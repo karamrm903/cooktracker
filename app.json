@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "newArchEnabled": false,
+    "name": "CookTrack",
+    "slug": "cooktrack",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B35"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anonymous.cooktrack"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6B35"
+      }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-video"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "cooking-tracker-frame-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "yt-dlp-exec": "^1.0.2"
+  }
+}
