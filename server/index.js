@@ -59,16 +59,13 @@ app.post('/metadata', async (req, res) => {
 
   try {
     const { stdout } = await execFileAsync('yt-dlp', [
-  '--force-ipv4',
-  '--no-playlist',
-  '--socket-timeout',
-  '60',
-  '-f',
-  'best',
-  '-o',
-  path.join(tmpDir, 'video.mp4'),
-  url
-], { timeout: 180000 });
+      '--force-ipv4',
+      '--no-playlist',
+      '--socket-timeout', '60',
+      '--no-check-certificates',
+      '-J',
+      url
+    ], { timeout: 180000 });
 
     const info = JSON.parse(stdout.trim());
 
@@ -332,7 +329,7 @@ app.post('/vision', async (req, res) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT ?? 3001;
-app.listen(PORT, () => {
-  console.log(`[server] Running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[server] Running on http://0.0.0.0:${PORT}`);
   console.log('[server] Routes: GET /health | POST /metadata /ocr /transcript /frames /vision');
 });

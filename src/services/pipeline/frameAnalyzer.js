@@ -17,7 +17,8 @@
  * }
  */
 
-const VISION_SERVER_URL = 'http://192.168.100.41:3001/vision';
+import { getBaseUrl } from '../../utils/api';
+const VISION_SERVER_URL = `${getBaseUrl()}/vision`;
 
 /**
  * Run vision analysis on sampled video frames via the frame server.
@@ -28,14 +29,14 @@ const VISION_SERVER_URL = 'http://192.168.100.41:3001/vision';
  * @returns {Promise<FrameAnalysisResult>}
  */
 export async function analyzeFrames(url, platform, _durationSec) {
-  if (!['youtube','tiktok','instagram'].includes(platform)) {
+  if (!['youtube', 'tiktok', 'instagram'].includes(platform)) {
     throw new Error(`Frame analysis not yet supported for platform: ${platform}`);
   }
 
   const response = await fetch(VISION_SERVER_URL, {
-    method:  'POST',
+    method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body:    JSON.stringify({ url }),
+    body: JSON.stringify({ url }),
   });
 
   if (!response.ok) {
@@ -48,12 +49,12 @@ export async function analyzeFrames(url, platform, _durationSec) {
   console.log(`[frameAnalyzer] ✔ dish: ${data.dishType} | confidence: ${data.confidence}`);
 
   return {
-    framesAnalyzed:    typeof data.framesAnalyzed === 'number' ? data.framesAnalyzed : (data.frameDescriptions?.length ?? 0),
-    confidence:        typeof data.confidence === 'number'     ? Math.min(1, Math.max(0, data.confidence)) : 0.6,
-    dishType:          typeof data.dishType === 'string'       ? data.dishType          : 'Unknown',
-    ingredients:       Array.isArray(data.ingredients)          ? data.ingredients       : [],
-    cookingActions:    Array.isArray(data.actions)              ? data.actions           : [],
-    tools:             Array.isArray(data.tools)                ? data.tools             : [],
-    frameDescriptions: Array.isArray(data.frameDescriptions)    ? data.frameDescriptions : [],
+    framesAnalyzed: typeof data.framesAnalyzed === 'number' ? data.framesAnalyzed : (data.frameDescriptions?.length ?? 0),
+    confidence: typeof data.confidence === 'number' ? Math.min(1, Math.max(0, data.confidence)) : 0.6,
+    dishType: typeof data.dishType === 'string' ? data.dishType : 'Unknown',
+    ingredients: Array.isArray(data.ingredients) ? data.ingredients : [],
+    cookingActions: Array.isArray(data.actions) ? data.actions : [],
+    tools: Array.isArray(data.tools) ? data.tools : [],
+    frameDescriptions: Array.isArray(data.frameDescriptions) ? data.frameDescriptions : [],
   };
 }

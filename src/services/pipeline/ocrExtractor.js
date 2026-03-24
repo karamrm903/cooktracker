@@ -13,7 +13,8 @@
  * }
  */
 
-const FRAME_SERVER_URL = 'http://192.168.100.41:3001/ocr';
+import { getBaseUrl } from '../../utils/api';
+const FRAME_SERVER_URL = `${getBaseUrl()}/ocr`;
 
 /**
  * Extract on-screen text from video keyframes via OCR.
@@ -23,14 +24,14 @@ const FRAME_SERVER_URL = 'http://192.168.100.41:3001/ocr';
  * @returns {Promise<OCRResult>}
  */
 export async function extractOCR(url, platform) {
-  if (!['youtube','tiktok','instagram'].includes(platform)) {
+  if (!['youtube', 'tiktok', 'instagram'].includes(platform)) {
     throw new Error(`OCR not yet supported for platform: ${platform}`);
   }
 
   const response = await fetch(FRAME_SERVER_URL, {
-    method:  'POST',
+    method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body:    JSON.stringify({ url }),
+    body: JSON.stringify({ url }),
   });
 
   if (!response.ok) {
