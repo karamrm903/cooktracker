@@ -75,7 +75,7 @@ export function detectLanguage(text) {
   // ── Arabic: character-ratio wins outright ──────────────────────────────────
   // Includes main Arabic block + Supplement + Extended-A
   const arabicChars = (text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g) ?? []).length;
-  const arabicRatio  = arabicChars / text.length;
+  const arabicRatio = arabicChars / text.length;
   if (arabicRatio >= 0.15) {
     return { language: 'ar', confidence: Math.min(0.97, 0.65 + arabicRatio) };
   }
@@ -122,13 +122,13 @@ export function detectLanguage(text) {
   // Sort by score descending
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const [bestLang, bestScore] = ranked[0];
-  const [, secondScore]       = ranked[1];
+  const [, secondScore] = ranked[1];
 
   // Require a meaningful margin to avoid flip-flopping on short or bilingual text
   const margin = bestScore - secondScore;
   if (bestScore < 0.0005 || margin < 0.0002) {
-    // Ambiguous — default to English with low confidence
-    return { language: 'en', confidence: 0.45 };
+    // Ambiguous — default to unknown with low confidence
+    return { language: 'unknown', confidence: 0.1 };
   }
 
   const confidence = Math.min(0.92, 0.50 + margin * 150);
@@ -154,7 +154,7 @@ export function guessLanguageFromMetadata(metadata) {
     .filter(Boolean)
     .join(' ');
 
-  if (!text.trim()) return { language: 'en', confidence: 0.30 };
+  if (!text.trim()) return { language: 'unknown', confidence: 0 };
 
   // Quick Arabic Unicode check on the title specifically
   const arabicInTitle = (metadata.title ?? '').match(/[\u0600-\u06FF]/g)?.length ?? 0;
@@ -203,7 +203,8 @@ export const CAPTION_LANGUAGE_PREFERENCE = ['en', 'ar', 'de', 'fr', 'es', 'pt'];
  * @param {string|null} videoId
  * @returns {Promise<TranscriptResult>}
  */
-const TRANSCRIPT_SERVER_URL = 'http://192.168.100.41:3001/transcript';
+import { getBaseUrl } from '../../utils/api';
+const TRANSCRIPT_SERVER_URL = `${getBaseUrl()}/transcript`;
 
 export async function extractTranscript(url, metadata, platform, videoId) {
 
@@ -213,7 +214,7 @@ export async function extractTranscript(url, metadata, platform, videoId) {
     langHint.language, '| confidence:', langHint.confidence.toFixed(2));
 
   // ── YouTube: fetch captions via youtube-transcript ────────────────────────
-  if (['youtube','tiktok','instagram'].includes(platform) && videoId) {
+  if (['youtube', 'tiktok', 'instagram'].includes(platform) && videoId) {
     try {
       const { YoutubeTranscript } = await import('youtube-transcript');
 
@@ -260,12 +261,12 @@ export async function extractTranscript(url, metadata, platform, videoId) {
           language, '| words:', wordCount, '| confidence:', confidence.toFixed(2));
 
         return {
-          available:  true,
+          available: true,
           language,
           confidence,
           wordCount,
           text,
-          source:    'youtube_captions',
+          source: 'youtube_captions',
           _fallback: null,
         };
       }
@@ -277,12 +278,12 @@ export async function extractTranscript(url, metadata, platform, videoId) {
   }
 
   // ── Server-side Whisper STT ────────────────────────────────────────────────
-  if (['youtube','tiktok','instagram'].includes(platform)) {
+  if (['youtube', 'tiktok', 'instagram'].includes(platform)) {
     try {
       const sttRes = await fetch(TRANSCRIPT_SERVER_URL, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body:    JSON.stringify({ url, language: langHint.language }),
+        body: JSON.stringify({ url, language: langHint.language }),
       });
 
       if (!sttRes.ok) {
@@ -330,23 +331,23 @@ export function buildMetadataFallbackTranscript(metadata) {
     language, '| words:', wordCount);
 
   return {
-    available:  true,
+    available: true,
     language,
     confidence: 0.45,
     wordCount,
-    text:       raw,
-    source:     'metadata_captions',
-    _fallback:  'metadata_captions',
+    text: raw,
+    source: 'metadata_captions',
+    _fallback: 'metadata_captions',
   };
 }
 
 /** Sentinel used in visual-only mode (no transcript from any source). */
 export const EMPTY_TRANSCRIPT = {
-  available:  false,
-  language:   'unknown',
+  available: false,
+  language: 'unknown',
   confidence: 0,
-  wordCount:  0,
-  text:       '',
-  source:     'visual_only',
-  _fallback:  'visual_only',
+  wordCount: 0,
+  text: '',
+  source: 'visual_only',
+  _fallback: 'visual_only',
 };

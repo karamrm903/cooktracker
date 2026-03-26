@@ -1,4 +1,5 @@
-const FRAME_SERVER_URL = "http://192.168.100.41:3001";
+import { getBaseUrl } from '../utils/api';
+const FRAME_SERVER_URL = getBaseUrl();
 
 export async function fetchFramesFromServer(url) {
   const res = await fetch(`${FRAME_SERVER_URL}/frames`, {

@@ -218,9 +218,10 @@ const anySource = true;
 
   // ── Stage 5: Build context + extract recipe ────────────────────────────────
   let recipe;
+  let context = {};
   tick(4, 'started');
   try {
-    const context = buildAnalysisContext({
+    context = buildAnalysisContext({
       url, platform, videoId, metadata, transcript, ocr, frames,
     });
     console.log('[pipeline] ✔ Analysis context built');
