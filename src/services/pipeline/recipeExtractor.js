@@ -93,14 +93,14 @@ function looksLikeIngredientLine(text) {
   if (badPhrases.some(x => lower.includes(x))) return false;
 
   const measurementWords = [
-    "cup","cups","tbsp","tablespoon","tablespoons",
-    "tsp","teaspoon","teaspoons","dessert spoon",
-    "g","gram","grams","ml","oz","slice","slices"
+    "cup", "cups", "tbsp", "tablespoon", "tablespoons",
+    "tsp", "teaspoon", "teaspoons", "dessert spoon",
+    "g", "gram", "grams", "ml", "oz", "slice", "slices"
   ];
 
   const ingredientWords = [
-    "milk","sugar","flour","cocoa","baking powder",
-    "cookie","cookies","chocolate","butter","egg","eggs"
+    "milk", "sugar", "flour", "cocoa", "baking powder",
+    "cookie", "cookies", "chocolate", "butter", "egg", "eggs"
   ];
 
   const hasMeasurement = measurementWords.some(w => lower.includes(w));
@@ -142,27 +142,27 @@ function extractStructuredIngredientLines(text) {
       }
 
       if (
-  quantityLineRegex.test(lower) ||
-  lower.includes('cookie') ||
-  lower.includes('cream') ||
-  lower.includes('milk') ||
-  lower.includes('flour') ||
-  lower.includes('powder')
-) {
-  results.push(line);
-}
+        quantityLineRegex.test(lower) ||
+        lower.includes('cookie') ||
+        lower.includes('cream') ||
+        lower.includes('milk') ||
+        lower.includes('flour') ||
+        lower.includes('powder')
+      ) {
+        results.push(line);
+      }
     } else {
       if (
-  quantityLineRegex.test(lower) ||
-  (inIngredientsSection &&
-    !/^ingredients?$/i.test(lower) &&
-    !/^method/i.test(lower) &&
-    !/^steps?/i.test(lower) &&
-    !/^instructions?/i.test(lower) &&
-    line.length < 120)
-) {
-  results.push(line);
-}
+        quantityLineRegex.test(lower) ||
+        (inIngredientsSection &&
+          !/^ingredients?$/i.test(lower) &&
+          !/^method/i.test(lower) &&
+          !/^steps?/i.test(lower) &&
+          !/^instructions?/i.test(lower) &&
+          line.length < 120)
+      ) {
+        results.push(line);
+      }
     }
   }
 
@@ -183,10 +183,10 @@ function cleanStepText(text) {
 export function buildAnalysisContext({ url, platform, videoId, metadata, transcript, ocr, frames }) {
   console.log("METADATA DEBUG:", metadata)
   // Resolve source language: prefer transcript (richest signal), fall back to OCR
-  const sourceLanguage  = transcript.language !== 'unknown'
+  const sourceLanguage = transcript.language !== 'unknown'
     ? (transcript.language ?? ocr.language ?? 'en')
     : (ocr.language ?? 'en');
-  const isMultilingual  = transcript.language !== ocr.language
+  const isMultilingual = transcript.language !== ocr.language
     && transcript.language !== 'unknown'
     && ocr.language !== 'unknown';
 
@@ -195,7 +195,7 @@ export function buildAnalysisContext({ url, platform, videoId, metadata, transcr
   // In the real implementation the AI does this comparison.
   // In mock mode we compute it from the fixed overlap between visual and recipe lists.
   const visualIngredients = frames.ingredients ?? [];
-  const ocrAndTranscript  = `${transcript.text ?? ''} ${ocr.combinedText ?? ''}`.toLowerCase();
+  const ocrAndTranscript = `${transcript.text ?? ''} ${ocr.combinedText ?? ''}`.toLowerCase();
   const agreedIngredients = visualIngredients.filter(ing =>
     // Check if at least the first meaningful word of the ingredient name is mentioned
     ing.split(/\s+/).filter(w => w.length > 3).some(w => ocrAndTranscript.includes(w))
@@ -214,12 +214,12 @@ export function buildAnalysisContext({ url, platform, videoId, metadata, transcr
     outputLanguage: 'en',
 
     // ── Metadata (may be bilingual or in source language) ──────────────────
-    title:          metadata.title          ?? '',
-    description:    metadata.description    ?? '',
-    channelName:    metadata.channelName    ?? '',
+    title: metadata.title ?? '',
+    description: metadata.description ?? '',
+    channelName: metadata.channelName ?? '',
     creatorCaption: metadata.creatorCaption ?? '',
-    hashtags:       metadata.hashtags       ?? [],
-       
+    hashtags: metadata.hashtags ?? [],
+
     parsedCaptionIngredients: extractStructuredIngredientLines(metadata.creatorCaption ?? ''),
     parsedDescriptionIngredients: extractStructuredIngredientLines(metadata.description ?? ''),
     parsedOcrIngredients: extractStructuredIngredientLines(ocr.combinedText ?? ''),
@@ -227,28 +227,28 @@ export function buildAnalysisContext({ url, platform, videoId, metadata, transcr
     // ── Audio transcript (raw — in source language) ────────────────────────
     // Claude reads this in its original language; output is always English.
     transcript: {
-      available:    transcript.available,
-      language:     transcript.language,
-      confidence:   transcript.confidence,
-      wordCount:    transcript.wordCount,
-      text:         transcript.text ?? '',
-      source:       transcript.source,
-      fallback:     transcript._fallback,
+      available: transcript.available,
+      language: transcript.language,
+      confidence: transcript.confidence,
+      wordCount: transcript.wordCount,
+      text: transcript.text ?? '',
+      source: transcript.source,
+      fallback: transcript._fallback,
     },
 
     // ── On-screen text / OCR (raw — in source language) ───────────────────
-    ocrLanguage:   ocr.language,
-    ocrText:       ocr.combinedText  ?? '',
-    ocrFrames:     ocr.detectedFrames ?? [],
+    ocrLanguage: ocr.language,
+    ocrText: ocr.combinedText ?? '',
+    ocrFrames: ocr.detectedFrames ?? [],
 
     // ── Visual frame analysis (always English — vision model output) ───────
-    dishType:             frames.dishType          ?? '',
-    frameDescriptions:    frames.frameDescriptions ?? [],
+    dishType: frames.dishType ?? '',
+    frameDescriptions: frames.frameDescriptions ?? [],
     visualIngredients,
-    visualCookingActions: frames.cookingActions    ?? [],
-    visualTools:          frames.tools             ?? [],
-    visualConfidence:     frames.confidence        ?? 0,
-    framesAnalyzed:       frames.framesAnalyzed    ?? 0,
+    visualCookingActions: frames.cookingActions ?? [],
+    visualTools: frames.tools ?? [],
+    visualConfidence: frames.confidence ?? 0,
+    framesAnalyzed: frames.framesAnalyzed ?? 0,
 
     // ── Cross-source signals ───────────────────────────────────────────────
     ingredientAgreementRatio,
@@ -274,8 +274,8 @@ export function buildAnalysisContext({ url, platform, videoId, metadata, transcr
 export function buildExtractionPrompt(ctx) {
   const langNote = ctx.sourceLanguage !== 'en'
     ? `The video is in ${LANGUAGE_NAMES[ctx.sourceLanguage] ?? ctx.sourceLanguage}. ` +
-      `Read and understand the ${LANGUAGE_NAMES[ctx.sourceLanguage] ?? ctx.sourceLanguage} content, ` +
-      `then write all recipe output in English.`
+    `Read and understand the ${LANGUAGE_NAMES[ctx.sourceLanguage] ?? ctx.sourceLanguage} content, ` +
+    `then write all recipe output in English.`
     : 'The video is in English.';
 
   const transcriptBlock = ctx.transcript.available
@@ -293,9 +293,9 @@ ${ctx.ocrFrames.map(f => `  [${f.timestamp}s] ${f.text}`).join('\n')}
 `
     : `ON-SCREEN TEXT / OCR: Not available.
 `;
-const parsedIngredientsBlock =
-  (ctx.parsedCaptionIngredients?.length || ctx.parsedDescriptionIngredients?.length || ctx.parsedOcrIngredients?.length)
-    ? `STRUCTURED INGREDIENT LIST DETECTED (HIGHEST PRIORITY SIGNAL):
+  const parsedIngredientsBlock =
+    (ctx.parsedCaptionIngredients?.length || ctx.parsedDescriptionIngredients?.length || ctx.parsedOcrIngredients?.length)
+      ? `STRUCTURED INGREDIENT LIST DETECTED (HIGHEST PRIORITY SIGNAL):
 Caption ingredients:
 ${ctx.parsedCaptionIngredients?.length ? ctx.parsedCaptionIngredients.map(x => `- ${x}`).join('\n') : '- (none)'}
 
@@ -305,7 +305,7 @@ ${ctx.parsedDescriptionIngredients?.length ? ctx.parsedDescriptionIngredients.ma
 OCR ingredients:
 ${ctx.parsedOcrIngredients?.length ? ctx.parsedOcrIngredients.map(x => `- ${x}`).join('\n') : '- (none)'}
 `
-    : `PARSED INGREDIENT LINES: None detected.
+      : `PARSED INGREDIENT LINES: None detected.
 `;
   const framesBlock = ctx.frameDescriptions.length > 0
     ? `VISUAL FRAME ANALYSIS (always in English — AI vision model output):
@@ -627,6 +627,7 @@ Do not remove an ingredient because its measurement unit is uncommon.
    and should still be confirmed if detected in any frame or transcript signal.
    An ingredient is INFERRED only when it does not appear in any signal at all but is strongly
    implied by the dish type or standard cooking practice (e.g. water for boiling pasta).
+   CRITICAL EXCEPTION: NEVER put calorie-dense fundamental ingredients (like sugar, cooking oil, butter) into the 'inferredIngredients' list. If they are unseen but necessary, they MUST go into the main 'ingredients' array with an estimated quantity so their calories are counted!
    If a detail has no evidence in any signal → omit it entirely, do not guess.
 7. INGREDIENTS: Confirmed = appears in any signal (frame, OCR, transcript, visual list).
 EARLY FRAME INGREDIENT PRIORITY:
@@ -646,10 +647,10 @@ even if they are not repeated later in the transcript.
    "room-temperature eggs" unless that exact state is shown or stated.
    If the ingredient is present but its state is unclear, use the neutral ingredient name only.
 7.1 QUANTITY GROUNDING:
-   Ingredient quantities must come from transcript or OCR evidence.
-   If a quantity is unclear or conflicting across signals, do not guess a quantity.
-   Use the safest supported value or omit the quantity entirely.
-   Never invent ingredient names or combinations such as "heavy milk".
+   Ingredient quantities in the main text should ideally come from transcript or OCR.
+   HOWEVER, for nutrition calculations, if a quantity is missing, you MUST assume a realistic standard serving size (e.g. 50g pasta, 1 tbsp oil, 2 tbsp sugar). Never assign 0 calories to energy-dense foods.
+   If a fundamental ingredient (like sugar in a dessert or oil for frying) is unseen but necessary, include it in the main 'ingredients' array with an estimated quantity.
+   Never invent impossible combinations such as "heavy milk".
    If the transcript contains similar dairy terms (milk, cream, whipping cream, heavy cream),
 do not merge or substitute them unless the evidence clearly supports the substitution.
    Use standard ingredient names only (e.g. milk, heavy cream, cream).
@@ -657,8 +658,9 @@ do not merge or substitute them unless the evidence clearly supports the substit
 9. NUTRITION: Provide estimated nutrition for the FULL recipe, not just per serving.
 Also estimate the number of servings and provide approximate per-serving nutrition separately.
 If serving size is uncertain, still prioritize full-recipe totals.
-Also estimate nutrition for each major ingredient when quantities are available.
+You MUST estimate nutrition for EVERY major ingredient, even if you have to guess the assumed quantity for the calculation.
 For each ingredient, return calories, protein, carbs, and fat.
+CRITICAL: The string used in 'ingredientNutrition[].ingredient' MUST exactly match the string used in the 'ingredients' array. Do not use a shorter name or omit the measurement in the nutrition array!
 These per-ingredient nutrition values will be used to recalculate the full recipe if ingredients are removed or changed.
 Mark all nutrition as estimated.
 10. CONFIDENCE SCORE: 0.0–1.0 reflecting how completely the evidence supports the extraction.
@@ -771,10 +773,15 @@ const LANGUAGE_NAMES = {
  * @returns {number}  0–1
  */
 function computeRawConfidence(ctx) {
-  const base =
-    (ctx.transcript.available            ? 0.40 : 0.05) +
-    (ctx.ocrFrames.length > 0            ? 0.30 : 0.05) +
-    (ctx.visualConfidence                * 0.30);
+  let base = 0;
+  if (ctx.transcript.available || ctx.ocrFrames.length > 0) {
+    base =
+      (ctx.transcript.available ? 0.40 : 0.05) +
+      (ctx.ocrFrames.length > 0 ? 0.30 : 0.05) +
+      (ctx.visualConfidence * 0.30);
+  } else {
+    base = Math.max(0.40, ctx.visualConfidence * 0.85);
+  }
 
   // Bonus: fraction of visual ingredients confirmed across other sources
   const agreementBonus = ctx.ingredientAgreementRatio * 0.10;
@@ -809,23 +816,23 @@ export async function extractRecipe(context) {
   }
 
   const prompt = buildExtractionPrompt(context);
-console.log('[recipeExtractor] transcript text:', context.transcript.text);
-console.log('[recipeExtractor] ocr text:', context.ocrText);
-console.log('[recipeExtractor] visual ingredients:', context.visualIngredients);
-console.log('[recipeExtractor] creator caption:', context.creatorCaption);
-console.log('[recipeExtractor] parsed caption ingredients:', context.parsedCaptionIngredients);
+  console.log('[recipeExtractor] transcript text:', context.transcript.text);
+  console.log('[recipeExtractor] ocr text:', context.ocrText);
+  console.log('[recipeExtractor] visual ingredients:', context.visualIngredients);
+  console.log('[recipeExtractor] creator caption:', context.creatorCaption);
+  console.log('[recipeExtractor] parsed caption ingredients:', context.parsedCaptionIngredients);
   const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method:  'POST',
+    method: 'POST',
     headers: {
-      'x-api-key':         apiKey,
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
-      'content-type':      'application/json',
+      'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model:      'claude-opus-4-6',
+      model: 'claude-opus-4-6',
       max_tokens: 2048,
-      system:     'You are an expert culinary AI. Always respond with valid JSON only. Do not include markdown fences.',
-      messages:   [{ role: 'user', content: prompt }],
+      system: 'You are an expert culinary AI. Always respond with valid JSON only. Do not include markdown fences.',
+      messages: [{ role: 'user', content: prompt }],
     }),
   });
 
@@ -834,102 +841,101 @@ console.log('[recipeExtractor] parsed caption ingredients:', context.parsedCapti
     throw new Error(`Anthropic API error ${response.status}: ${text}`);
   }
 
-  const data      = await response.json();
-  
+  const data = await response.json();
+
   let extracted;
 
-try {
-  const raw = data.content[0].text;
+  try {
+    const raw = data.content[0].text;
 
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
 
-  if (jsonMatch) {
-    extracted = JSON.parse(jsonMatch[0]);
-    extracted.ingredients = extracted.ingredients?.map(cleanIngredientText);
-extracted.steps = extracted.steps?.map(cleanStepText);
-   
-    console.log('[recipeExtractor] raw ingredients before cleanup:', extracted.ingredients);
-console.log('[recipeExtractor] raw steps before cleanup:', extracted.steps);
-console.log('[recipeExtractor] ingredients after cleanup:', extracted.ingredients);
-console.log('[recipeExtractor] steps after cleanup:', extracted.steps);
-    
-  } else {
-    throw new Error("No JSON found in Claude response");
+    if (jsonMatch) {
+      extracted = JSON.parse(jsonMatch[0]);
+      extracted.ingredients = extracted.ingredients?.map(cleanIngredientText);
+      extracted.steps = extracted.steps?.map(cleanStepText);
+
+      console.log('[recipeExtractor] raw ingredients before cleanup:', extracted.ingredients);
+      console.log('[recipeExtractor] raw steps before cleanup:', extracted.steps);
+      console.log('[recipeExtractor] ingredients after cleanup:', extracted.ingredients);
+      console.log('[recipeExtractor] steps after cleanup:', extracted.steps);
+
+    } else {
+      throw new Error("No JSON found in Claude response");
+    }
+
+    if (Array.isArray(extracted.inferredIngredients) && extracted.inferredIngredients.length > 0) {
+      const cleanedInferred = extracted.inferredIngredients.map(cleanIngredientText);
+      extracted.ingredients = [...(extracted.ingredients || []), ...cleanedInferred];
+      extracted.inferredIngredients = [];
+    }
+
+    if (Array.isArray(extracted.steps)) {
+      extracted.steps = extracted.steps.map(step => ({
+        ...step,
+        text: cleanStepText(step.text),
+      }));
+    }
+    const forcedParsedIngredients = [
+      ...(context.parsedCaptionIngredients ?? []),
+      ...(context.parsedDescriptionIngredients ?? []),
+      ...(context.parsedOcrIngredients ?? []),
+    ]
+      .map(cleanIngredientText)
+      .filter(Boolean)
+      .filter(looksLikeIngredientLine);
+
+    const uniqueForcedParsedIngredients = [...new Set(forcedParsedIngredients)];
+
+    console.log('[recipeExtractor] forced parsed ingredients:', uniqueForcedParsedIngredients);
+
+    if (Array.isArray(extracted.ingredients) && Array.isArray(extracted.ingredientNutrition)) {
+      extracted.ingredients = extracted.ingredients.map((ing) => {
+        const cleanedName = typeof ing === 'string' ? cleanIngredientText(ing) : cleanIngredientText(ing.name || '');
+
+        let bestMatch = null;
+        let highestScore = 0;
+
+        const tokenize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !['cup', 'cups', 'tbsp', 'tsp', 'tablespoon', 'teaspoon', 'gram', 'grams', 'ml', 'oz', 'pinch', 'slices', 'pieces', 'chopped', 'diced', 'minced', 'roasted', 'fresh', 'powder'].includes(w));
+        const targetTokens = tokenize(cleanedName);
+
+        for (const item of extracted.ingredientNutrition) {
+          if (!item?.ingredient) continue;
+          const itemTokens = tokenize(item.ingredient);
+          const score = itemTokens.filter(t => targetTokens.includes(t)).length;
+          
+          const a = item.ingredient.toLowerCase();
+          const b = cleanedName.toLowerCase();
+          const isSub = a.includes(b) || b.includes(a);
+
+          if (score > highestScore || (isSub && highestScore === 0)) {
+            highestScore = Math.max(score, isSub ? 1 : 0);
+            bestMatch = item;
+          }
+        }
+
+        const match = bestMatch;
+
+        return {
+          name: cleanedName,
+          calories: match?.calories ?? 0,
+          protein: match?.protein ?? 0,
+          carbs: match?.carbs ?? 0,
+          fat: match?.fat ?? 0,
+        };
+      });
+    }
+
+  } catch (err) {
+    console.warn("[recipeExtractor] JSON parse failed, using fallback");
+
+    extracted = {
+      title: "Detected Dish",
+      ingredients: [],
+      steps: [],
+      confidence: 0.3
+    };
   }
-
-if (Array.isArray(extracted.inferredIngredients)) {
-  extracted.inferredIngredients = extracted.inferredIngredients.map(cleanIngredientText);
-}
-
-if (Array.isArray(extracted.steps)) {
-  extracted.steps = extracted.steps.map(step => ({
-    ...step,
-    text: cleanStepText(step.text),
-  }));
-}
-const forcedParsedIngredients = [
-  ...(context.parsedCaptionIngredients ?? []),
-  ...(context.parsedDescriptionIngredients ?? []),
-  ...(context.parsedOcrIngredients ?? []),
-]
-  .map(cleanIngredientText)
-  .filter(Boolean)
-  .filter(looksLikeIngredientLine);
-
-const uniqueForcedParsedIngredients = [...new Set(forcedParsedIngredients)];
-
-console.log('[recipeExtractor] forced parsed ingredients:', uniqueForcedParsedIngredients);
-
-if (uniqueForcedParsedIngredients.length > 0) {
-  extracted.ingredients = uniqueForcedParsedIngredients.map((ing) => {
-    const match = Array.isArray(extracted.ingredientNutrition)
-      ? extracted.ingredientNutrition.find((item) => {
-          if (!item?.ingredient) return false;
-          const a = cleanIngredientText(item.ingredient).toLowerCase();
-          const b = cleanIngredientText(ing).toLowerCase();
-          return a === b || a.includes(b) || b.includes(a);
-        })
-      : null;
-
-    return {
-      name: ing,
-      calories: match?.calories ?? 0,
-      protein: match?.protein ?? 0,
-      carbs: match?.carbs ?? 0,
-      fat: match?.fat ?? 0,
-    };
-  });
-
-  extracted.inferredIngredients = [];
-} else if (Array.isArray(extracted.ingredients) && Array.isArray(extracted.ingredientNutrition)) {
-  extracted.ingredients = extracted.ingredients.map((ing) => {
-    const cleanedName = cleanIngredientText(ing);
-
-    const match = extracted.ingredientNutrition.find((item) => {
-      if (!item?.ingredient) return false;
-      return cleanIngredientText(item.ingredient).toLowerCase() === cleanedName.toLowerCase();
-    });
-
-    return {
-      name: cleanedName,
-      calories: match?.calories ?? 0,
-      protein: match?.protein ?? 0,
-      carbs: match?.carbs ?? 0,
-      fat: match?.fat ?? 0,
-    };
-  });
-}
-
-} catch (err) {
-  console.warn("[recipeExtractor] JSON parse failed, using fallback");
-
-  extracted = {
-    title: "Detected Dish",
-    ingredients: [],
-    steps: [],
-    confidence: 0.3
-  };
-}
   console.log('[recipeExtractor] ✔ Claude response received → title:', extracted.title);
 
   return {
@@ -937,15 +943,15 @@ if (uniqueForcedParsedIngredients.length > 0) {
     ...extracted,
     _analysis: {
       rawConfidence,
-      detectedLanguage:         context.sourceLanguage,
-      outputLanguage:           context.outputLanguage,
-      isMultilingual:           context.isMultilingual,
+      detectedLanguage: context.sourceLanguage,
+      outputLanguage: context.outputLanguage,
+      isMultilingual: context.isMultilingual,
       ingredientAgreementRatio: context.ingredientAgreementRatio,
       sourcesUsed: {
-        metadata:   !!context.title,
+        metadata: !!context.title,
         transcript: context.transcript.available,
-        ocr:        context.ocrFrames.length > 0,
-        frames:     context.framesAnalyzed > 0,
+        ocr: context.ocrFrames.length > 0,
+        frames: context.framesAnalyzed > 0,
       },
       extractionNotes: extracted.extractionNotes,
     },

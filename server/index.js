@@ -1,46 +1,46 @@
 import 'dotenv/config';
 
-import express       from 'express';
-import { execFile }  from 'child_process';
+import express from 'express';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
-import fs            from 'fs';
-import os            from 'os';
-import path          from 'path';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 const execFileAsync = promisify(execFile);
-const app           = express();
+const app = express();
 app.use(express.json());
 
 const FRAME_EVERY_SECONDS = 5;
-const MAX_FRAMES          = 12;
-const SCALE_WIDTH         = 640;
+const MAX_FRAMES = 12;
+const SCALE_WIDTH = 640;
 
 // ── Shared helper ─────────────────────────────────────────────────────────────
 async function extractFrameFiles(url, tmpDir, {
   everySeconds = FRAME_EVERY_SECONDS,
-  maxFrames    = MAX_FRAMES,
-  width        = SCALE_WIDTH,
+  maxFrames = MAX_FRAMES,
+  width = SCALE_WIDTH,
 } = {}) {
   await execFileAsync('yt-dlp', [
-  '--force-ipv4',
-  '--no-playlist',
-  '--socket-timeout',
-  '60',
-  '-f',
-  'best',
-  '-o',
-  path.join(tmpDir, 'video.mp4'),
-  url
-], { timeout: 180000 });
-const videoStreamUrl = path.join(tmpDir, 'video.mp4');
+    '--force-ipv4',
+    '--no-playlist',
+    '--socket-timeout',
+    '60',
+    '-f',
+    'best',
+    '-o',
+    path.join(tmpDir, 'video.mp4'),
+    url
+  ], { timeout: 180000 });
+  const videoStreamUrl = path.join(tmpDir, 'video.mp4');
   if (!videoStreamUrl) throw new Error('yt-dlp returned an empty URL');
 
   const framePattern = path.join(tmpDir, 'frame%03d.jpg');
   await execFileAsync('ffmpeg', [
-    '-i',        videoStreamUrl,
-    '-vf',       `fps=1/${everySeconds},scale=${width}:-2`,
+    '-i', videoStreamUrl,
+    '-vf', `fps=1/${everySeconds},scale=${width}:-2`,
     '-frames:v', String(maxFrames),
-    '-q:v',      '3',
+    '-q:v', '3',
     framePattern,
   ], { timeout: 60_000 });
 
@@ -70,11 +70,11 @@ app.post('/metadata', async (req, res) => {
     const info = JSON.parse(stdout.trim());
 
     res.json({
-      title:       info.title       ?? '',
+      title: info.title ?? '',
       description: info.description ?? '',
-      channelName: info.uploader    ?? info.channel ?? '',
-      tags:        Array.isArray(info.tags) ? info.tags : [],
-      durationSec: info.duration    ?? 0,
+      channelName: info.uploader ?? info.channel ?? '',
+      tags: Array.isArray(info.tags) ? info.tags : [],
+      durationSec: info.duration ?? 0,
     });
   } catch (err) {
     console.error('[metadata] ✖', err.message);
@@ -98,11 +98,11 @@ app.post('/ocr', async (req, res) => {
     const rawResults = await Promise.all(filePaths.map(async (fp, i) => {
       const base64 = fs.readFileSync(fp).toString('base64');
       const vRes = await fetch(VISION_URL, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           requests: [{
-            image:    { content: base64 },
+            image: { content: base64 },
             features: [{ type: 'TEXT_DETECTION', maxResults: 1 }],
           }],
         }),
@@ -113,8 +113,8 @@ app.post('/ocr', async (req, res) => {
     }));
 
     const withText = rawResults.filter(r => r.text.length > 0);
-    const seen     = new Set();
-    const deduped  = withText.filter(({ text }) => {
+    const seen = new Set();
+    const deduped = withText.filter(({ text }) => {
       const key = text.slice(0, 60).toLowerCase().replace(/\s+/g, ' ');
       if (seen.has(key)) return false;
       seen.add(key);
@@ -149,18 +149,18 @@ app.post('/transcript', async (req, res) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ct-stt-'));
   try {
     await execFileAsync('yt-dlp', [
-  '--force-ipv4',
-  '--no-playlist',
-  '--socket-timeout', '60',
-  '--no-check-certificates',
+      '--force-ipv4',
+      '--no-playlist',
+      '--socket-timeout', '60',
+      '--no-check-certificates',
 
-  '-x',
-  '--audio-format', 'mp3',
-  '--audio-quality', '0',
+      '-x',
+      '--audio-format', 'mp3',
+      '--audio-quality', '0',
 
-  '-o', path.join(tmpDir, 'audio.%(ext)s'),
-  url
-], { timeout: 120000 });
+      '-o', path.join(tmpDir, 'audio.%(ext)s'),
+      url
+    ], { timeout: 120000 });
 
     const audioFileName = fs.readdirSync(tmpDir).find(f => f.endsWith('.mp3'));
     if (!audioFileName) throw new Error('yt-dlp produced no audio file');
@@ -174,9 +174,9 @@ app.post('/transcript', async (req, res) => {
     if (language && language !== 'unknown') form.append('language', language);
 
     const whisperRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Authorization': `Bearer ${groqKey}` },
-      body:    form,
+      body: form,
     });
 
     if (!whisperRes.ok) {
@@ -188,20 +188,20 @@ app.post('/transcript', async (req, res) => {
 
     const LANG_NAMES = {
       english: 'en', arabic: 'ar', german: 'de',
-      french:  'fr', spanish: 'es', portuguese: 'pt',
+      french: 'fr', spanish: 'es', portuguese: 'pt',
     };
     const detectedLang = LANG_NAMES[data.language?.toLowerCase()] ?? data.language ?? 'unknown';
-    const text         = data.text?.trim() ?? '';
-    const wordCount    = text.split(/\s+/).filter(Boolean).length;
+    const text = data.text?.trim() ?? '';
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
 
     console.log(`[transcript] ✔ Whisper: ${detectedLang} | ${wordCount} words`);
     res.json({
-      available:  true,
-      language:   detectedLang,
+      available: true,
+      language: detectedLang,
       confidence: 0.85,
       wordCount,
       text,
-      source:    'server_whisper',
+      source: 'server_whisper',
       _fallback: 'server_whisper',
     });
   } catch (err) {
@@ -221,7 +221,7 @@ app.post('/frames', async (req, res) => {
   try {
     const filePaths = await extractFrameFiles(url, tmpDir);
     const frames = filePaths.map(fp => ({
-      base64:    fs.readFileSync(fp).toString('base64'),
+      base64: fs.readFileSync(fp).toString('base64'),
       mediaType: 'image/jpeg',
     }));
     console.log(`[frames] ✔ ${frames.length} frames extracted`);
@@ -241,7 +241,7 @@ const VISION_PROMPT =
   '{\n' +
   '  "ingredients": ["ingredient 1", "ingredient 2"],\n' +
   '  "tools": ["pan", "spatula"],\n' +
-  '  "actions": ["searing steak", "frying eggs"],\n' +
+  '  "actions": ["searing steak", "chopping onions"],\n' +
   '  "dishType": "most specific dish name visible",\n' +
   '  "confidence": 0.85,\n' +
   '  "frameDescriptions": ["one English sentence per frame in order"]\n' +
@@ -264,27 +264,27 @@ app.post('/vision', async (req, res) => {
     const filePaths = await extractFrameFiles(url, tmpDir);
 
     const imageBlocks = filePaths.map(fp => ({
-      type:   'image',
+      type: 'image',
       source: {
-        type:       'base64',
+        type: 'base64',
         media_type: 'image/jpeg',
-        data:       fs.readFileSync(fp).toString('base64'),
+        data: fs.readFileSync(fp).toString('base64'),
       },
     }));
 
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method:  'POST',
+      method: 'POST',
       headers: {
-        'x-api-key':         anthropicKey,
+        'x-api-key': anthropicKey,
         'anthropic-version': '2023-06-01',
-        'content-type':      'application/json',
+        'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model:      'claude-haiku-4-5-20251001',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
-        system:     'You are a culinary vision AI. Always respond with valid JSON only. No markdown fences.',
+        system: 'You are a culinary vision AI. Always respond with valid JSON only. No markdown fences.',
         messages: [{
-          role:    'user',
+          role: 'user',
           content: [
             ...imageBlocks,
             { type: 'text', text: VISION_PROMPT },
@@ -299,7 +299,7 @@ app.post('/vision', async (req, res) => {
     }
 
     const claudeData = await claudeRes.json();
-    const raw        = claudeData.content[0].text.trim();
+    const raw = claudeData.content[0].text.trim();
 
     let parsed;
     try {
@@ -312,11 +312,11 @@ app.post('/vision', async (req, res) => {
 
     console.log(`[vision] ✔ ${filePaths.length} frames analysed | dish: ${parsed.dishType}`);
     res.json({
-      ingredients:       Array.isArray(parsed.ingredients)      ? parsed.ingredients      : [],
-      tools:             Array.isArray(parsed.tools)             ? parsed.tools            : [],
-      actions:           Array.isArray(parsed.actions)           ? parsed.actions          : [],
-      dishType:          typeof parsed.dishType === 'string'     ? parsed.dishType         : 'Unknown',
-      confidence:        typeof parsed.confidence === 'number'   ? Math.min(1, Math.max(0, parsed.confidence)) : 0.6,
+      ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+      tools: Array.isArray(parsed.tools) ? parsed.tools : [],
+      actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+      dishType: typeof parsed.dishType === 'string' ? parsed.dishType : 'Unknown',
+      confidence: typeof parsed.confidence === 'number' ? Math.min(1, Math.max(0, parsed.confidence)) : 0.6,
       frameDescriptions: Array.isArray(parsed.frameDescriptions) ? parsed.frameDescriptions : [],
     });
   } catch (err) {

@@ -127,8 +127,8 @@ export function detectLanguage(text) {
   // Require a meaningful margin to avoid flip-flopping on short or bilingual text
   const margin = bestScore - secondScore;
   if (bestScore < 0.0005 || margin < 0.0002) {
-    // Ambiguous — default to English with low confidence
-    return { language: 'en', confidence: 0.45 };
+    // Ambiguous — default to unknown with low confidence
+    return { language: 'unknown', confidence: 0.1 };
   }
 
   const confidence = Math.min(0.92, 0.50 + margin * 150);
@@ -154,7 +154,7 @@ export function guessLanguageFromMetadata(metadata) {
     .filter(Boolean)
     .join(' ');
 
-  if (!text.trim()) return { language: 'en', confidence: 0.30 };
+  if (!text.trim()) return { language: 'unknown', confidence: 0 };
 
   // Quick Arabic Unicode check on the title specifically
   const arabicInTitle = (metadata.title ?? '').match(/[\u0600-\u06FF]/g)?.length ?? 0;
