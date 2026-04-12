@@ -1,0 +1,22 @@
+export const colors = {
+  background: "#FFFFFF",
+  text: "#333333",
+  textMuted: "#888888",
+  textSecondary: "#555555",
+  placeholder: "#CCCCCC",
+  inputBg: "#F7F7F7",
+  border: "#E0E0E0",
+  btnPrimary: "#007BFF",
+  btnPrimaryText: "#FFFFFF",
+  btnDisabled: "#B0B0B0",
+  textDisabled: "#A0A0A0",
+  backBtnBg: "#F0F0F0",
+  appleBtn: "#000000",
+  appleBtnText: "#FFFFFF",
+  googleBtn: "#FFFFFF",
+  googleBtnText: "#4285F4",
+  surface: "#FFFFFF",
+  error: '#FF3B30',
+  success: '#34C759',
+  warning: '#FFCC00'
+};

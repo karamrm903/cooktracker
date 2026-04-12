@@ -11,8 +11,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { SPACING, RADIUS, FONTS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 import { USER, PROFILE_SETTINGS } from '../data/placeholder';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch, useSelector } from 'react-redux';
+import { setAuthSession, setPersistedAccessToken } from '../store/slices/authSlice';
+import { authService } from '../services/auth.service';
+import { RootState } from '../store';
 
-const GROUPS = ['Account', 'Preferences', 'More'];
+const GROUPS = ['Account', 'Preferences', 'More'] as const;
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
@@ -20,10 +25,32 @@ export default function ProfileScreen() {
   const [shareMealNames, setShareMealNames] = useState(USER.shareMealNames ?? true);
   const [shareCalories, setShareCalories] = useState(USER.shareCalories ?? true);
   const [shareMacros, setShareMacros] = useState(USER.shareMacros ?? true);
-  const initials = USER.name
+  const { user } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch();
+
+  const displayName = user?.email ? user.email.split('@')[0] : USER.name;
+  const initials = displayName
     .split(' ')
-    .map((n) => n[0])
-    .join('');
+    .map((n: string) => n[0])
+    .join('').toUpperCase();
+
+  const handleLogout = async () => {
+    try {
+      // Requirement 1: Clear user storage (except onboarding)
+      const onboardingFlag = await AsyncStorage.getItem('hasCompletedOnboarding');
+      await AsyncStorage.clear();
+      if (onboardingFlag) {
+        await AsyncStorage.setItem('hasCompletedOnboarding', onboardingFlag);
+      }
+
+      // Requirement 2: Sign out from Supabase & clear Redux
+      await authService.signOut();
+      dispatch(setPersistedAccessToken(null));
+      dispatch(setAuthSession(null));
+    } catch (err) {
+      console.error("Logout error", err);
+    }
+  };
 
   return (
     <SafeAreaView
@@ -50,7 +77,7 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <Text style={[styles.profileName, { color: colors.text }]}>
-            {USER.name}
+            {displayName}
           </Text>
           <Text style={[styles.profileUsername, { color: colors.textMuted }]}>
             {USER.username}
@@ -273,6 +300,15 @@ export default function ProfileScreen() {
           })}
         </View>
 
+        {/* ── Sign Out ────────────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.signOutBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          activeOpacity={0.7}
+          onPress={handleLogout}
+        >
+          <Text style={[styles.signOutText, { color: colors.error }]}>Log Out</Text>
+        </TouchableOpacity>
+
         {/* ── Version ─────────────────────────────────────────────────── */}
         <Text style={[styles.version, { color: colors.textMuted }]}>
           CookTrack v1.0.0
@@ -409,6 +445,18 @@ const styles = StyleSheet.create({
   },
 
   // ── Version ───────────────────────────────────────────────────────
+  signOutBtn: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+  },
+  signOutText: {
+    fontSize: 16,
+    fontWeight: FONTS.semibold,
+  },
   version: {
     textAlign: 'center',
     fontSize: 12,
@@ -416,54 +464,54 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   // ── Meal Privacy ──────────────────────────────────────────────────
-privacySection: {
-  marginHorizontal: 24,
-  marginBottom: 28,
-  borderRadius: RADIUS.lg,
-  padding: 16,
-},
-privacyTitle: {
-  fontSize: 18,
-  fontWeight: FONTS.bold,
-  marginBottom: 14,
-},
-privacyLabel: {
-  fontSize: 13,
-  fontWeight: FONTS.medium,
-  marginBottom: 10,
-},
-privacyOptionsRow: {
-  flexDirection: 'row',
-  gap: 10,
-  marginBottom: 18,
-},
-privacyChip: {
-  flex: 1,
-  paddingVertical: 10,
-  borderRadius: 12,
-  alignItems: 'center',
-},
-privacyChipActive: {},
-privacyChipText: {
-  fontSize: 14,
-  fontWeight: FONTS.medium,
-},
-privacyChipTextActive: {
-  color: '#FFFFFF',
-},
-toggleRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  paddingVertical: 12,
-  borderTopWidth: StyleSheet.hairlineWidth,
-},
-toggleLabel: {
-  fontSize: 15,
-  fontWeight: FONTS.medium,
-},
-toggleValue: {
-  fontSize: 14,
-  fontWeight: FONTS.bold,
-},
+  privacySection: {
+    marginHorizontal: 24,
+    marginBottom: 28,
+    borderRadius: RADIUS.lg,
+    padding: 16,
+  },
+  privacyTitle: {
+    fontSize: 18,
+    fontWeight: FONTS.bold,
+    marginBottom: 14,
+  },
+  privacyLabel: {
+    fontSize: 13,
+    fontWeight: FONTS.medium,
+    marginBottom: 10,
+  },
+  privacyOptionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 18,
+  },
+  privacyChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  privacyChipActive: {},
+  privacyChipText: {
+    fontSize: 14,
+    fontWeight: FONTS.medium,
+  },
+  privacyChipTextActive: {
+    color: '#FFFFFF',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    fontWeight: FONTS.medium,
+  },
+  toggleValue: {
+    fontSize: 14,
+    fontWeight: FONTS.bold,
+  },
 });

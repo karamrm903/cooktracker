@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { setOnboardingPayload } from '../store/slices/authSlice';
 import {
   View,
   Text,
@@ -57,13 +59,13 @@ function calculateTargets(
   };
   const calories = Math.round(bmr * (activityMap[activity] ?? 1.375) + (goalMap[goal] ?? 0));
   let protein = Math.round(w * 1.8);
-let fat = Math.round(w * 0.8);
+  let fat = Math.round(w * 0.8);
 
-protein = Math.min(protein, 220);
-fat = Math.max(fat, 40);
+  protein = Math.min(protein, 220);
+  fat = Math.max(fat, 40);
 
-const carbCalories = calories - protein * 4 - fat * 9;
-const carbs = Math.max(0, Math.round(carbCalories / 4));
+  const carbCalories = calories - protein * 4 - fat * 9;
+  const carbs = Math.max(0, Math.round(carbCalories / 4));
   return { calories, protein, carbs, fat };
 }
 
@@ -78,17 +80,17 @@ function feetInchesToCm(ft: string, inches: string) {
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const GOALS = [
-  { key: 'lose',     emoji: '📉', label: 'Lose weight',     sub: 'Burn fat and feel lighter' },
-  { key: 'maintain', emoji: '⚖️',  label: 'Maintain weight', sub: 'Stay at your current weight' },
-  { key: 'muscle',   emoji: '💪', label: 'Gain muscle',     sub: 'Build strength and size' },
-  { key: 'healthy',  emoji: '🥗', label: 'Eat healthier',   sub: 'Better habits, better nutrition' },
+  { key: 'lose', emoji: '📉', label: 'Lose weight', sub: 'Burn fat and feel lighter' },
+  { key: 'maintain', emoji: '⚖️', label: 'Maintain weight', sub: 'Stay at your current weight' },
+  { key: 'muscle', emoji: '💪', label: 'Gain muscle', sub: 'Build strength and size' },
+  { key: 'healthy', emoji: '🥗', label: 'Eat healthier', sub: 'Better habits, better nutrition' },
 ];
 
 const ACTIVITIES = [
-  { key: 'sedentary', emoji: '🛋️', label: 'Sedentary',         sub: 'Mostly sitting, little exercise' },
-  { key: 'light',     emoji: '🚶', label: 'Lightly active',    sub: 'Light exercise 1–3 days/week' },
-  { key: 'moderate',  emoji: '🏃', label: 'Moderately active', sub: 'Exercise 3–5 days/week' },
-  { key: 'very',      emoji: '🏋️', label: 'Very active',       sub: 'Hard exercise 6–7 days/week' },
+  { key: 'sedentary', emoji: '🛋️', label: 'Sedentary', sub: 'Mostly sitting, little exercise' },
+  { key: 'light', emoji: '🚶', label: 'Lightly active', sub: 'Light exercise 1–3 days/week' },
+  { key: 'moderate', emoji: '🏃', label: 'Moderately active', sub: 'Exercise 3–5 days/week' },
+  { key: 'very', emoji: '🏋️', label: 'Very active', sub: 'Hard exercise 6–7 days/week' },
 ];
 
 const TOTAL_STEPS = 4;
@@ -96,49 +98,50 @@ const TOTAL_STEPS = 4;
 export default function UserSetupScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
+  const dispatch = useDispatch();
 
   const [step, setStep] = useState(1);
 
-  const [gender, setGender]     = useState<string | null>(null);
-  const [age, setAge]           = useState('');
+  const [gender, setGender] = useState<string | null>(null);
+  const [age, setAge] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>('metric');
   const [heightFt, setHeightFt] = useState('');
   const [heightIn, setHeightIn] = useState('');
   const [weightLbs, setWeightLbs] = useState('');
-  const [goal, setGoal]         = useState<string | null>(null);
+  const [goal, setGoal] = useState<string | null>(null);
   const [activity, setActivity] = useState<string | null>(null);
 
   const normalizedHeightCm =
-  unitSystem === 'metric'
-    ? heightCm
-    : String(feetInchesToCm(heightFt, heightIn));
+    unitSystem === 'metric'
+      ? heightCm
+      : String(feetInchesToCm(heightFt, heightIn));
 
-const normalizedWeightKg =
-  unitSystem === 'metric'
-    ? weightKg
-    : String(lbsToKg(weightLbs));
+  const normalizedWeightKg =
+    unitSystem === 'metric'
+      ? weightKg
+      : String(lbsToKg(weightLbs));
 
-const nutrition = calculateTargets(
-  gender ?? 'male',
-  age,
-  normalizedHeightCm,
-  normalizedWeightKg,
-  goal ?? 'maintain',
-  activity ?? 'moderate',
-);
+  const nutrition = calculateTargets(
+    gender ?? 'male',
+    age,
+    normalizedHeightCm,
+    normalizedWeightKg,
+    goal ?? 'maintain',
+    activity ?? 'moderate',
+  );
 
   function isComplete() {
     switch (step) {
       case 1:
-  return gender !== null &&
-    age !== '' &&
-    (
-      unitSystem === 'metric'
-        ? heightCm !== '' && weightKg !== ''
-        : heightFt !== '' && heightIn !== '' && weightLbs !== ''
-    );
+        return gender !== null &&
+          age !== '' &&
+          (
+            unitSystem === 'metric'
+              ? heightCm !== '' && weightKg !== ''
+              : heightFt !== '' && heightIn !== '' && weightLbs !== ''
+          );
       case 2: return goal !== null;
       case 3: return activity !== null;
       case 4: return true;
@@ -150,6 +153,20 @@ const nutrition = calculateTargets(
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
+      const payload = {
+        gender: gender ?? '',
+        age: parseInt(age) || null,
+        height_cm: Math.round(parseFloat(normalizedHeightCm)) || null,
+        weight_kg: Math.round(parseFloat(normalizedWeightKg)) || null,
+        goal: goal ?? '',
+        activity: activity ?? '',
+        calories: nutrition.calories,
+        protein: nutrition.protein,
+        carbs: nutrition.carbs,
+        fat: nutrition.fat,
+      };
+
+      dispatch(setOnboardingPayload(payload));
       navigation.navigate('AppleHealth');
     }
   }
@@ -160,9 +177,9 @@ const nutrition = calculateTargets(
   }
 
   const stepMeta: Record<number, { title: string; subtitle: string }> = {
-    1: { title: 'Basic info',         subtitle: 'Help us personalize your experience' },
-    2: { title: "What's your goal?",  subtitle: 'Choose what you want to achieve' },
-    3: { title: 'Activity level',     subtitle: 'How active are you in a typical week?' },
+    1: { title: 'Basic info', subtitle: 'Help us personalize your experience' },
+    2: { title: "What's your goal?", subtitle: 'Choose what you want to achieve' },
+    3: { title: 'Activity level', subtitle: 'How active are you in a typical week?' },
     4: { title: 'Your daily targets', subtitle: 'Calculated based on your profile' },
   };
 
@@ -226,118 +243,118 @@ const nutrition = calculateTargets(
                   maxLength={3}
                 />
               </View>
-<View style={styles.fieldGroup}>
-  <Text style={styles.label}>Units</Text>
-  <View style={styles.chipRow}>
-    <TouchableOpacity
-      style={[styles.chip, unitSystem === 'metric' && styles.chipActive]}
-      onPress={() => setUnitSystem('metric')}
-      activeOpacity={0.8}
-    >
-      <Text style={[styles.chipText, unitSystem === 'metric' && styles.chipTextActive]}>
-        Metric
-      </Text>
-    </TouchableOpacity>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Units</Text>
+                <View style={styles.chipRow}>
+                  <TouchableOpacity
+                    style={[styles.chip, unitSystem === 'metric' && styles.chipActive]}
+                    onPress={() => setUnitSystem('metric')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.chipText, unitSystem === 'metric' && styles.chipTextActive]}>
+                      Metric
+                    </Text>
+                  </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[styles.chip, unitSystem === 'imperial' && styles.chipActive]}
-      onPress={() => setUnitSystem('imperial')}
-      activeOpacity={0.8}
-    >
-      <Text style={[styles.chipText, unitSystem === 'imperial' && styles.chipTextActive]}>
-        Imperial
-      </Text>
-    </TouchableOpacity>
-  </View>
-</View>
+                  <TouchableOpacity
+                    style={[styles.chip, unitSystem === 'imperial' && styles.chipActive]}
+                    onPress={() => setUnitSystem('imperial')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.chipText, unitSystem === 'imperial' && styles.chipTextActive]}>
+                      Imperial
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               {unitSystem === 'metric' && (
-  <View style={styles.row}>
-    <View style={[styles.fieldGroup, { flex: 1 }]}>
-      <Text style={styles.label}>Height</Text>
-      <View style={styles.unitInput}>
-        <TextInput
-          style={styles.unitInputField}
-          placeholder="170"
-          placeholderTextColor={colors.placeholder}
-          value={heightCm}
-          onChangeText={setHeightCm}
-          keyboardType="number-pad"
-          maxLength={3}
-        />
-        <Text style={styles.unit}>cm</Text>
-      </View>
-    </View>
+                <View style={styles.row}>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.label}>Height</Text>
+                    <View style={styles.unitInput}>
+                      <TextInput
+                        style={styles.unitInputField}
+                        placeholder="170"
+                        placeholderTextColor={colors.placeholder}
+                        value={heightCm}
+                        onChangeText={setHeightCm}
+                        keyboardType="number-pad"
+                        maxLength={3}
+                      />
+                      <Text style={styles.unit}>cm</Text>
+                    </View>
+                  </View>
 
-    <View style={[styles.fieldGroup, { flex: 1 }]}>
-      <Text style={styles.label}>Weight</Text>
-      <View style={styles.unitInput}>
-        <TextInput
-          style={styles.unitInputField}
-          placeholder="70"
-          placeholderTextColor={colors.placeholder}
-          value={weightKg}
-          onChangeText={setWeightKg}
-          keyboardType="decimal-pad"
-          maxLength={5}
-        />
-        <Text style={styles.unit}>kg</Text>
-      </View>
-    </View>
-  </View>
-)}
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.label}>Weight</Text>
+                    <View style={styles.unitInput}>
+                      <TextInput
+                        style={styles.unitInputField}
+                        placeholder="70"
+                        placeholderTextColor={colors.placeholder}
+                        value={weightKg}
+                        onChangeText={setWeightKg}
+                        keyboardType="decimal-pad"
+                        maxLength={5}
+                      />
+                      <Text style={styles.unit}>kg</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
 
-{unitSystem === 'imperial' && (
-  <>
-    <View style={styles.row}>
-      <View style={[styles.fieldGroup, { flex: 1 }]}>
-        <Text style={styles.label}>Height</Text>
-        <View style={styles.row}>
-          <View style={[styles.unitInput, { flex: 1 }]}>
-            <TextInput
-              style={styles.unitInputField}
-              placeholder="5"
-              placeholderTextColor={colors.placeholder}
-              value={heightFt}
-              onChangeText={setHeightFt}
-              keyboardType="number-pad"
-              maxLength={1}
-            />
-            <Text style={styles.unit}>ft</Text>
-          </View>
+              {unitSystem === 'imperial' && (
+                <>
+                  <View style={styles.row}>
+                    <View style={[styles.fieldGroup, { flex: 1 }]}>
+                      <Text style={styles.label}>Height</Text>
+                      <View style={styles.row}>
+                        <View style={[styles.unitInput, { flex: 1 }]}>
+                          <TextInput
+                            style={styles.unitInputField}
+                            placeholder="5"
+                            placeholderTextColor={colors.placeholder}
+                            value={heightFt}
+                            onChangeText={setHeightFt}
+                            keyboardType="number-pad"
+                            maxLength={1}
+                          />
+                          <Text style={styles.unit}>ft</Text>
+                        </View>
 
-          <View style={[styles.unitInput, { flex: 1 }]}>
-            <TextInput
-              style={styles.unitInputField}
-              placeholder="11"
-              placeholderTextColor={colors.placeholder}
-              value={heightIn}
-              onChangeText={setHeightIn}
-              keyboardType="number-pad"
-              maxLength={2}
-            />
-            <Text style={styles.unit}>in</Text>
-          </View>
-        </View>
-      </View>
-    </View>
+                        <View style={[styles.unitInput, { flex: 1 }]}>
+                          <TextInput
+                            style={styles.unitInputField}
+                            placeholder="11"
+                            placeholderTextColor={colors.placeholder}
+                            value={heightIn}
+                            onChangeText={setHeightIn}
+                            keyboardType="number-pad"
+                            maxLength={2}
+                          />
+                          <Text style={styles.unit}>in</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
 
-    <View style={styles.fieldGroup}>
-      <Text style={styles.label}>Weight</Text>
-      <View style={styles.unitInput}>
-        <TextInput
-          style={styles.unitInputField}
-          placeholder="176"
-          placeholderTextColor={colors.placeholder}
-          value={weightLbs}
-          onChangeText={setWeightLbs}
-          keyboardType="decimal-pad"
-          maxLength={5}
-        />
-        <Text style={styles.unit}>lbs</Text>
-      </View>
-    </View>
-  </>
-)}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.label}>Weight</Text>
+                    <View style={styles.unitInput}>
+                      <TextInput
+                        style={styles.unitInputField}
+                        placeholder="176"
+                        placeholderTextColor={colors.placeholder}
+                        value={weightLbs}
+                        onChangeText={setWeightLbs}
+                        keyboardType="decimal-pad"
+                        maxLength={5}
+                      />
+                      <Text style={styles.unit}>lbs</Text>
+                    </View>
+                  </View>
+                </>
+              )}
             </View>
           )}
 

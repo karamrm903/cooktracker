@@ -1,4 +1,22 @@
-export const USER = {
+export interface UserType {
+  name: string;
+  username: string;
+  avatar: string | null;
+  goal: string;
+  dailyCalorieGoal: number;
+  currentStreak: number;
+  totalMealsLogged: number;
+  goalsMetThisMonth: number;
+  weight: string;
+  height: string;
+  age: number;
+  mealVisibility: string;
+  shareMealNames: boolean;
+  shareCalories: boolean;
+  shareMacros: boolean;
+}
+
+export const USER: UserType = {
   name: 'Alex Rivera',
   username: '@alexrivera',
   avatar: null,
@@ -11,12 +29,28 @@ export const USER = {
   height: "5'10\"",
   age: 28,
   mealVisibility: 'friends',
- shareMealNames: true,
- shareCalories: true,
- shareMacros: true,
+  shareMealNames: true,
+  shareCalories: true,
+  shareMacros: true,
 };
 
-export const TODAY_STATS = {
+export interface MacroTrack {
+  consumed: number;
+  goal: number;
+}
+
+export interface TodayStatsType {
+  caloriesConsumed: number;
+  caloriesGoal: number;
+  water: number;
+  waterGoal: number;
+  mealsLogged: number;
+  carbs: MacroTrack;
+  protein: MacroTrack;
+  fat: MacroTrack;
+}
+
+export const TODAY_STATS: TodayStatsType = {
   caloriesConsumed: 1340,
   caloriesGoal: 2000,
   water: 5,
@@ -80,7 +114,13 @@ export const WEEKLY_CALORIES = [
   { day: 'Sun', calories: 1340, goal: 2000 },
 ];
 
-export const EXPLORE_CATEGORIES = [
+export interface ExploreCategoryType {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
+export const EXPLORE_CATEGORIES: ExploreCategoryType[] = [
   { id: 'all', label: 'All', emoji: '✨' },
   { id: 'breakfast', label: 'Breakfast', emoji: '🌅' },
   { id: 'lunch', label: 'Lunch', emoji: '☀️' },
@@ -89,7 +129,26 @@ export const EXPLORE_CATEGORIES = [
   { id: 'dessert', label: 'Desserts', emoji: '🍰' },
 ];
 
-export const RECIPES = [
+export interface RecipeType {
+  id: string;
+  name: string;
+  category: string;
+  calories: number;
+  time: string;
+  difficulty: string;
+  rating: number;
+  reviews: number;
+  emoji: string;
+  color: string;
+  tags: string[];
+  macros: { carbs: number; protein: number; fat: number };
+  recipeId?: string;
+  savedDate?: string;
+  lastCooked?: string;
+  timesCooked?: number;
+}
+
+export const RECIPES: RecipeType[] = [
   {
     id: '1',
     name: 'Avocado Toast with Poached Egg',
@@ -204,7 +263,7 @@ export const RECIPES = [
   },
 ];
 
-export const SAVED_MEALS = [
+export const SAVED_MEALS: RecipeType[] = [
   {
     id: '1',
     name: 'Avocado Toast with Poached Egg',
@@ -279,7 +338,15 @@ export const SAVED_MEALS = [
   },
 ];
 
-export const PROFILE_SETTINGS = [
+export interface ProfileSettingType {
+  id: string;
+  label: string;
+  icon: any;
+  group: 'Account' | 'Preferences' | 'More';
+  danger?: boolean;
+}
+
+export const PROFILE_SETTINGS: ProfileSettingType[] = [
   { id: '1', label: 'Edit Profile', icon: 'person-outline', group: 'Account' },
   { id: '2', label: 'Dietary Preferences', icon: 'leaf-outline', group: 'Account' },
   { id: '3', label: 'Health Goals', icon: 'fitness-outline', group: 'Account' },
@@ -288,10 +355,16 @@ export const PROFILE_SETTINGS = [
   { id: '6', label: 'Privacy & Security', icon: 'shield-outline', group: 'Preferences' },
   { id: '7', label: 'Help & Support', icon: 'help-circle-outline', group: 'More' },
   { id: '8', label: 'Rate the App', icon: 'star-outline', group: 'More' },
-  { id: '9', label: 'Sign Out', icon: 'log-out-outline', group: 'More', danger: true },
 ];
 
-export const BADGES = [
+export interface BadgeType {
+  id: string;
+  label: string;
+  emoji: string;
+  earned: boolean;
+}
+
+export const BADGES: BadgeType[] = [
   { id: '1', label: '2-Week Streak', emoji: '🔥', earned: true },
   { id: '2', label: 'Protein Pro', emoji: '💪', earned: true },
   { id: '3', label: 'Hydration Hero', emoji: '💧', earned: false },

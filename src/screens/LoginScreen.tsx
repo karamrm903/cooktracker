@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { ActivityIndicator } from "react-native";
+import { useDispatch } from "react-redux";
+import { setPersistedAccessToken, setOnboardingStatus } from "../store/slices/authSlice";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin, statusCodes, isSuccessResponse } from '@react-native-google-signin/google-signin';
+import Constants from 'expo-constants';
+import { authService } from "../services/auth.service";
 import {
   View,
   Text,
@@ -8,11 +15,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme } from '../context/ThemeContext';
-import type { Colors } from '../context/ThemeContext';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../context/ThemeContext";
+import type { Colors } from "../context/ThemeContext";
+import CommonAlertModal, { CommonModalVariant } from "../components/CommonModal";
 
 type RootStackParamList = {
   Welcome: undefined;
@@ -22,26 +30,116 @@ type RootStackParamList = {
 };
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, "Login">;
 };
 
+// Configure Google Sign-In outside the component
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
+
 export default function LoginScreen({ navigation }: Props) {
+  const dispatch = useDispatch();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [alert, setAlert] = useState<{ visible: boolean; message: string; variant: CommonModalVariant; title?: string }>({
+    visible: false,
+    message: "",
+    variant: 'error',
+  });
 
-  function handleSignIn() {
-  navigation.replace('MainTabs');
-}
+  const [loading, setLoading] = useState(false);
+
+  async function onGoogleButtonPress() {
+    try {
+      setLoading(true);
+
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+
+      console.log("Google Sign In Response:", response);
+
+      if (isSuccessResponse(response)) {
+        const idToken = response.data.idToken;
+        if (idToken) {
+          const data = await authService.signInWithGoogleIdToken(idToken);
+
+          if (data.session?.access_token) {
+            await authService.persistToken(data.session.access_token);
+            dispatch(setPersistedAccessToken(data.session.access_token));
+
+            await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+            dispatch(setOnboardingStatus(true));
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+        return;
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setAlert({ visible: true, message: 'Google Play Services not available or outdated.', variant: 'error', title: 'Play Services Error' });
+      } else if (error.code === statusCodes.SIGN_IN_CANCELLED || error.message?.includes('CANCELED')) {
+        return; // User cancelled the login flow
+      } else {
+        console.error(error.message)
+        setAlert({ visible: true, message: `Google Sign In Failed: ${error.message}`, variant: 'error', title: 'Sign In Error' });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSignIn() {
+    if (!email || !password) {
+      setAlert((prev) => {
+        return {
+          ...prev,
+          visible: true,
+          title: "Missing Fields",
+          message: "Please enter your email and password",
+          variant: 'warning',
+        };
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.signIn({
+        email: email.trim(),
+        password,
+      });
+
+      const { data: { session } } = await authService.getSession();
+      if (session?.access_token) {
+        await authService.persistToken(session.access_token);
+        dispatch(setPersistedAccessToken(session.access_token));
+
+        await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+        dispatch(setOnboardingStatus(true));
+      }
+    } catch (error: any) {
+      setAlert({
+        visible: true,
+        title: "Sign In Failed",
+        message: error.message,
+        variant: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -49,14 +147,20 @@ export default function LoginScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {/* Back arrow */}
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in to continue tracking your meals</Text>
+            <Text style={styles.subtitle}>
+              Sign in to continue tracking your meals
+            </Text>
           </View>
 
           {/* Form */}
@@ -95,53 +199,75 @@ export default function LoginScreen({ navigation }: Props) {
                   activeOpacity={0.7}
                   style={styles.eyeBtn}
                 >
-                  <Text style={styles.eyeText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
+                  <Text style={styles.eyeText}>
+                    {passwordVisible ? "Hide" : "Show"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.forgotWrapper} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.forgotWrapper}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Sign In button */}
             <TouchableOpacity
-  style={styles.signInBtn}
-  activeOpacity={0.85}
-  onPress={handleSignIn}
->
-  <Text style={styles.signInBtnText}>Sign In</Text>
-</TouchableOpacity>
-            {/* Divider */}
+              style={[styles.signInBtn, loading && styles.signInBtnDisabled]}
+              activeOpacity={0.85}
+              onPress={handleSignIn}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.btnPrimaryText} />
+              ) : (
+                <Text style={styles.signInBtnText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>or</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Apple Sign In */}
-            <TouchableOpacity style={styles.socialBtn} activeOpacity={0.85}>
-              <Text style={styles.appleLogo}></Text>
-              <Text style={styles.socialBtnText}>Continue with Apple</Text>
-            </TouchableOpacity>
-
-            {/* Google Sign In */}
-            <TouchableOpacity style={[styles.socialBtn, styles.googleBtn]} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={[styles.socialBtn, styles.googleBtn, loading && styles.signInBtnDisabled]}
+              activeOpacity={0.85}
+              onPress={onGoogleButtonPress}
+              disabled={loading}
+            >
               <Text style={styles.googleLogo}>G</Text>
               <Text style={styles.googleBtnText}>Continue with Google</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Bottom sign up link */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Don't have an account?{' '}
-              <Text style={styles.footerLink} onPress={() => navigation.navigate('Onboarding')}>
+              Don't have an account?{" "}
+              <Text
+                style={styles.footerLink}
+                onPress={() => navigation.navigate("Onboarding")}
+              >
                 Sign Up
               </Text>
             </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.btnPrimaryText} />
+        </View>
+      )}
+      {alert.visible && (
+        <CommonAlertModal
+          visible={alert.visible}
+          title={alert.title || "Alert"}
+          message={alert.message}
+          variant={alert.variant}
+          onClose={() => setAlert({ ...alert, visible: false })}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -157,16 +283,15 @@ function makeStyles(colors: Colors) {
       paddingHorizontal: 24,
       paddingBottom: 32,
     },
-
     backBtn: {
       marginTop: 8,
       width: 40,
       height: 40,
       borderRadius: 999,
       backgroundColor: colors.backBtnBg,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.07,
       shadowRadius: 4,
@@ -177,7 +302,6 @@ function makeStyles(colors: Colors) {
       color: colors.text,
       lineHeight: 22,
     },
-
     header: {
       marginTop: 32,
       marginBottom: 36,
@@ -185,17 +309,16 @@ function makeStyles(colors: Colors) {
     },
     title: {
       fontSize: 32,
-      fontWeight: '800',
+      fontWeight: "800",
       color: colors.text,
       letterSpacing: -0.5,
     },
     subtitle: {
       fontSize: 15,
       color: colors.textMuted,
-      fontWeight: '400',
+      fontWeight: "400",
       lineHeight: 22,
     },
-
     form: {
       gap: 20,
     },
@@ -204,7 +327,7 @@ function makeStyles(colors: Colors) {
     },
     label: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
       letterSpacing: 0.2,
     },
@@ -215,19 +338,19 @@ function makeStyles(colors: Colors) {
       paddingVertical: 15,
       fontSize: 15,
       color: colors.text,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 1,
     },
     passwordWrapper: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: colors.inputBg,
       borderRadius: 14,
       paddingHorizontal: 16,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
@@ -244,41 +367,43 @@ function makeStyles(colors: Colors) {
     },
     eyeText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textMuted,
     },
     forgotWrapper: {
-      alignSelf: 'flex-end',
+      alignSelf: "flex-end",
     },
     forgotText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
-
     signInBtn: {
       backgroundColor: colors.btnPrimary,
       paddingVertical: 17,
       borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginTop: 4,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.18,
       shadowRadius: 12,
       elevation: 6,
     },
+    signInBtnDisabled: {
+      backgroundColor: colors.btnDisabled,
+      shadowOpacity: 0,
+    },
     signInBtnText: {
       fontSize: 17,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.btnPrimaryText,
       letterSpacing: 0.2,
     },
-
     divider: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 12,
       marginVertical: 4,
     },
@@ -290,33 +415,21 @@ function makeStyles(colors: Colors) {
     dividerText: {
       fontSize: 13,
       color: colors.textDisabled,
-      fontWeight: '500',
+      fontWeight: "500",
     },
-
     socialBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       gap: 10,
       backgroundColor: colors.appleBtn,
       paddingVertical: 15,
       borderRadius: 999,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.12,
       shadowRadius: 8,
       elevation: 3,
-    },
-    appleLogo: {
-      fontSize: 18,
-      color: colors.appleBtnText,
-      lineHeight: 22,
-    },
-    socialBtnText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.appleBtnText,
-      letterSpacing: 0.1,
     },
     googleBtn: {
       backgroundColor: colors.googleBtn,
@@ -324,29 +437,35 @@ function makeStyles(colors: Colors) {
     },
     googleLogo: {
       fontSize: 16,
-      fontWeight: '700',
-      color: '#4285F4',
+      fontWeight: "700",
+      color: "#4285F4",
     },
     googleBtnText: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.googleBtnText,
       letterSpacing: 0.1,
     },
-
     footer: {
-      marginTop: 'auto',
+      marginTop: "auto",
       paddingTop: 32,
-      alignItems: 'center',
+      alignItems: "center",
     },
     footerText: {
       fontSize: 14,
       color: colors.textMuted,
-      fontWeight: '400',
+      fontWeight: "400",
     },
     footerLink: {
       color: colors.text,
-      fontWeight: '700',
+      fontWeight: "700",
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 999,
     },
   });
 }

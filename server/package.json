@@ -6,8 +6,11 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.102.1",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
     "express": "^4.22.1",
+    "pg": "^8.20.0",
     "yt-dlp-exec": "^1.0.2"
   }
 }

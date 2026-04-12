@@ -1,6 +1,8 @@
 import 'dotenv/config';
 
 import express from 'express';
+import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
@@ -9,6 +11,7 @@ import path from 'path';
 
 const execFileAsync = promisify(execFile);
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 const FRAME_EVERY_SECONDS = 5;
@@ -327,9 +330,103 @@ app.post('/vision', async (req, res) => {
   }
 });
 
+// ── Auth & Profiles ────────────────────────────────────────────────────────
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+// Middleware to verify Supabase JWT
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+
+  req.user = user;
+  next();
+}
+
+app.post('/api/profile', requireAuth, async (req, res) => {
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'Server misconfiguration: missing service role key' });
+  }
+
+  const payload = req.body;
+  if (!payload) return res.status(400).json({ error: 'Missing request body' });
+
+  for (const k of ['gender', 'goal', 'activity']) {
+    if (!payload[k] || typeof payload[k] !== 'string') {
+       return res.status(400).json({ error: `Invalid or missing field: ${k}` });
+    }
+  }
+
+  const adminAuthClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+
+  try {
+    const { data, error } = await adminAuthClient
+      .from('users')
+      .upsert({
+        id: req.user.id,
+        gender: payload.gender,
+        age: parseInt(payload.age) || null,
+        height_cm: parseFloat(payload.height_cm) || null,
+        weight_kg: parseFloat(payload.weight_kg) || null,
+        goal: payload.goal,
+        activity_level: payload.activity,
+        calories: parseInt(payload.calories) || 0,
+        protein: parseInt(payload.protein) || 0,
+        carbs: parseInt(payload.carbs) || 0,
+        fat: parseInt(payload.fat) || 0,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, profile: data });
+  } catch (err) {
+    console.error('[profile POST] ✖', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/profile', requireAuth, async (req, res) => {
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
+
+  const adminAuthClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+
+  try {
+    const { data, error } = await adminAuthClient
+      .from('users')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // Allow "no rows" as null profile
+    res.json({ profile: data || null });
+  } catch (err) {
+    console.error('[profile GET] ✖', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT ?? 3001;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] Running on http://0.0.0.0:${PORT}`);
-  console.log('[server] Routes: GET /health | POST /metadata /ocr /transcript /frames /vision');
+  console.log('[server] Routes: GET /health | POST /metadata /ocr /transcript /frames /vision | POST/GET /api/profile');
 });

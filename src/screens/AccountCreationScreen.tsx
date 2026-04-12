@@ -1,4 +1,11 @@
 import React, { useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setOnboardingStatus, setPersistedAccessToken } from '../store/slices/authSlice';
+import { GoogleSignin, statusCodes, isSuccessResponse } from '@react-native-google-signin/google-signin';
+import { authService } from '../services/auth.service';
+import { profileService } from '../services/profile.service';
 import {
   View,
   Text,
@@ -13,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
+import CommonAlertModal, { CommonModalVariant } from "../components/CommonModal";
 
 type RootStackParamList = {
   AccountCreation: undefined;
@@ -23,15 +31,130 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AccountCreation'>;
 };
 
+// Configure Google Sign-In outside the component
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
+
 export default function AccountCreationScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
+  const dispatch = useDispatch();
+  const { onboardingPayload } = useSelector((state: any) => state.auth);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<{ visible: boolean; message: string; variant: CommonModalVariant; title?: string }>({
+    visible: false,
+    message: "",
+    variant: 'error',
+  });
+
+  async function onGoogleButtonPress() {
+    try {
+      setLoading(true);
+
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+
+      if (isSuccessResponse(response)) {
+        const idToken = response.data.idToken;
+        if (idToken) {
+          const data = await authService.signInWithGoogleIdToken(idToken);
+
+          if (data.session?.access_token) {
+            const sessionData = data;
+
+            // Now save profile to backend if onboarding payload exists
+            if (onboardingPayload && sessionData.session) {
+              try {
+                await profileService.updateProfile(sessionData.session, onboardingPayload);
+              } catch (apiErr) {
+                console.error("Failed to sync profile after Google Login:", apiErr);
+              }
+            }
+
+            await authService.persistToken(sessionData.session.access_token);
+            dispatch(setPersistedAccessToken(sessionData.session.access_token));
+
+            await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+            dispatch(setOnboardingStatus(true));
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+        return;
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setAlert({ visible: true, message: 'Google Play Services not available or outdated.', variant: 'error', title: 'Play Services Error' });
+      } else if (error.code === statusCodes.SIGN_IN_CANCELLED || error.message?.includes('CANCELED')) {
+        return; // User cancelled the login flow
+      } else {
+        setAlert({ visible: true, message: `Google Sign In Failed: ${error.message}`, variant: 'error', title: 'Sign In Error' });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const isReady = email.trim().length > 0 && password.length >= 6;
+
+  async function handleSignUp() {
+    if (!email.trim() || password.length < 6) {
+      setAlert({
+        visible: true,
+        message: 'Please enter a valid email and a password of at least 6 characters.',
+        variant: 'warning',
+        title: 'Missing Details'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authService.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      const { data: { session } } = await authService.getSession();
+
+      if (!session?.access_token) {
+        setLoading(false);
+        setAlert({
+          visible: true,
+          message: 'Confirm your email to finish signing up, then sign in.',
+          variant: 'info',
+          title: 'Check your email'
+        });
+        return;
+      }
+
+      if (onboardingPayload) {
+        await profileService.updateProfile(session, onboardingPayload);
+      }
+
+      await authService.persistToken(session.access_token);
+      dispatch(setPersistedAccessToken(session.access_token));
+
+      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+      dispatch(setOnboardingStatus(true));
+    } catch (err: any) {
+      console.error("Sign up/Sync error:", err);
+      setAlert({
+        visible: true,
+        message: err.message || 'Something went wrong saving your profile.',
+        variant: 'error',
+        title: 'Registration Error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -92,14 +215,18 @@ export default function AccountCreationScreen({ navigation }: Props) {
 
             {/* CTA */}
             <TouchableOpacity
-              style={[styles.primaryBtn, !isReady && styles.primaryBtnDisabled]}
-              onPress={() => navigation.navigate('MainTabs')}
-              disabled={!isReady}
+              style={[styles.primaryBtn, (!isReady || loading) && styles.primaryBtnDisabled]}
+              onPress={handleSignUp}
+              disabled={!isReady || loading}
               activeOpacity={0.85}
             >
-              <Text style={[styles.primaryBtnText, !isReady && styles.primaryBtnTextDisabled]}>
-                Start Cooking 🍳
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={colors.btnPrimaryText} />
+              ) : (
+                <Text style={[styles.primaryBtnText, !isReady && styles.primaryBtnTextDisabled]}>
+                  Start Cooking 🍳
+                </Text>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -109,20 +236,11 @@ export default function AccountCreationScreen({ navigation }: Props) {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Apple */}
-            <TouchableOpacity
-              style={styles.socialBtn}
-              onPress={() => navigation.navigate('MainTabs')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.appleLogo}></Text>
-              <Text style={styles.socialBtnText}>Continue with Apple</Text>
-            </TouchableOpacity>
-
             {/* Google */}
             <TouchableOpacity
-              style={[styles.socialBtn, styles.googleBtn]}
-              onPress={() => navigation.navigate('MainTabs')}
+              style={[styles.socialBtn, styles.googleBtn, loading && styles.primaryBtnDisabled]}
+              onPress={onGoogleButtonPress}
+              disabled={loading}
               activeOpacity={0.85}
             >
               <Text style={styles.googleLogo}>G</Text>
@@ -139,6 +257,22 @@ export default function AccountCreationScreen({ navigation }: Props) {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.btnPrimaryText} />
+        </View>
+      )}
+
+      {alert.visible && (
+        <CommonAlertModal
+          visible={alert.visible}
+          title={alert.title || "Alert"}
+          message={alert.message}
+          variant={alert.variant}
+          onClose={() => setAlert({ ...alert, visible: false })}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -265,5 +399,12 @@ function makeStyles(colors: Colors) {
       marginTop: 20,
     },
     termsLink: { color: colors.text, fontWeight: '600' },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 999,
+    },
   });
 }
