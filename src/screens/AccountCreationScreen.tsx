@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setOnboardingStatus, setPersistedAccessToken } from '../store/slices/authSlice';
+import { setOnboardingStatus, setPersistedAccessToken, setAuthSession } from '../store/slices/authSlice';
 import { GoogleSignin, statusCodes, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import { authService } from '../services/auth.service';
 import { profileService } from '../services/profile.service';
@@ -30,12 +30,6 @@ type RootStackParamList = {
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AccountCreation'>;
 };
-
-// Configure Google Sign-In outside the component
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-});
 
 export default function AccountCreationScreen({ navigation }: Props) {
   const { colors } = useTheme();
@@ -66,19 +60,17 @@ export default function AccountCreationScreen({ navigation }: Props) {
           const data = await authService.signInWithGoogleIdToken(idToken);
 
           if (data.session?.access_token) {
-            const sessionData = data;
-
-            // Now save profile to backend if onboarding payload exists
-            if (onboardingPayload && sessionData.session) {
+            if (onboardingPayload && data.session) {
               try {
-                await profileService.updateProfile(sessionData.session, onboardingPayload);
+                await profileService.updateProfile(data.session, onboardingPayload);
               } catch (apiErr) {
                 console.error("Failed to sync profile after Google Login:", apiErr);
               }
             }
 
-            await authService.persistToken(sessionData.session.access_token);
-            dispatch(setPersistedAccessToken(sessionData.session.access_token));
+            await authService.persistToken(data.session.access_token);
+            dispatch(setPersistedAccessToken(data.session.access_token));
+            dispatch(setAuthSession({ user: data.user, session: data.session }));
 
             await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
             dispatch(setOnboardingStatus(true));
@@ -140,6 +132,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
 
       await authService.persistToken(session.access_token);
       dispatch(setPersistedAccessToken(session.access_token));
+      dispatch(setAuthSession({ user: session.user, session }));
 
       await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
       dispatch(setOnboardingStatus(true));

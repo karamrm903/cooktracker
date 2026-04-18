@@ -13,7 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { USER, PROFILE_SETTINGS } from '../data/placeholder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch, useSelector } from 'react-redux';
-import { setAuthSession, setPersistedAccessToken } from '../store/slices/authSlice';
+import { setAuthSession, setPersistedAccessToken, setOnboardingStatus } from '../store/slices/authSlice';
 import { authService } from '../services/auth.service';
 import { RootState } from '../store';
 
@@ -36,17 +36,11 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
-      // Requirement 1: Clear user storage (except onboarding)
-      const onboardingFlag = await AsyncStorage.getItem('hasCompletedOnboarding');
       await AsyncStorage.clear();
-      if (onboardingFlag) {
-        await AsyncStorage.setItem('hasCompletedOnboarding', onboardingFlag);
-      }
-
-      // Requirement 2: Sign out from Supabase & clear Redux
       await authService.signOut();
       dispatch(setPersistedAccessToken(null));
       dispatch(setAuthSession(null));
+      dispatch(setOnboardingStatus(false));
     } catch (err) {
       console.error("Logout error", err);
     }

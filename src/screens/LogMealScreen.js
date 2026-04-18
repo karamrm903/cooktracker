@@ -6,11 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useMealLogs } from '../context/MealLogsContext';
+import CommonAlertModal from '../components/CommonModal';
 import { FONTS, RADIUS, SPACING } from '../constants/theme';
 
 export default function LogMealScreen({ navigation, route }) {
@@ -29,6 +31,8 @@ const addMealLog =
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [mealType, setMealType] = useState(defaultMealType);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
 
   const mealTypes = [
     { key: 'breakfast', label: 'Breakfast', emoji: '🍳' },
@@ -56,26 +60,17 @@ const addMealLog =
     return mealTypes.find(m => m.key === type)?.emoji ?? '🍽️';
   }
 
-  function handleSave() {
-    if (!name.trim()) return;
+  async function handleSave() {
+    if (!name.trim() || isSaving) return;
 
     const now = new Date();
-
     const meal = {
-      id: `meal_${Date.now()}`,
       name: name.trim(),
-
       calories: calories ? Number(calories) || 0 : calculatedCalories,
       protein: proteinNum,
       carbs: carbsNum,
       fat: fatNum,
-
-      macros: {
-        protein: proteinNum,
-        carbs: carbsNum,
-        fat: fatNum,
-      },
-
+      macros: { protein: proteinNum, carbs: carbsNum, fat: fatNum },
       mealType,
       meal: formatMealLabel(mealType),
       time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
@@ -85,8 +80,15 @@ const addMealLog =
       emoji: getMealEmoji(mealType),
     };
 
-    addMealLog(meal);
-    navigation.goBack();
+    setIsSaving(true);
+    try {
+      await addMealLog(meal);
+      navigation.goBack();
+    } catch (err) {
+      setErrorModal({ visible: true, message: err?.message || 'Failed to save meal. Please try again.' });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -267,13 +269,26 @@ const addMealLog =
       <View style={[styles.bottomBar, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <TouchableOpacity
           onPress={handleSave}
-          style={[styles.saveBtn, { backgroundColor: colors.text, opacity: name.trim() ? 1 : 0.5 }]}
+          style={[styles.saveBtn, { backgroundColor: colors.text, opacity: name.trim() && !isSaving ? 1 : 0.5 }]}
           activeOpacity={0.8}
-          disabled={!name.trim()}
+          disabled={!name.trim() || isSaving}
         >
-          <Text style={[styles.saveBtnText, { color: colors.background }]}>Save Meal</Text>
+          {isSaving ? (
+            <ActivityIndicator color={colors.background} size="small" />
+          ) : (
+            <Text style={[styles.saveBtnText, { color: colors.background }]}>Save Meal</Text>
+          )}
         </TouchableOpacity>
       </View>
+
+      <CommonAlertModal
+        visible={errorModal.visible}
+        title="Save Failed"
+        message={errorModal.message}
+        variant="error"
+        primaryText="Try Again"
+        onPrimary={() => setErrorModal({ visible: false, message: '' })}
+      />
     </SafeAreaView>
   );
 }

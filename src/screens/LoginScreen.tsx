@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { useDispatch } from "react-redux";
-import { setPersistedAccessToken, setOnboardingStatus } from "../store/slices/authSlice";
+import { setPersistedAccessToken, setOnboardingStatus, setAuthSession } from "../store/slices/authSlice";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin, statusCodes, isSuccessResponse } from '@react-native-google-signin/google-signin';
-import Constants from 'expo-constants';
 import { authService } from "../services/auth.service";
 import {
   View,
@@ -33,12 +32,6 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Login">;
 };
 
-// Configure Google Sign-In outside the component
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-});
-
 export default function LoginScreen({ navigation }: Props) {
   const dispatch = useDispatch();
   const { colors } = useTheme();
@@ -62,8 +55,6 @@ export default function LoginScreen({ navigation }: Props) {
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
 
-      console.log("Google Sign In Response:", response);
-
       if (isSuccessResponse(response)) {
         const idToken = response.data.idToken;
         if (idToken) {
@@ -72,6 +63,7 @@ export default function LoginScreen({ navigation }: Props) {
           if (data.session?.access_token) {
             await authService.persistToken(data.session.access_token);
             dispatch(setPersistedAccessToken(data.session.access_token));
+            dispatch(setAuthSession({ user: data.user, session: data.session }));
 
             await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
             dispatch(setOnboardingStatus(true));
@@ -110,15 +102,15 @@ export default function LoginScreen({ navigation }: Props) {
     }
     setLoading(true);
     try {
-      await authService.signIn({
+      const { user, session } = await authService.signIn({
         email: email.trim(),
         password,
       });
 
-      const { data: { session } } = await authService.getSession();
       if (session?.access_token) {
         await authService.persistToken(session.access_token);
         dispatch(setPersistedAccessToken(session.access_token));
+        dispatch(setAuthSession({ user, session }));
 
         await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
         dispatch(setOnboardingStatus(true));
@@ -147,13 +139,15 @@ export default function LoginScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {/* Back arrow */}
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.backArrow}>←</Text>
-          </TouchableOpacity>
+          {navigation.canGoBack() && (
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Header */}
           <View style={styles.header}>

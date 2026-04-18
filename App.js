@@ -2,6 +2,12 @@ import 'react-native-url-polyfill/auto';
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
+
 import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { supabase } from './src/lib/supabase';
@@ -100,6 +106,7 @@ function AuthStateWrapper({ children }) {
           await clearAuthAccessToken();
           dispatch(setPersistedAccessToken(null));
           dispatch(setAuthSession(null));
+          dispatch(setOnboardingStatus(false));
           return;
         }
 
@@ -216,7 +223,7 @@ function MainTabs() {
 // ── Navigation shell — conditonal routing ────────────────────────────
 function AppContent({ onRouteChange }) {
   const { isDark } = useTheme();
-  const { isHydrated, session, persistedAccessToken, hasCompletedOnboarding } = useSelector(
+  const { isHydrated, session, persistedAccessToken } = useSelector(
     (state) => state.auth
   );
 
@@ -232,7 +239,7 @@ function AppContent({ onRouteChange }) {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <NavigationContainer ref={navigationRef} onReady={onRouteChange} onStateChange={onRouteChange}>
+      <NavigationContainer key={canAccessMain ? 'main' : 'auth'} ref={navigationRef} onReady={onRouteChange} onStateChange={onRouteChange}>
         {canAccessMain ? (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="MainTabs" component={MainTabs} />
@@ -242,11 +249,6 @@ function AppContent({ onRouteChange }) {
             <Stack.Screen name="RecipeSummary" component={RecipeSummaryScreen} />
             <Stack.Screen name="LogMeal" component={LogMealScreen} />
             <Stack.Screen name="CookingMode" component={CookingModeScreen} />
-          </Stack.Navigator>
-        ) : hasCompletedOnboarding ? (
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="AccountCreation" component={AccountCreationScreen} />
           </Stack.Navigator>
         ) : (
           <Stack.Navigator screenOptions={{ headerShown: false }}>

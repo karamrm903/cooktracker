@@ -1,34 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { StackActions, useFocusEffect } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
+  Alert,
   Animated,
   LayoutAnimation,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
   UIManager,
-  Alert,
-} from 'react-native';
-import { StackActions, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { SPACING, RADIUS, FONTS } from '../constants/theme';
-import { useTheme } from '../context/ThemeContext';
-import { USER } from '../data/placeholder';
-import { useMealLogs } from '../context/MealLogsContext';
-import { useSavedMeals } from '../context/SavedMealsContext';
-import { ExpandedNutrition } from '../components/NutritionExpansion';
-import SaveModal from '../components/SaveModal';
-import { useSelector } from 'react-redux';
-import { CalorieRing } from '../components/CalorieRing';
-import CommonAlertModal from '../components/CommonModal';
-import { profileService } from '../services/profile.service';
-import { UserProfile, Meal } from '../types';
-import { RootState } from '../store';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useSelector } from "react-redux";
+import { CalorieRing } from "../components/CalorieRing";
+import CommonAlertModal from "../components/CommonModal";
+import { ExpandedNutrition } from "../components/NutritionExpansion";
+import SaveModal from "../components/SaveModal";
+import { FONTS, RADIUS, SPACING } from "../constants/theme";
+import { useMealLogs } from "../context/MealLogsContext";
+import { useSavedMeals } from "../context/SavedMealsContext";
+import { useTheme } from "../context/ThemeContext";
+import { profileService } from "../services/profile.service";
+import { RootState } from "../store";
+import { Meal, UserProfile } from "../types";
 
 type RootStackParamList = {
   Dashboard: undefined;
@@ -36,13 +35,19 @@ type RootStackParamList = {
   LogMeal: { defaultMealType: string };
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Dashboard"
+>;
 
 interface DashboardProps {
   navigation: NavigationProp;
 }
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -51,16 +56,38 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const { colors } = useTheme();
   const { isSaved, getSavedCategory, saveMeal, unsaveMeal } = useSavedMeals();
   const mealLogsContext = useMealLogs() as any;
-  const allMeals: Meal[] = mealLogsContext.allMeals || mealLogsContext.meals || [];
-  const removeMeal = mealLogsContext.removeMeal || (() => { });
+  const allMeals: Meal[] =
+    mealLogsContext.allMeals || mealLogsContext.meals || [];
+  const removeMeal = mealLogsContext.removeMeal || (() => {});
+  const updateMeal = mealLogsContext.updateMeal || (() => {});
+  const refreshMeals = mealLogsContext.refreshMeals || (() => {});
+  const isLoadingMeals: boolean = mealLogsContext.isLoadingMeals ?? false;
+  const isInitialLoad: boolean = mealLogsContext.isInitialLoad ?? true;
+  const showMealSkeleton = isLoadingMeals && isInitialLoad;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [importUrl, setImportUrl] = useState('');
+  const [importUrl, setImportUrl] = useState("");
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [errorAlert, setErrorAlert] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const [errorAlert, setErrorAlert] = useState<{
+    visible: boolean;
+    message: string;
+  }>({ visible: false, message: "" });
+  const [deleteModal, setDeleteModal] = useState<{
+    visible: boolean;
+    id: string;
+    name: string;
+  }>({ visible: false, id: "", name: "" });
   const { session, user } = useSelector((state: RootState) => state.auth);
+  const streak = useSelector((state: RootState) => state.meals.streak);
+
+  // Re-fetch meals silently whenever Dashboard comes into focus (e.g. returning from LogMeal)
+  useFocusEffect(
+    useCallback(() => {
+      refreshMeals();
+    }, [refreshMeals])
+  );
 
   useEffect(() => {
     async function fetchProfile() {
@@ -73,9 +100,11 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         setProfileData(profile);
       } catch (err: any) {
         console.error("Dashboard profile fetch error:", err);
-        setErrorAlert({ 
-          visible: true, 
-          message: err.message || "Couldn't load your profile goals. Displaying default values." 
+        setErrorAlert({
+          visible: true,
+          message:
+            err.message ||
+            "Couldn't load your profile goals. Displaying default values.",
         });
       } finally {
         setIsLoadingProfile(false);
@@ -84,14 +113,13 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
     fetchProfile();
   }, [session]);
 
-
   function handleImport() {
     const url = importUrl.trim();
     if (!url) return;
-    setImportUrl(''); // clear immediately so returning to Dashboard is clean
+    setImportUrl(""); // clear immediately so returning to Dashboard is clean
     // Reset the stack to [MainTabs, Analyzing] — removes any stale
     // RecipeSummary / CookingMode screens left from a previous analysis
-    navigation.dispatch(StackActions.push('Analyzing', { url }));
+    navigation.dispatch(StackActions.push("Analyzing", { url }));
   }
   const [modalMeal, setModalMeal] = useState<Meal | null>(null);
   const [toastText, setToastText] = useState<string | null>(null);
@@ -99,34 +127,51 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const skeletonAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    if (isLoadingProfile) {
+    if (isLoadingProfile || showMealSkeleton) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(skeletonAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-          Animated.timing(skeletonAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+          Animated.timing(skeletonAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(skeletonAnim, {
+            toValue: 0.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
         ])
       ).start();
     }
-  }, [isLoadingProfile]);
+  }, [isLoadingProfile, showMealSkeleton]);
 
-  // Use email prefix if available, otherwise just 'Chef'. 
-  const firstName = user?.email ? user.email.split('@')[0] : 'Chef';
+  // Use email prefix if available, otherwise just 'Chef'.
+  const firstName = user?.email ? user.email.split("@")[0] : "Chef";
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
   });
 
   const todayKey = new Date().toISOString().slice(0, 10);
 
   const todaysMeals = allMeals
-    .filter(meal => meal.dateKey === todayKey)
+    .filter((meal) => meal.dateKey === todayKey)
     .sort((a, b) => new Date(a.loggedAt) - new Date(b.loggedAt));
 
-  const totalCalories = todaysMeals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
-  const totalProtein = todaysMeals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
-  const totalCarbs = todaysMeals.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
+  const totalCalories = todaysMeals.reduce(
+    (sum, meal) => sum + (meal.calories || 0),
+    0
+  );
+  const totalProtein = todaysMeals.reduce(
+    (sum, meal) => sum + (meal.protein || 0),
+    0
+  );
+  const totalCarbs = todaysMeals.reduce(
+    (sum, meal) => sum + (meal.carbs || 0),
+    0
+  );
   const totalFat = todaysMeals.reduce((sum, meal) => sum + (meal.fat || 0), 0);
 
   const calorieGoal = profileData?.calories ?? 0;
@@ -138,26 +183,27 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const caloriesLeft = Math.max(calorieGoal - totalCalories, 0);
 
   const mealSections = [
-    { key: 'breakfast', label: 'Breakfast', emoji: '🍳' },
-    { key: 'lunch', label: 'Lunch', emoji: '🥗' },
-    { key: 'dinner', label: 'Dinner', emoji: '🍽️' },
-    { key: 'snack', label: 'Snacks', emoji: '🍪' },
-  ].map(section => {
-    const meals = todaysMeals.filter(meal => meal.mealType === section.key);
+    { key: "breakfast", label: "Breakfast", emoji: "🍳" },
+    { key: "lunch", label: "Lunch", emoji: "🥗" },
+    { key: "dinner", label: "Dinner", emoji: "🍽️" },
+    { key: "snack", label: "Snacks", emoji: "🍪" },
+  ].map((section) => {
+    const meals = todaysMeals.filter((meal) => meal.mealType === section.key);
 
     return {
       ...section,
-      meals: meals.length > 0
-        ? meals
-        : [
-          {
-            id: `pending_${section.key}`,
-            name: section.label,
-            pending: true,
-            mealType: section.key as any,
-            emoji: section.emoji,
-          } as Meal,
-        ],
+      meals:
+        meals.length > 0
+          ? meals
+          : [
+              {
+                id: `pending_${section.key}`,
+                name: section.label,
+                pending: true,
+                mealType: section.key as any,
+                emoji: section.emoji,
+              } as Meal,
+            ],
     };
   });
 
@@ -167,52 +213,76 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
     setToastText(text);
     toastAnim.setValue(0);
     Animated.sequence([
-      Animated.timing(toastAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.timing(toastAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
       Animated.delay(1600),
-      Animated.timing(toastAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+      }),
     ]).start(() => setToastText(null));
   }
 
-  function handleSave(category) {
+  function handleSave(category: string) {
     if (!modalMeal) return;
 
-    const idToSave = modalMeal.recipeId ?? modalMeal.id;
+    const mealType = category.toLowerCase() as Meal["mealType"];
+    const mealEmoji =
+      { breakfast: "🍳", lunch: "🥗", dinner: "🍽️", snack: "🍪" }[mealType] ??
+      modalMeal.emoji;
 
-    saveMeal(idToSave, category);
+    // Move meal to selected section
+    updateMeal(modalMeal.id, { mealType, meal: category, emoji: mealEmoji });
+
+    // Also bookmark the recipe if it has a source recipe
+    if (modalMeal.recipeId) {
+      saveMeal(modalMeal.recipeId, category);
+    }
 
     setModalMeal(null);
-    showToast(`Saved to ${category}`);
+    showToast(`Moved to ${category}`);
   }
+
   function handleRemove() {
     if (!modalMeal) return;
 
-    const idToRemove = modalMeal.recipeId ?? modalMeal.id;
-
-    unsaveMeal(idToRemove);
+    if (modalMeal.recipeId) {
+      unsaveMeal(modalMeal.recipeId);
+    }
 
     setModalMeal(null);
-    showToast('Removed from Saved');
+    showToast("Removed from Saved");
   }
 
   function handleToggle(id) {
     LayoutAnimation.configureNext({
       duration: 260,
-      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
       update: { type: LayoutAnimation.Types.easeInEaseOut },
-      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
     });
-    setExpandedId(prev => (prev === id ? null : id));
+    setExpandedId((prev) => (prev === id ? null : id));
   }
   function handleEditLoggedGrams(meal) {
-    if (!meal || meal.source !== 'recipe') return;
+    if (!meal || meal.source !== "recipe") return;
 
     Alert.prompt(
-      'Edit grams eaten',
-      'Enter the new grams eaten',
+      "Edit grams eaten",
+      "Enter the new grams eaten",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Save',
+          text: "Save",
           onPress: (value) => {
             const grams = Number(value);
             if (!grams || grams <= 0) return;
@@ -232,19 +302,25 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
             const carbs = Math.round((total.carbs ?? 0) * ratio);
             const fat = Math.round((total.fat ?? 0) * ratio);
 
-            Alert.alert(
-              'New nutrition',
-              `${grams} g\n${calories} kcal\nP ${protein}g · C ${carbs}g · F ${fat}g`
-            );
+            updateMeal(meal.id, {
+              calories,
+              protein,
+              carbs,
+              fat,
+              gramsEaten: grams,
+            });
           },
         },
       ],
-      'plain-text',
-      String(meal.gramsEaten ?? '')
+      "plain-text",
+      String(meal.gramsEaten ?? "")
     );
   }
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -252,22 +328,48 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
       >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <Text style={[styles.greeting, { color: colors.textMuted }]}>Welcome back,</Text>
+          <Text style={[styles.greeting, { color: colors.textMuted }]}>
+            Welcome back,
+          </Text>
           <Text style={[styles.name, { color: colors.text }]}>{firstName}</Text>
           <View style={styles.headerMeta}>
-            <Text style={[styles.dateText, { color: colors.textMuted }]}>{today}</Text>
-            <View style={[styles.streakChip, { backgroundColor: colors.surfaceAlt }]}>
-              <Text style={[styles.streakText, { color: colors.textSecondary }]}>
-                🔥 {USER.currentStreak} days
+            <Text style={[styles.dateText, { color: colors.textMuted }]}>
+              {today}
+            </Text>
+            <View
+              style={[
+                styles.streakChip,
+                { backgroundColor: colors.surfaceAlt },
+              ]}
+            >
+              <Text
+                style={[styles.streakText, { color: colors.textSecondary }]}
+              >
+                🔥 {Math.max(1, streak)} day
+                {Math.max(1, streak) === 1 ? "" : "s"}
               </Text>
             </View>
           </View>
         </View>
 
         {/* ── Import recipe card ────────────────────────────────────────── */}
-        <View style={[styles.importCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-          <View style={[styles.importIconBox, { backgroundColor: colors.surfaceAlt }]}>
-            <Ionicons name="link-outline" size={20} color={colors.textSecondary} />
+        <View
+          style={[
+            styles.importCard,
+            { borderColor: colors.border, backgroundColor: colors.surface },
+          ]}
+        >
+          <View
+            style={[
+              styles.importIconBox,
+              { backgroundColor: colors.surfaceAlt },
+            ]}
+          >
+            <Ionicons
+              name="link-outline"
+              size={20}
+              color={colors.textSecondary}
+            />
           </View>
           <TextInput
             style={[styles.importInput, { color: colors.text }]}
@@ -286,212 +388,340 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
               onPress={handleImport}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-forward" size={16} color={colors.background} />
+              <Ionicons
+                name="arrow-forward"
+                size={16}
+                color={colors.background}
+              />
             </TouchableOpacity>
           )}
         </View>
 
         {/* ── TODAY calories ────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Today</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            Today
+          </Text>
           <View style={styles.caloriesTopRow}>
             <View />
-            <Text style={[styles.caloriesLeftText, { color: colors.textMuted }]}>
-              {caloriesLeft.toLocaleString()} left
-            </Text>
-          </View>
-
-          <View style={{ alignItems: 'center', marginVertical: 20 }}>
-            {isLoadingProfile ? (
-              <View style={styles.skeletonRingContainer}>
-                <Animated.View style={[styles.skeletonRing, { opacity: skeletonAnim }]} />
-              </View>
-            ) : (
-              <CalorieRing
-                calories={totalCalories}
-                goal={calorieGoal}
-              />
+            {!showMealSkeleton && !isLoadingProfile && (
+              <Text
+                style={[styles.caloriesLeftText, { color: colors.textMuted }]}
+              >
+                {caloriesLeft.toLocaleString()} left
+              </Text>
             )}
           </View>
 
-          {hasNoMealsLogged && !isLoadingProfile && (
-            <TouchableOpacity 
-              style={[styles.emptyStateCard, { backgroundColor: colors.surfaceAlt }]}
-              onPress={() => navigation.navigate('LogMeal', { defaultMealType: 'breakfast' })}
+          <View style={{ alignItems: "center", marginVertical: 20 }}>
+            {isLoadingProfile || showMealSkeleton ? (
+              <View style={styles.skeletonRingContainer}>
+                <Animated.View
+                  style={[styles.skeletonRing, { opacity: skeletonAnim }]}
+                />
+              </View>
+            ) : (
+              <CalorieRing calories={totalCalories} goal={calorieGoal} />
+            )}
+          </View>
+
+          {hasNoMealsLogged && !isLoadingProfile && !showMealSkeleton && (
+            <TouchableOpacity
+              style={[
+                styles.emptyStateCard,
+                { backgroundColor: colors.surfaceAlt },
+              ]}
+              onPress={() =>
+                navigation.navigate("LogMeal", { defaultMealType: "breakfast" })
+              }
               activeOpacity={0.8}
             >
               <Text style={styles.emptyStateEmoji}>🚀</Text>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>Log your first meal</Text>
-                <Text style={[styles.emptyStateSub, { color: colors.textMuted }]}>Start tracking to hit your {calorieGoal} kcal goal.</Text>
+                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+                  Log your first meal
+                </Text>
+                <Text
+                  style={[styles.emptyStateSub, { color: colors.textMuted }]}
+                >
+                  Start tracking to hit your {calorieGoal} kcal goal.
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.textMuted}
+              />
             </TouchableOpacity>
           )}
         </View>
         {/* ── TODAY'S MEALS ─────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Today's Meals</Text>
-          <View style={[styles.mealsCard, { backgroundColor: colors.surface }]}>
-            {mealSections.map((section, sectionIndex) => (
-              <View key={section.key}>
-                {sectionIndex > 0 && (
-                  <View style={[styles.sectionSpacer, { backgroundColor: colors.background }]} />
-                )}
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            Today's Meals
+          </Text>
+          {showMealSkeleton ? (
+            <View
+              style={[
+                styles.mealsCard,
+                { backgroundColor: colors.surface, padding: 16, gap: 12 },
+              ]}
+            >
+              {[0, 1, 2].map((i) => (
+                <Animated.View
+                  key={i}
+                  style={[
+                    styles.mealSkeletonRow,
+                    {
+                      backgroundColor: colors.surfaceAlt,
+                      opacity: skeletonAnim,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          ) : (
+            <View
+              style={[styles.mealsCard, { backgroundColor: colors.surface }]}
+            >
+              {mealSections.map((section, sectionIndex) => (
+                <View key={section.key}>
+                  {sectionIndex > 0 && (
+                    <View
+                      style={[
+                        styles.sectionSpacer,
+                        { backgroundColor: colors.background },
+                      ]}
+                    />
+                  )}
 
-                <View style={styles.mealGroupHeader}>
-                  <Text style={styles.mealGroupEmoji}>{section.emoji}</Text>
-                  <Text style={[styles.greetingSubtitle, { color: colors.textMuted }]}>
-                    {caloriesLeft} kcal remaining today
-                  </Text>
-                  <Text style={[styles.mealGroupTitle, { color: colors.text }]}>{section.label}</Text>
-                </View>
+                  <View style={styles.mealGroupHeader}>
+                    <Text style={styles.mealGroupEmoji}>{section.emoji}</Text>
+                    <Text
+                      style={[
+                        styles.greetingSubtitle,
+                        { color: colors.textMuted },
+                      ]}
+                    >
+                      {caloriesLeft} kcal remaining today
+                    </Text>
+                    <Text
+                      style={[styles.mealGroupTitle, { color: colors.text }]}
+                    >
+                      {section.label}
+                    </Text>
+                  </View>
 
-                {section.meals.map((meal, index) => {
-                  const isExpanded = expandedId === meal.id;
+                  {section.meals.map((meal, index) => {
+                    const isExpanded = expandedId === meal.id;
 
-                  return (
-                    <React.Fragment key={meal.id}>
-                      {index > 0 && (
-                        <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-                      )}
-
-                      <TouchableOpacity
-                        style={styles.mealRow}
-                        activeOpacity={meal.pending ? 0.7 : 0.65}
-                        onPress={
-                          meal.pending
-                            ? () => navigation.navigate('LogMeal', { defaultMealType: meal.mealType })
-                            : () => {
-                              handleToggle(meal.id);
-
-                              if (meal.source === 'recipe' && meal.gramsEaten != null) {
-                                handleEditLoggedGrams(meal);
-                                setSelectedMeal(meal);
-                              }
-                            }
-                        }
-                      >
-                        <Text style={styles.mealEmoji}>{meal.emoji ?? section.emoji}</Text>
-
-                        <View style={styles.mealInfo}>
-                          {meal.pending ? (
-                            <Text style={[styles.mealNameMuted, { color: colors.textMuted }]}>
-                              Add {section.label}
-                            </Text>
-                          ) : (
-                            <>
-                              <Text style={[styles.mealName, { color: colors.text }]}>
-                                {meal.name}
-                              </Text>
-                              <Text style={[styles.mealMeta, { color: colors.textMuted }]}>
-                                {meal.meal} · {meal.time}
-                              </Text>
-                            </>
-                          )}
-                        </View>
-
-                        {!meal.pending && (
-                          <View style={styles.mealActions}>
-                            <TouchableOpacity
-                              onPress={() => setModalMeal(meal)}
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                              style={styles.bookmarkBtn}
-                            >
-                              <Ionicons
-                                name={isSaved(meal.id ?? meal.name) ? 'bookmark' : 'bookmark-outline'}
-                                size={17}
-                                color={isSaved(meal.id ?? meal.name) ? colors.text : colors.textMuted}
-                              />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              onPress={() =>
-                                Alert.alert(
-                                  'Remove meal',
-                                  `Remove "${meal.name}" from today?`,
-                                  [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    {
-                                      text: 'Remove',
-                                      style: 'destructive',
-                                      onPress: () => removeMeal(meal.id),
-                                    },
-                                  ]
-                                )
-                              }
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                              style={styles.bookmarkBtn}
-                            >
-                              <Ionicons
-                                name="trash-outline"
-                                size={17}
-                                color={colors.error}
-                              />
-                            </TouchableOpacity>
-                          </View>
+                    return (
+                      <React.Fragment key={meal.id}>
+                        {index > 0 && (
+                          <View
+                            style={[
+                              styles.hairline,
+                              { backgroundColor: colors.border },
+                            ]}
+                          />
                         )}
 
-                        {meal.pending ? (
-                          <Ionicons name="add-circle-outline" size={22} color={colors.textMuted} />
-                        ) : (
-                          <View style={styles.mealRight}>
-                            <Text style={[styles.mealCalories, { color: colors.textSecondary }]}>
-                              {meal.calories} kcal
-                            </Text>
-                            <Ionicons
-                              name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                              size={12}
-                              color={colors.textMuted}
-                              style={styles.chevron}
-                            />
-                          </View>
-                        )}
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.mealRow}
+                          activeOpacity={meal.pending ? 0.7 : 0.65}
+                          onPress={
+                            meal.pending
+                              ? () =>
+                                  navigation.navigate("LogMeal", {
+                                    defaultMealType: meal.mealType,
+                                  })
+                              : () => {
+                                  handleToggle(meal.id);
 
-                      {isExpanded && (meal.macros || meal.protein != null) && (
-                        <>
-                          {meal.gramsEaten != null && (
-                            <View
-                              style={{
-                                paddingHorizontal: 16,
-                                paddingTop: 10,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <Text style={{ color: colors.textMuted, fontSize: 13 }}>
-                                Portion eaten: {meal.gramsEaten} g
+                                  if (
+                                    meal.source === "recipe" &&
+                                    meal.gramsEaten != null
+                                  ) {
+                                    handleEditLoggedGrams(meal);
+                                    setSelectedMeal(meal);
+                                  }
+                                }
+                          }
+                        >
+                          <Text style={styles.mealEmoji}>
+                            {meal.emoji ?? section.emoji}
+                          </Text>
+
+                          <View style={styles.mealInfo}>
+                            {meal.pending ? (
+                              <Text
+                                style={[
+                                  styles.mealNameMuted,
+                                  { color: colors.textMuted },
+                                ]}
+                              >
+                                Add {section.label}
                               </Text>
-
-                              <TouchableOpacity onPress={() => handleEditLoggedGrams(meal)}>
-                                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>
-                                  Edit grams
+                            ) : (
+                              <>
+                                <Text
+                                  style={[
+                                    styles.mealName,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {meal.name}
                                 </Text>
+                                <Text
+                                  style={[
+                                    styles.mealMeta,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {meal.meal} · {meal.time}
+                                </Text>
+                              </>
+                            )}
+                          </View>
+
+                          {!meal.pending && (
+                            <View style={styles.mealActions}>
+                              <TouchableOpacity
+                                onPress={() => setModalMeal(meal)}
+                                hitSlop={{
+                                  top: 8,
+                                  bottom: 8,
+                                  left: 8,
+                                  right: 8,
+                                }}
+                                style={styles.bookmarkBtn}
+                              >
+                                <Ionicons
+                                  name={
+                                    isSaved(meal.id ?? meal.name)
+                                      ? "bookmark"
+                                      : "bookmark-outline"
+                                  }
+                                  size={17}
+                                  color={
+                                    isSaved(meal.id ?? meal.name)
+                                      ? colors.text
+                                      : colors.textMuted
+                                  }
+                                />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                onPress={() =>
+                                  setDeleteModal({
+                                    visible: true,
+                                    id: meal.id,
+                                    name: meal.name,
+                                  })
+                                }
+                                hitSlop={{
+                                  top: 8,
+                                  bottom: 8,
+                                  left: 8,
+                                  right: 8,
+                                }}
+                                style={styles.bookmarkBtn}
+                              >
+                                <Ionicons
+                                  name="trash-outline"
+                                  size={17}
+                                  color={colors.error}
+                                />
                               </TouchableOpacity>
                             </View>
                           )}
 
-                          <ExpandedNutrition
-                            item={{
-                              ...meal,
-                              macros: meal.macros ?? {
-                                protein: meal.protein ?? 0,
-                                carbs: meal.carbs ?? 0,
-                                fat: meal.fat ?? 0,
-                              },
-                            }}
-                            colors={colors}
-                          />
-                        </>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
+                          {meal.pending ? (
+                            <Ionicons
+                              name="add-circle-outline"
+                              size={22}
+                              color={colors.textMuted}
+                            />
+                          ) : (
+                            <View style={styles.mealRight}>
+                              <Text
+                                style={[
+                                  styles.mealCalories,
+                                  { color: colors.textSecondary },
+                                ]}
+                              >
+                                {meal.calories} kcal
+                              </Text>
+                              <Ionicons
+                                name={
+                                  isExpanded ? "chevron-up" : "chevron-down"
+                                }
+                                size={12}
+                                color={colors.textMuted}
+                                style={styles.chevron}
+                              />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+
+                        {isExpanded &&
+                          (meal.macros || meal.protein != null) && (
+                            <>
+                              {meal.gramsEaten != null && (
+                                <View
+                                  style={{
+                                    paddingHorizontal: 16,
+                                    paddingTop: 10,
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: colors.textMuted,
+                                      fontSize: 13,
+                                    }}
+                                  >
+                                    Portion eaten: {meal.gramsEaten} g
+                                  </Text>
+
+                                  <TouchableOpacity
+                                    onPress={() => handleEditLoggedGrams(meal)}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: colors.text,
+                                        fontSize: 13,
+                                        fontWeight: "600",
+                                      }}
+                                    >
+                                      Edit grams
+                                    </Text>
+                                  </TouchableOpacity>
+                                </View>
+                              )}
+
+                              <ExpandedNutrition
+                                item={{
+                                  ...meal,
+                                  macros: meal.macros ?? {
+                                    protein: meal.protein ?? 0,
+                                    carbs: meal.carbs ?? 0,
+                                    fat: meal.fat ?? 0,
+                                  },
+                                }}
+                                colors={colors}
+                              />
+                            </>
+                          )}
+                      </React.Fragment>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
       {/* ── Save modal ──────────────────────────────────────────────── */}
@@ -501,28 +731,54 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         onClose={() => setModalMeal(null)}
         onSave={handleSave}
         onRemove={handleRemove}
-        savedCategory={modalMeal ? getSavedCategory(modalMeal.recipeId ?? modalMeal.id) : null}
+        savedCategory={
+          modalMeal
+            ? getSavedCategory(modalMeal.recipeId ?? modalMeal.id)
+            : null
+        }
         colors={colors}
+        title="Move to…"
       />
 
       {/* ── Toast ───────────────────────────────────────────────────── */}
       {toastText && (
         <Animated.View
-          style={[styles.toast, { backgroundColor: colors.text, opacity: toastAnim }]}
+          style={[
+            styles.toast,
+            { backgroundColor: colors.text, opacity: toastAnim },
+          ]}
           pointerEvents="none"
         >
-          <Text style={[styles.toastText, { color: colors.background }]}>{toastText}</Text>
+          <Text style={[styles.toastText, { color: colors.background }]}>
+            {toastText}
+          </Text>
         </Animated.View>
       )}
 
-      {/* Error Alert Modal */}
+      {/* Delete confirmation */}
+      <CommonAlertModal
+        visible={deleteModal.visible}
+        title="Remove meal"
+        message={`Remove "${deleteModal.name}" from today?`}
+        variant="warning"
+        primaryText="Remove"
+        onPrimary={() => {
+          removeMeal(deleteModal.id);
+          setDeleteModal({ visible: false, id: "", name: "" });
+        }}
+        secondaryText="Cancel"
+        onSecondary={() => setDeleteModal({ visible: false, id: "", name: "" })}
+      />
+
+      {/* Profile load error */}
       {errorAlert.visible && (
         <CommonAlertModal
           visible={errorAlert.visible}
           title="Profile Load Failed"
           message={errorAlert.message}
           variant="warning"
-          onClose={() => setErrorAlert({ visible: false, message: '' })}
+          primaryText="Got it"
+          onPrimary={() => setErrorAlert({ visible: false, message: "" })}
         />
       )}
     </SafeAreaView>
@@ -542,8 +798,13 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
   },
   greeting: { fontSize: 14, fontWeight: FONTS.regular, marginBottom: 2 },
-  name: { fontSize: 28, fontWeight: FONTS.bold, letterSpacing: -0.5, marginBottom: 12 },
-  headerMeta: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  name: {
+    fontSize: 28,
+    fontWeight: FONTS.bold,
+    letterSpacing: -0.5,
+    marginBottom: 12,
+  },
+  headerMeta: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   dateText: { fontSize: 13, fontWeight: FONTS.regular },
   streakChip: {
     paddingHorizontal: 10,
@@ -559,33 +820,33 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     borderWidth: 1,
     borderRadius: RADIUS.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     paddingVertical: 10,
     gap: 12,
   },
   // Macro progress bar
   macroTrack: {
-    width: '80%',
+    width: "80%",
     height: 5,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     borderRadius: 999,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginTop: 6,
     marginBottom: 6,
   },
 
   macroFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 999,
   },
   importIconBox: {
     width: 40,
     height: 40,
     borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   importInput: {
     flex: 1,
@@ -597,8 +858,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // Sections
@@ -610,36 +871,45 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: FONTS.semibold,
     letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: 16,
   },
 
   // Calories hero
   caloriesTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
     marginBottom: 12,
   },
-  caloriesBig: { fontSize: 48, fontWeight: FONTS.bold, letterSpacing: -1, lineHeight: 52 },
+  caloriesBig: {
+    fontSize: 48,
+    fontWeight: FONTS.bold,
+    letterSpacing: -1,
+    lineHeight: 52,
+  },
   caloriesGoalText: { fontSize: 13, fontWeight: FONTS.regular, marginTop: 3 },
-  caloriesLeftText: { fontSize: 13, fontWeight: FONTS.regular, paddingBottom: 4 },
-  progressTrack: { height: 3, borderRadius: RADIUS.full, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: RADIUS.full },
+  caloriesLeftText: {
+    fontSize: 13,
+    fontWeight: FONTS.regular,
+    paddingBottom: 4,
+  },
+  progressTrack: { height: 3, borderRadius: RADIUS.full, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: RADIUS.full },
 
   // Macro summary
   macrosRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderTopWidth: 1,
     paddingTop: 16,
     marginTop: 16,
   },
   macroCell: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 10,
-    maxWidth: '33%',
+    maxWidth: "33%",
   },
   macroDividerV: { width: 1, marginVertical: 2 },
   macroValue: {
@@ -648,8 +918,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   macroLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginTop: 4,
   },
@@ -662,27 +932,27 @@ const styles = StyleSheet.create({
   macroLeft: { fontSize: 11, fontWeight: FONTS.regular, marginTop: 2 },
 
   // Meals list
-  mealsCard: { borderRadius: RADIUS.lg, overflow: 'hidden' },
+  mealsCard: { borderRadius: RADIUS.lg, overflow: "hidden" },
   mealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: SPACING.md,
     gap: 12,
   },
-  mealEmoji: { fontSize: 24, width: 32, textAlign: 'center' },
+  mealEmoji: { fontSize: 24, width: 32, textAlign: "center" },
   mealInfo: { flex: 1 },
   mealName: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 2 },
   mealNameMuted: { fontSize: 15, fontWeight: FONTS.medium },
   mealMeta: { fontSize: 12, fontWeight: FONTS.regular },
-  mealRight: { alignItems: 'flex-end', gap: 3 },
+  mealRight: { alignItems: "flex-end", gap: 3 },
   mealCalories: { fontSize: 13, fontWeight: FONTS.regular },
   chevron: { marginTop: 1 },
   hairline: { height: StyleSheet.hairlineWidth, marginLeft: 60 },
   bookmarkBtn: { padding: 2 },
   mealActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   sectionSpacer: {
@@ -690,8 +960,8 @@ const styles = StyleSheet.create({
   },
 
   mealGroupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: SPACING.md,
     paddingTop: 12,
@@ -709,9 +979,9 @@ const styles = StyleSheet.create({
 
   // Toast
   toast: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 28,
-    alignSelf: 'center',
+    alignSelf: "center",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: RADIUS.full,
@@ -725,27 +995,27 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 95,
     borderWidth: 14,
-    borderRightColor: '#FF7A18',
-    borderTopColor: '#FF7A18',
+    borderRightColor: "#FF7A18",
+    borderTopColor: "#FF7A18",
     opacity: 0.3,
   },
   skeletonRingContainer: {
     width: 200,
     height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   skeletonRing: {
     width: 180,
     height: 180,
     borderRadius: 90,
     borderWidth: 12,
-    borderColor: '#E1E1E1',
-    borderStyle: 'dashed',
+    borderColor: "#E1E1E1",
+    borderStyle: "dashed",
   },
   emptyStateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
     borderRadius: RADIUS.lg,
     gap: 14,
@@ -756,10 +1026,14 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 2,
   },
   emptyStateSub: {
     fontSize: 13,
+  },
+  mealSkeletonRow: {
+    height: 52,
+    borderRadius: RADIUS.md,
   },
 });

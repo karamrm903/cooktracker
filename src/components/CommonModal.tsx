@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from "../styles/colors";
+import { useTheme } from '../context/ThemeContext';
 
 export type CommonModalVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -10,7 +10,14 @@ export type CommonModalProps = {
   title: string;
   message: string;
   variant?: CommonModalVariant;
-  onClose: () => void;
+  // Primary action button
+  primaryText?: string;
+  onPrimary?: () => void;
+  // Optional secondary/cancel button
+  secondaryText?: string;
+  onSecondary?: () => void;
+  // Legacy compat — maps to onPrimary
+  onClose?: () => void;
 };
 
 const CommonAlertModal: React.FC<CommonModalProps> = ({
@@ -18,80 +25,95 @@ const CommonAlertModal: React.FC<CommonModalProps> = ({
   title,
   message,
   variant = 'info',
+  primaryText,
+  onPrimary,
+  secondaryText,
+  onSecondary,
   onClose,
 }) => {
+  const { colors } = useTheme();
   const scaleValue = useRef(new Animated.Value(0.9)).current;
   const opacityValue = useRef(new Animated.Value(0)).current;
+
+  const handlePrimary = onPrimary ?? onClose ?? (() => {});
+  const handleSecondary = onSecondary ?? onClose ?? (() => {});
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.timing(opacityValue, {
           toValue: 1,
-          duration: 250,
+          duration: 220,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.spring(scaleValue, {
           toValue: 1,
-          friction: 6,
+          friction: 7,
           tension: 60,
           useNativeDriver: true,
-        })
+        }),
       ]).start();
     } else {
       Animated.timing(opacityValue, {
         toValue: 0,
-        duration: 200,
+        duration: 180,
         useNativeDriver: true,
-      }).start(() => {
-        scaleValue.setValue(0.9);
-      });
+      }).start(() => scaleValue.setValue(0.9));
     }
   }, [visible]);
 
-  const getVariantStyles = () => {
+  const getVariant = () => {
     switch (variant) {
-      case 'error': return { icon: 'close-circle', color: colors.error };
-      case 'warning': return { icon: 'warning', color: colors.warning };
-      case 'success': return { icon: 'checkmark-circle', color: colors.success };
-      case 'info':
-      default: return { icon: 'information-circle', color: colors.btnPrimary };
+      case 'error':   return { icon: 'close-circle',        color: '#EF4444' };
+      case 'warning': return { icon: 'warning',             color: '#F59E0B' };
+      case 'success': return { icon: 'checkmark-circle',    color: '#22C55E' };
+      default:        return { icon: 'information-circle',  color: colors.text };
     }
   };
 
-  const { icon, color } = getVariantStyles();
+  const { icon, color } = getVariant();
 
   return (
-    <Modal
-      transparent={true}
-      animationType="none"
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal transparent animationType="none" visible={visible} onRequestClose={handleSecondary}>
       <View style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity: opacityValue }]} />
         <Animated.View
           style={[
-            styles.modalContainer,
-            {
-              opacity: opacityValue,
-              transform: [{ scale: scaleValue }]
-            }
+            styles.card,
+            { backgroundColor: colors.surface, opacity: opacityValue, transform: [{ scale: scaleValue }] },
           ]}
         >
-          <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon as any} size={36} color={color} />
+          <View style={[styles.iconWrap, { backgroundColor: color + '18' }]}>
+            <Ionicons name={icon as any} size={34} color={color} />
           </View>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: color }]}
-            onPress={onClose}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>Got it</Text>
-          </TouchableOpacity>
+
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.message, { color: colors.textMuted }]}>{message}</Text>
+
+          <View style={styles.buttons}>
+            {secondaryText && (
+              <TouchableOpacity
+                style={[styles.btn, styles.btnSecondary, { borderColor: colors.border }]}
+                onPress={handleSecondary}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.btnText, { color: colors.textSecondary }]}>{secondaryText}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.btn,
+                styles.btnPrimary,
+                { backgroundColor: color },
+                secondaryText ? styles.btnFlex : styles.btnFull,
+              ]}
+              onPress={handlePrimary}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.btnPrimaryText}>{primaryText ?? 'Got it'}</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -101,61 +123,73 @@ const CommonAlertModal: React.FC<CommonModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  modalContainer: {
+  card: {
     width: '85%',
     maxWidth: 340,
-    backgroundColor: colors.surface,
     borderRadius: 24,
-    alignItems: "center",
+    alignItems: 'center',
     padding: 28,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  iconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: colors.text || '#1C1C1E',
-    marginBottom: 12,
-    textAlign: "center",
-    letterSpacing: -0.5,
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 10,
+    textAlign: 'center',
+    letterSpacing: -0.4,
   },
   message: {
-    fontSize: 15,
-    color: colors.textMuted || '#8E8E93',
-    marginBottom: 32,
-    textAlign: "center",
-    lineHeight: 22,
+    fontSize: 14,
+    marginBottom: 28,
+    textAlign: 'center',
+    lineHeight: 21,
   },
-  button: {
+  buttons: {
     width: '100%',
-    paddingVertical: 16,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  btn: {
+    paddingVertical: 14,
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: {
-    color: colors.btnPrimaryText || '#FFFFFF',
-    fontSize: 17,
-    fontWeight: "700",
-    letterSpacing: 0.2,
+  btnFull: { flex: 1 },
+  btnFlex: { flex: 1 },
+  btnPrimary: {},
+  btnSecondary: {
+    borderWidth: 1,
+    flex: 1,
+  },
+  btnText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  btnPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
 });
 

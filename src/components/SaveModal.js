@@ -23,7 +23,7 @@ const SAVE_CATEGORIES = [
   { id: 'Snack',     label: 'Snack',     icon: 'cafe-outline'         },
 ];
 
-export default function SaveModal({ meal, visible, onClose, onSave, onRemove, savedCategory, colors }) {
+export default function SaveModal({ meal, visible, onClose, onSave, onRemove, savedCategory, colors, title }) {
   const [showing,         setShowing]         = useState(false);
   const [displayCategory, setDisplayCategory] = useState(null);
 
@@ -68,7 +68,7 @@ export default function SaveModal({ meal, visible, onClose, onSave, onRemove, sa
       >
         <View style={[sav.handle, { backgroundColor: colors.border }]} />
         <Text style={[sav.sheetTitle, { color: colors.textMuted }]}>
-          {alreadySaved ? 'Saved' : 'Save to…'}
+          {title ?? (alreadySaved ? 'Saved' : 'Save to…')}
         </Text>
 
         {SAVE_CATEGORIES.map((cat) => (
