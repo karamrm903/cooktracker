@@ -249,26 +249,36 @@ app.post('/frames', async (req, res) => {
 
 // ── Vision ────────────────────────────────────────────────────────────────────
 
-const VISION_PROMPT =
-  'You are analyzing sampled frames from a cooking video. Examine every image carefully.\n\n' +
-  'Return ONLY a JSON object — no markdown, no code block — with this exact shape:\n' +
-  '{\n' +
-  '  "ingredients": ["ingredient 1", "ingredient 2"],\n' +
-  '  "tools": ["pan", "spatula"],\n' +
-  '  "actions": ["searing steak", "chopping onions"],\n' +
-  '  "dishType": "most specific dish name visible",\n' +
-  '  "confidence": 0.85,\n' +
-  '  "frameDescriptions": ["one English sentence per frame in order"]\n' +
-  '}\n\n' +
-  'Rules:\n' +
-  '- Only list ingredients you can actually see — no guesses.\n' +
-  '- dishType: use the most specific name the evidence supports.\n' +
-  '- confidence: 0.0–1.0 based on how clearly cooking content is visible.\n' +
-  '- All text must be in English.';
+const LOCALE_TO_LANGUAGE = {
+  en: 'English', fr: 'French', es: 'Spanish', de: 'German',
+};
+
+function buildVisionPrompt(languageName) {
+  return (
+    'You are analyzing sampled frames from a cooking video. Examine every image carefully.\n\n' +
+    'Return ONLY a JSON object — no markdown, no code block — with this exact shape:\n' +
+    '{\n' +
+    '  "ingredients": ["ingredient 1", "ingredient 2"],\n' +
+    '  "tools": ["pan", "spatula"],\n' +
+    '  "actions": ["searing steak", "chopping onions"],\n' +
+    '  "dishType": "most specific dish name visible",\n' +
+    '  "confidence": 0.85,\n' +
+    `  "frameDescriptions": ["one sentence per frame in order"]\n` +
+    '}\n\n' +
+    'Rules:\n' +
+    '- Only list ingredients you can actually see — no guesses.\n' +
+    '- dishType: use the most specific name the evidence supports.\n' +
+    '- confidence: 0.0–1.0 based on how clearly cooking content is visible.\n' +
+    `- Respond entirely in ${languageName}. All extracted text must be in ${languageName}.`
+  );
+}
 
 app.post('/vision', async (req, res) => {
-  const { url } = req.body ?? {};
+  const { url, locale } = req.body ?? {};
   if (!url) return res.status(400).json({ error: 'Body must contain { url }' });
+
+  const languageName = LOCALE_TO_LANGUAGE[locale] ?? 'English';
+  const VISION_PROMPT = buildVisionPrompt(languageName);
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
@@ -354,6 +364,7 @@ app.post('/api/profile', requireAuth, async (req, res) => {
         protein: parseInt(payload.protein) || 0,
         carbs: parseInt(payload.carbs) || 0,
         fat: parseInt(payload.fat) || 0,
+        ...(payload.locale && { locale: payload.locale }),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' })
       .select()
@@ -363,6 +374,26 @@ app.post('/api/profile', requireAuth, async (req, res) => {
     res.json({ success: true, profile: data });
   } catch (err) {
     console.error('[profile POST] ✖', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/profile', requireAuth, async (req, res) => {
+  const { locale } = req.body ?? {};
+  if (!locale || typeof locale !== 'string') {
+    return res.status(400).json({ error: 'locale required' });
+  }
+
+  try {
+    const { error } = await adminClient
+      .from('users')
+      .update({ locale, updated_at: new Date().toISOString() })
+      .eq('id', req.user.id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[profile PATCH] ✖', err.message);
     res.status(500).json({ error: err.message });
   }
 });

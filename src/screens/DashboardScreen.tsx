@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { StackActions, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -53,6 +54,7 @@ if (
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function DashboardScreen({ navigation }: DashboardProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { isSaved, getSavedCategory, saveMeal, unsaveMeal } = useSavedMeals();
   const mealLogsContext = useMealLogs() as any;
@@ -102,9 +104,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         console.error("Dashboard profile fetch error:", err);
         setErrorAlert({
           visible: true,
-          message:
-            err.message ||
-            "Couldn't load your profile goals. Displaying default values.",
+          message: err.message || t('dashboard.profileLoadFailedMsg'),
         });
       } finally {
         setIsLoadingProfile(false);
@@ -183,22 +183,24 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const caloriesLeft = Math.max(calorieGoal - totalCalories, 0);
 
   const mealSections = [
-    { key: "breakfast", label: "Breakfast", emoji: "🍳" },
-    { key: "lunch", label: "Lunch", emoji: "🥗" },
-    { key: "dinner", label: "Dinner", emoji: "🍽️" },
-    { key: "snack", label: "Snacks", emoji: "🍪" },
+    { key: "breakfast", emoji: "🍳" },
+    { key: "lunch", emoji: "🥗" },
+    { key: "dinner", emoji: "🍽️" },
+    { key: "snack", emoji: "🍪" },
   ].map((section) => {
+    const label = t(`mealType.${section.key}`);
     const meals = todaysMeals.filter((meal) => meal.mealType === section.key);
 
     return {
       ...section,
+      label,
       meals:
         meals.length > 0
           ? meals
           : [
               {
                 id: `pending_${section.key}`,
-                name: section.label,
+                name: label,
                 pending: true,
                 mealType: section.key as any,
                 emoji: section.emoji,
@@ -244,7 +246,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
     }
 
     setModalMeal(null);
-    showToast(`Moved to ${category}`);
+    showToast(t('dashboard.movedTo', { category }));
   }
 
   function handleRemove() {
@@ -255,7 +257,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
     }
 
     setModalMeal(null);
-    showToast("Removed from Saved");
+    showToast(t('dashboard.removedFromSaved'));
   }
 
   function handleToggle(id) {
@@ -277,12 +279,12 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
     if (!meal || meal.source !== "recipe") return;
 
     Alert.prompt(
-      "Edit grams eaten",
-      "Enter the new grams eaten",
+      t('dashboard.editGrams'),
+      t('dashboard.editGrams'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Save",
+          text: t('common.save'),
           onPress: (value) => {
             const grams = Number(value);
             if (!grams || grams <= 0) return;
@@ -329,7 +331,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <View style={styles.header}>
           <Text style={[styles.greeting, { color: colors.textMuted }]}>
-            Welcome back,
+            {t('dashboard.welcomeBack')},
           </Text>
           <Text style={[styles.name, { color: colors.text }]}>{firstName}</Text>
           <View style={styles.headerMeta}>
@@ -373,7 +375,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
           </View>
           <TextInput
             style={[styles.importInput, { color: colors.text }]}
-            placeholder="Paste YouTube, TikTok or Instagram link…"
+            placeholder={t('dashboard.pasteLinkPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={importUrl}
             onChangeText={setImportUrl}
@@ -439,12 +441,12 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
               <Text style={styles.emptyStateEmoji}>🚀</Text>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  Log your first meal
+                  {t('dashboard.noMealsTitle')}
                 </Text>
                 <Text
                   style={[styles.emptyStateSub, { color: colors.textMuted }]}
                 >
-                  Start tracking to hit your {calorieGoal} kcal goal.
+                  {t('dashboard.noMealsSubtitle', { goal: calorieGoal })}
                 </Text>
               </View>
               <Ionicons
@@ -458,7 +460,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         {/* ── TODAY'S MEALS ─────────────────────────────────────────────── */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-            Today's Meals
+            {t('dashboard.todaysMeals')}
           </Text>
           {showMealSkeleton ? (
             <View
@@ -560,7 +562,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                                   { color: colors.textMuted },
                                 ]}
                               >
-                                Add {section.label}
+                                {t('dashboard.addMealSection', { label: section.label })}
                               </Text>
                             ) : (
                               <>
@@ -683,7 +685,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                                       fontSize: 13,
                                     }}
                                   >
-                                    Portion eaten: {meal.gramsEaten} g
+                                    {t('dashboard.portionEaten')}: {meal.gramsEaten} g
                                   </Text>
 
                                   <TouchableOpacity
@@ -696,7 +698,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                                         fontWeight: "600",
                                       }}
                                     >
-                                      Edit grams
+                                      {t('dashboard.editGrams')}
                                     </Text>
                                   </TouchableOpacity>
                                 </View>
@@ -758,10 +760,10 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
       {/* Delete confirmation */}
       <CommonAlertModal
         visible={deleteModal.visible}
-        title="Remove meal"
-        message={`Remove "${deleteModal.name}" from today?`}
+        title={t('dashboard.removeMeal')}
+        message={`${t('dashboard.removeFromToday')} "${deleteModal.name}"`}
         variant="warning"
-        primaryText="Remove"
+        primaryText={t('dashboard.removeMeal')}
         onPrimary={() => {
           removeMeal(deleteModal.id);
           setDeleteModal({ visible: false, id: "", name: "" });
@@ -774,10 +776,10 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
       {errorAlert.visible && (
         <CommonAlertModal
           visible={errorAlert.visible}
-          title="Profile Load Failed"
+          title={t('dashboard.profileLoadFailed')}
           message={errorAlert.message}
           variant="warning"
-          primaryText="Got it"
+          primaryText={t('common.ok')}
           onPrimary={() => setErrorAlert({ visible: false, message: "" })}
         />
       )}

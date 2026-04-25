@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -16,6 +17,7 @@ import CommonAlertModal from '../components/CommonModal';
 import { FONTS, RADIUS, SPACING } from '../constants/theme';
 
 export default function LogMealScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const mealLogsContext = useMealLogs() || {};
 const addMealLog =
@@ -35,10 +37,10 @@ const addMealLog =
   const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
 
   const mealTypes = [
-    { key: 'breakfast', label: 'Breakfast', emoji: '🍳' },
-    { key: 'lunch', label: 'Lunch', emoji: '🥗' },
-    { key: 'dinner', label: 'Dinner', emoji: '🍽️' },
-    { key: 'snack', label: 'Snack', emoji: '🍪' },
+    { key: 'breakfast', emoji: '🍳' },
+    { key: 'lunch', emoji: '🥗' },
+    { key: 'dinner', emoji: '🍽️' },
+    { key: 'snack', emoji: '🍪' },
   ];
 
   const proteinNum = Number(protein) || 0;
@@ -85,7 +87,7 @@ const addMealLog =
       await addMealLog(meal);
       navigation.goBack();
     } catch (err) {
-      setErrorModal({ visible: true, message: err?.message || 'Failed to save meal. Please try again.' });
+      setErrorModal({ visible: true, message: err?.message || t('logMeal.saveFailedMsg') });
     } finally {
       setIsSaving(false);
     }
@@ -102,7 +104,7 @@ const addMealLog =
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Log Meal</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('logMeal.headerTitle')}</Text>
 
         <View style={styles.headerBtn} />
       </View>
@@ -114,18 +116,16 @@ const addMealLog =
       >
         <View style={styles.hero}>
           <Text style={styles.heroEmoji}>{getMealEmoji(mealType)}</Text>
-          <Text style={[styles.heroTitle, { color: colors.text }]}>Add a meal</Text>
-          <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>
-            Enter the details and it will be added to Today’s Meals.
-          </Text>
+          <Text style={[styles.heroTitle, { color: colors.text }]}>{t('logMeal.heroTitle')}</Text>
+          <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>{t('logMeal.heroSubtitle')}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.textMuted }]}>Meal name</Text>
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t('logMeal.mealNameLabel')}</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="e.g. Chicken Rice Bowl"
+            placeholder={t('logMeal.mealNamePlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={[
               styles.input,
@@ -135,7 +135,7 @@ const addMealLog =
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.textMuted }]}>Meal type</Text>
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t('logMeal.mealTypeLabel')}</Text>
           <View style={styles.typeRow}>
             {mealTypes.map(type => {
               const active = mealType === type.key;
@@ -154,7 +154,7 @@ const addMealLog =
                 >
                   <Text style={styles.typeEmoji}>{type.emoji}</Text>
                   <Text style={{ color: active ? colors.background : colors.text }}>
-                    {type.label}
+                    {t(`mealType.${type.key}`)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -163,12 +163,12 @@ const addMealLog =
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.textMuted }]}>Calories</Text>
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t('logMeal.caloriesLabel')}</Text>
           <TextInput
             value={calories}
             onChangeText={setCalories}
             keyboardType="numeric"
-            placeholder="Leave blank to auto-calculate"
+            placeholder={t('logMeal.caloriesPlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={[
               styles.input,
@@ -177,14 +177,14 @@ const addMealLog =
           />
           <Text style={[styles.helperText, { color: colors.textMuted }]}>
             {calories
-              ? 'Manual calories entered'
-              : `Auto-calculated from macros: ${finalCaloriesPreview} kcal`}
+              ? t('logMeal.manualCalories')
+              : t('logMeal.autoCalculated', { amount: finalCaloriesPreview })}
           </Text>
         </View>
 
         <View style={styles.row}>
           <View style={styles.half}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Protein (g)</Text>
+            <Text style={[styles.label, { color: colors.textMuted }]}>{t('logMeal.proteinLabel')}</Text>
             <TextInput
               value={protein}
               onChangeText={setProtein}
@@ -199,7 +199,7 @@ const addMealLog =
           </View>
 
           <View style={styles.half}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Carbs (g)</Text>
+            <Text style={[styles.label, { color: colors.textMuted }]}>{t('logMeal.carbsLabel')}</Text>
             <TextInput
               value={carbs}
               onChangeText={setCarbs}
@@ -215,7 +215,7 @@ const addMealLog =
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.textMuted }]}>Fat (g)</Text>
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t('logMeal.fatLabel')}</Text>
           <TextInput
             value={fat}
             onChangeText={setFat}
@@ -230,7 +230,7 @@ const addMealLog =
         </View>
 
         <View style={[styles.previewCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.previewTitle, { color: colors.text }]}>Preview</Text>
+          <Text style={[styles.previewTitle, { color: colors.text }]}>{t('logMeal.preview')}</Text>
 
           <View style={styles.previewRow}>
             <Text style={[styles.previewMain, { color: colors.text }]}>
@@ -276,17 +276,17 @@ const addMealLog =
           {isSaving ? (
             <ActivityIndicator color={colors.background} size="small" />
           ) : (
-            <Text style={[styles.saveBtnText, { color: colors.background }]}>Save Meal</Text>
+            <Text style={[styles.saveBtnText, { color: colors.background }]}>{t('logMeal.saveMeal')}</Text>
           )}
         </TouchableOpacity>
       </View>
 
       <CommonAlertModal
         visible={errorModal.visible}
-        title="Save Failed"
+        title={t('logMeal.saveFailedTitle')}
         message={errorModal.message}
         variant="error"
-        primaryText="Try Again"
+        primaryText={t('logMeal.tryAgain')}
         onPrimary={() => setErrorModal({ visible: false, message: '' })}
       />
     </SafeAreaView>

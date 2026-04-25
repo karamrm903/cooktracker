@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
@@ -29,45 +30,22 @@ type Props = {
 const { width } = Dimensions.get('window');
 
 // Emoji backgrounds are intentional brand colors — kept the same in both modes
-const slides = [
-  {
-    emoji: '🎬',
-    emojiBg: '#FFF3E8',
-    title: 'Find a recipe video',
-    description:
-      'Browse TikTok, Instagram, or YouTube and copy the link of a food video you want to cook.',
-  },
-  {
-    emoji: '🔗',
-    emojiBg: '#EEF4FF',
-    title: 'Paste the video link',
-    description:
-      'Paste the link into the app and the AI will convert the video into a step-by-step recipe.',
-  },
-  {
-    emoji: '👨‍🍳',
-    emojiBg: '#EDFAF3',
-    title: 'Cook with guided steps',
-    description:
-      'Follow simple instructions with automatic timers and alerts.',
-  },
-  {
-    emoji: '📊',
-    emojiBg: '#FFF8E0',
-    title: 'See nutrition instantly',
-    description:
-      'The app calculates calories, protein, carbs, and fats based on ingredients and servings.',
-  },
+const SLIDE_EMOJIS = [
+  { emoji: '🎬', emojiBg: '#FFF3E8' },
+  { emoji: '🔗', emojiBg: '#EEF4FF' },
+  { emoji: '👨‍🍳', emojiBg: '#EDFAF3' },
+  { emoji: '📊', emojiBg: '#FFF8E0' },
 ];
 
 export default function OnboardingScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const isLast = activeIndex === slides.length - 1;
+  const isLast = activeIndex === SLIDE_EMOJIS.length - 1;
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -92,7 +70,7 @@ export default function OnboardingScreen({ navigation }: Props) {
           activeOpacity={0.6}
           style={styles.skipBtn}
         >
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -106,7 +84,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         scrollEventThrottle={16}
         style={styles.slider}
       >
-        {slides.map((slide, i) => (
+        {SLIDE_EMOJIS.map((slide, i) => (
           <View key={i} style={styles.slide}>
             {/* Illustration circle */}
             <View style={[styles.iconCircle, { backgroundColor: slide.emojiBg }]}>
@@ -115,11 +93,11 @@ export default function OnboardingScreen({ navigation }: Props) {
 
             {/* Step badge */}
             <View style={styles.stepBadge}>
-              <Text style={styles.stepText}>{i + 1} of {slides.length}</Text>
+              <Text style={styles.stepText}>{t('onboarding.stepOf', { current: i + 1, total: SLIDE_EMOJIS.length })}</Text>
             </View>
 
-            <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.description}>{slide.description}</Text>
+            <Text style={styles.title}>{t(`onboarding.slides.${i}.title`)}</Text>
+            <Text style={styles.description}>{t(`onboarding.slides.${i}.description`)}</Text>
           </View>
         ))}
       </ScrollView>
@@ -128,7 +106,7 @@ export default function OnboardingScreen({ navigation }: Props) {
       <View style={styles.bottom}>
         {/* Dots */}
         <View style={styles.dots}>
-          {slides.map((_, i) => (
+          {SLIDE_EMOJIS.map((_, i) => (
             <View
               key={i}
               style={[
@@ -146,14 +124,14 @@ export default function OnboardingScreen({ navigation }: Props) {
           activeOpacity={0.85}
         >
           <Text style={styles.btnText}>
-            {isLast ? 'Start Cooking' : 'Continue'}
+            {isLast ? t('onboarding.startCooking') : t('onboarding.continue')}
           </Text>
         </TouchableOpacity>
 
         {/* Back to Welcome */}
         {activeIndex === 0 && (
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('onboarding.back')}</Text>
           </TouchableOpacity>
         )}
       </View>

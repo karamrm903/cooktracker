@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { LANGUAGE_META } from '../i18n';
+import LanguagePickerModal from '../components/LanguagePickerModal';
 
 // ─── Assets ─────────────────────────────────────────────────────────────────
 const wowImage = require('../../assets/wow.png');
@@ -45,9 +49,12 @@ interface Props {
   onPressLanguage?: () => void;
 }
 
-export default function WelcomeScreen({ navigation, onPressLanguage }: Props) {
+export default function WelcomeScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const { language } = useLanguage();
   const styles = makeStyles(colors);
+  const [langPickerVisible, setLangPickerVisible] = useState(false);
 
   const player = useVideoPlayer(previewVideo, (p) => {
     p.loop = true;
@@ -61,11 +68,11 @@ export default function WelcomeScreen({ navigation, onPressLanguage }: Props) {
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.languagePill}
-          onPress={onPressLanguage}
+          onPress={() => setLangPickerVisible(true)}
           activeOpacity={0.7}
         >
-          <Text style={styles.flagEmoji}>🇺🇸</Text>
-          <Text style={styles.languageLabel}>EN</Text>
+          <Text style={styles.flagEmoji}>{LANGUAGE_META[language].flag}</Text>
+          <Text style={styles.languageLabel}>{language.toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
 
@@ -95,9 +102,7 @@ export default function WelcomeScreen({ navigation, onPressLanguage }: Props) {
         </View>
 
         {/* Headline */}
-        <Text style={styles.headline}>
-          {'Calorie tracking\nmade easy'}
-        </Text>
+        <Text style={styles.headline}>{t('welcome.headline')}</Text>
       </View>
 
       {/* Bottom actions */}
@@ -107,16 +112,21 @@ export default function WelcomeScreen({ navigation, onPressLanguage }: Props) {
           onPress={() => navigation.navigate('Onboarding')}
           activeOpacity={0.85}
         >
-          <Text style={styles.getStartedText}>Get Started</Text>
+          <Text style={styles.getStartedText}>{t('welcome.getStarted')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
           <Text style={styles.signInRow}>
-            Already have an account?{' '}
-            <Text style={styles.signInLink}>Sign In</Text>
+            {t('welcome.signInRow')}{' '}
+            <Text style={styles.signInLink}>{t('welcome.signInLink')}</Text>
           </Text>
         </TouchableOpacity>
       </View>
+
+      <LanguagePickerModal
+        visible={langPickerVisible}
+        onClose={() => setLangPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 }

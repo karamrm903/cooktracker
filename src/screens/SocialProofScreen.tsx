@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
@@ -22,6 +23,7 @@ const AVATARS = [
 ];
 
 export default function SocialProofScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
@@ -42,15 +44,13 @@ export default function SocialProofScreen({ navigation }: Props) {
           <Text style={styles.ratingStars}>⭐</Text>
           <Text style={styles.ratingNumber}>4.8</Text>
           <View style={styles.ratingDivider} />
-          <Text style={styles.ratingCount}>200K+ reviews</Text>
+          <Text style={styles.ratingCount}>{t('socialProof.ratingCount')}</Text>
         </View>
 
         {/* Title */}
         <View style={styles.header}>
-          <Text style={styles.title}>People are loving{'\n'}this app</Text>
-          <Text style={styles.subtitle}>
-            Built for people who love cooking but want a smarter way to follow recipes and track nutrition.
-          </Text>
+          <Text style={styles.title}>{t('socialProof.title')}</Text>
+          <Text style={styles.subtitle}>{t('socialProof.subtitle')}</Text>
         </View>
 
         {/* Avatars */}
@@ -67,7 +67,7 @@ export default function SocialProofScreen({ navigation }: Props) {
               <Text key={i} style={styles.starIcon}>⭐</Text>
             ))}
           </View>
-          <Text style={styles.ratingLabel}>Rated 4.8 out of 5</Text>
+          <Text style={styles.ratingLabel}>{t('socialProof.ratingLabel')}</Text>
         </View>
 
         {/* Review card */}
@@ -77,7 +77,7 @@ export default function SocialProofScreen({ navigation }: Props) {
               <Text style={[styles.reviewAvatarText, { color: '#E65100' }]}>AM</Text>
             </View>
             <View style={styles.reviewMeta}>
-              <Text style={styles.reviewName}>Alex M.</Text>
+              <Text style={styles.reviewName}>{t('socialProof.reviewerName')}</Text>
               <View style={styles.reviewStars}>
                 {[1,2,3,4,5].map((i) => (
                   <Text key={i} style={styles.reviewStar}>⭐</Text>
@@ -85,29 +85,27 @@ export default function SocialProofScreen({ navigation }: Props) {
               </View>
             </View>
             <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>Verified</Text>
+              <Text style={styles.verifiedText}>{t('socialProof.verified')}</Text>
             </View>
           </View>
-          <Text style={styles.reviewText}>
-            "I just paste a cooking video link and the app instantly gives me the recipe and nutrition breakdown. It's like having a personal nutritionist."
-          </Text>
+          <Text style={styles.reviewText}>{t('socialProof.reviewText')}</Text>
         </View>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>500K+</Text>
-            <Text style={styles.statLabel}>Users</Text>
+            <Text style={styles.statLabel}>{t('socialProof.statUsers')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>2M+</Text>
-            <Text style={styles.statLabel}>Recipes tracked</Text>
+            <Text style={styles.statLabel}>{t('socialProof.statRecipes')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>#1</Text>
-            <Text style={styles.statLabel}>Food tracker</Text>
+            <Text style={styles.statLabel}>{t('socialProof.statFoodTracker')}</Text>
           </View>
         </View>
 
@@ -120,7 +118,7 @@ export default function SocialProofScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('Subscription')}
           activeOpacity={0.85}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <Text style={styles.continueBtnText}>{t('socialProof.continue')}</Text>
         </TouchableOpacity>
       </View>
 

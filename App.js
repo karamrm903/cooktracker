@@ -1,61 +1,74 @@
-import 'react-native-url-polyfill/auto';
-import { enableScreens } from 'react-native-screens';
+import "react-native-url-polyfill/auto";
+import { enableScreens } from "react-native-screens";
 enableScreens();
 
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
 });
 
-import React, { useState, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { supabase } from './src/lib/supabase';
-import { Alert } from 'react-native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useCallback } from "react";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { supabase } from "./src/lib/supabase";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+} from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import { SavedMealsProvider } from './src/context/SavedMealsContext';
-import { MealLogsProvider } from './src/context/MealLogsContext';
+import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
+import { LanguageProvider, useLanguage } from "./src/context/LanguageContext";
+import { SavedMealsProvider } from "./src/context/SavedMealsContext";
+import { MealLogsProvider } from "./src/context/MealLogsContext";
+import "./src/i18n";
+import { profileService } from "./src/services/profile.service";
+import { SUPPORTED_LANGUAGES } from "./src/i18n";
 
-import { Provider, useDispatch, useSelector } from 'react-redux';
-import { store } from './src/store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Provider, useDispatch, useSelector } from "react-redux";
+import { store } from "./src/store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   setAuthSession,
   setOnboardingStatus,
   setHydrated,
   setPersistedAccessToken,
-} from './src/store/slices/authSlice';
-import { clearAuthAccessToken, readAuthAccessToken, saveAuthAccessToken } from './src/lib/authStorage';
+} from "./src/store/slices/authSlice";
+import {
+  clearAuthAccessToken,
+  readAuthAccessToken,
+  saveAuthAccessToken,
+} from "./src/lib/authStorage";
 
-import WelcomeScreen from './src/screens/WelcomeScreen';
-import OnboardingScreen from './src/screens/OnboardingScreen';
-import UserSetupScreen from './src/screens/UserSetupScreen';
-import AppleHealthScreen from './src/screens/AppleHealthScreen';
-import CalorieRolloverScreen from './src/screens/CalorieRolloverScreen';
-import ReferralScreen from './src/screens/ReferralScreen';
-import SocialProofScreen from './src/screens/SocialProofScreen';
-import SubscriptionScreen from './src/screens/SubscriptionScreen';
-import AccountCreationScreen from './src/screens/AccountCreationScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import ExploreScreen from './src/screens/ExploreScreen';
-import SavedMealsScreen from './src/screens/SavedMealsScreen';
-import FriendsScreen from './src/screens/FriendsScreen';
-import FriendDetailScreen from './src/screens/FriendDetailScreen';
-import CaloriesScreen from './src/screens/CaloriesScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-import PlanScreen from './src/screens/PlanScreen';
-import AnalyzingScreen from './src/screens/AnalyzingScreen';
-import RecipeSummaryScreen from './src/screens/RecipeSummaryScreen';
-import CookingModeScreen from './src/screens/CookingModeScreen';
-import LogMealScreen from './src/screens/LogMealScreen';
+import WelcomeScreen from "./src/screens/WelcomeScreen";
+import OnboardingScreen from "./src/screens/OnboardingScreen";
+import UserSetupScreen from "./src/screens/UserSetupScreen";
+import AppleHealthScreen from "./src/screens/AppleHealthScreen";
+import CalorieRolloverScreen from "./src/screens/CalorieRolloverScreen";
+import ReferralScreen from "./src/screens/ReferralScreen";
+import SocialProofScreen from "./src/screens/SocialProofScreen";
+import SubscriptionScreen from "./src/screens/SubscriptionScreen";
+import AccountCreationScreen from "./src/screens/AccountCreationScreen";
+import LoginScreen from "./src/screens/LoginScreen";
+import DashboardScreen from "./src/screens/DashboardScreen";
+import ExploreScreen from "./src/screens/ExploreScreen";
+import SavedMealsScreen from "./src/screens/SavedMealsScreen";
+import FriendsScreen from "./src/screens/FriendsScreen";
+import FriendDetailScreen from "./src/screens/FriendDetailScreen";
+import CaloriesScreen from "./src/screens/CaloriesScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import PlanScreen from "./src/screens/PlanScreen";
+import AnalyzingScreen from "./src/screens/AnalyzingScreen";
+import RecipeSummaryScreen from "./src/screens/RecipeSummaryScreen";
+import CookingModeScreen from "./src/screens/CookingModeScreen";
+import LogMealScreen from "./src/screens/LogMealScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -63,17 +76,22 @@ const navigationRef = createNavigationContainerRef();
 
 function AuthStateWrapper({ children }) {
   const dispatch = useDispatch();
+  const { setLanguage } = useLanguage();
 
   React.useEffect(() => {
     async function loadState() {
       try {
-        const onboardingComplete = await AsyncStorage.getItem('hasCompletedOnboarding');
-        if (onboardingComplete === 'true') {
+        const onboardingComplete = await AsyncStorage.getItem(
+          "hasCompletedOnboarding"
+        );
+        if (onboardingComplete === "true") {
           dispatch(setOnboardingStatus(true));
         }
 
         const storedToken = await readAuthAccessToken();
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         if (session?.access_token) {
           if (!storedToken) {
@@ -84,9 +102,11 @@ function AuthStateWrapper({ children }) {
             await saveAuthAccessToken(session.access_token);
             dispatch(setPersistedAccessToken(session.access_token));
             dispatch(setAuthSession({ user: session.user, session }));
+            syncLocaleFromProfile(session);
           } else {
             dispatch(setPersistedAccessToken(storedToken));
             dispatch(setAuthSession({ user: session.user, session }));
+            syncLocaleFromProfile(session);
           }
         } else {
           if (storedToken) {
@@ -102,7 +122,7 @@ function AuthStateWrapper({ children }) {
       }
 
       supabase.auth.onAuthStateChange(async (event, newSession) => {
-        if (event === 'SIGNED_OUT' || !newSession) {
+        if (event === "SIGNED_OUT" || !newSession) {
           await clearAuthAccessToken();
           dispatch(setPersistedAccessToken(null));
           dispatch(setAuthSession(null));
@@ -110,9 +130,11 @@ function AuthStateWrapper({ children }) {
           return;
         }
 
-        dispatch(setAuthSession({ user: newSession.user, session: newSession }));
+        dispatch(
+          setAuthSession({ user: newSession.user, session: newSession })
+        );
 
-        if (event === 'TOKEN_REFRESHED' && newSession.access_token) {
+        if (event === "TOKEN_REFRESHED" && newSession.access_token) {
           const existing = await readAuthAccessToken();
           if (existing) {
             await saveAuthAccessToken(newSession.access_token);
@@ -121,6 +143,18 @@ function AuthStateWrapper({ children }) {
         }
       });
     }
+    async function syncLocaleFromProfile(session) {
+      try {
+        const profile = await profileService.getProfile(session);
+        if (profile?.locale && SUPPORTED_LANGUAGES.includes(profile.locale)) {
+          await setLanguage(profile.locale);
+        }
+      } catch (err) {
+        // Non-critical — local language preference stays
+        console.warn("[AuthStateWrapper] locale sync failed:", err.message);
+      }
+    }
+
     loadState();
   }, []);
 
@@ -128,7 +162,14 @@ function AuthStateWrapper({ children }) {
 }
 
 // ── Screens where the theme toggle is visible ──────────────────────────────────
-const TOGGLE_ALLOWED = new Set(['Welcome', 'Dashboard', 'Explore', 'Friends', 'Calories', 'Profile']);
+const TOGGLE_ALLOWED = new Set([
+  "Welcome",
+  "Dashboard",
+  "Explore",
+  "Friends",
+  "Calories",
+  "Profile",
+]);
 
 // ── Theme toggle overlay — rendered OUTSIDE AppContent so LayoutAnimation
 //    calls inside screens never affect its position ────────────────────────────
@@ -146,13 +187,17 @@ function FloatingThemeToggle({ routeName }) {
           {
             top: insets.top + 8,
             backgroundColor: colors.surface,
-            borderColor: isDark ? 'rgba(255,255,255,0.14)' : colors.border,
+            borderColor: isDark ? "rgba(255,255,255,0.14)" : colors.border,
           },
         ]}
         onPress={toggleTheme}
         activeOpacity={0.7}
       >
-        <Ionicons name={isDark ? 'sunny' : 'moon'} size={15} color={colors.text} />
+        <Ionicons
+          name={isDark ? "sunny" : "moon"}
+          size={15}
+          color={colors.text}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -160,19 +205,19 @@ function FloatingThemeToggle({ routeName }) {
 
 const ftt = StyleSheet.create({
   btn: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
   },
 });
@@ -198,14 +243,14 @@ function MainTabs() {
         },
         tabBarActiveTintColor: colors.tabActive,
         tabBarInactiveTintColor: colors.tabInactive,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         tabBarIcon: ({ focused, color }) => {
           const icons = {
-            Dashboard: focused ? 'home' : 'home-outline',
-            Explore: focused ? 'compass' : 'compass-outline',
-            Friends: focused ? 'people' : 'people-outline',
-            Calories: focused ? 'flame' : 'flame-outline',
-            Profile: focused ? 'person' : 'person-outline',
+            Dashboard: focused ? "home" : "home-outline",
+            Explore: focused ? "compass" : "compass-outline",
+            Friends: focused ? "people" : "people-outline",
+            Calories: focused ? "flame" : "flame-outline",
+            Profile: focused ? "person" : "person-outline",
           };
           return <Ionicons name={icons[route.name]} size={22} color={color} />;
         },
@@ -233,20 +278,30 @@ function AppContent({ onRouteChange }) {
     persistedAccessToken === session.access_token;
 
   if (!isHydrated) {
-    return <View style={{ flex: 1, backgroundColor: isDark ? '#000' : '#fff' }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: isDark ? "#000" : "#fff" }} />
+    );
   }
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <NavigationContainer key={canAccessMain ? 'main' : 'auth'} ref={navigationRef} onReady={onRouteChange} onStateChange={onRouteChange}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <NavigationContainer
+        key={canAccessMain ? "main" : "auth"}
+        ref={navigationRef}
+        onReady={onRouteChange}
+        onStateChange={onRouteChange}
+      >
         {canAccessMain ? (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="MainTabs" component={MainTabs} />
             <Stack.Screen name="FriendDetail" component={FriendDetailScreen} />
             <Stack.Screen name="Plan" component={PlanScreen} />
             <Stack.Screen name="Analyzing" component={AnalyzingScreen} />
-            <Stack.Screen name="RecipeSummary" component={RecipeSummaryScreen} />
+            <Stack.Screen
+              name="RecipeSummary"
+              component={RecipeSummaryScreen}
+            />
             <Stack.Screen name="LogMeal" component={LogMealScreen} />
             <Stack.Screen name="CookingMode" component={CookingModeScreen} />
           </Stack.Navigator>
@@ -256,11 +311,17 @@ function AppContent({ onRouteChange }) {
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="UserSetup" component={UserSetupScreen} />
             <Stack.Screen name="AppleHealth" component={AppleHealthScreen} />
-            <Stack.Screen name="CalorieRollover" component={CalorieRolloverScreen} />
+            <Stack.Screen
+              name="CalorieRollover"
+              component={CalorieRolloverScreen}
+            />
             <Stack.Screen name="Referral" component={ReferralScreen} />
             <Stack.Screen name="SocialProof" component={SocialProofScreen} />
             <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-            <Stack.Screen name="AccountCreation" component={AccountCreationScreen} />
+            <Stack.Screen
+              name="AccountCreation"
+              component={AccountCreationScreen}
+            />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="MainTabs" component={MainTabs} />
           </Stack.Navigator>
@@ -272,8 +333,7 @@ function AppContent({ onRouteChange }) {
 
 // ── Root — routeName lives here so FloatingThemeToggle is a true sibling ──────
 export default function App() {
-
-  const [routeName, setRouteName] = useState('Welcome');
+  const [routeName, setRouteName] = useState("Welcome");
 
   const onRouteChange = useCallback(() => {
     const current = navigationRef.getCurrentRoute()?.name;
@@ -284,14 +344,16 @@ export default function App() {
     <Provider store={store}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <SavedMealsProvider>
-            <MealLogsProvider>
-              <AuthStateWrapper>
-                <AppContent onRouteChange={onRouteChange} />
-                <FloatingThemeToggle routeName={routeName} />
-              </AuthStateWrapper>
-            </MealLogsProvider>
-          </SavedMealsProvider>
+          <LanguageProvider>
+            <SavedMealsProvider>
+              <MealLogsProvider>
+                <AuthStateWrapper>
+                  <AppContent onRouteChange={onRouteChange} />
+                  <FloatingThemeToggle routeName={routeName} />
+                </AuthStateWrapper>
+              </MealLogsProvider>
+            </SavedMealsProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </Provider>

@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { fetchFramesFromServer } from "../services/frameServer";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { FONTS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { analyzeVideo, PIPELINE_STAGES } from '../services/videoAnalyzer';
 import { saveRecipe } from '../services/recipeService';
 const FOOD_EMOJIS = ['🍳', '🍰', '🥩', '🍗', '🍣', '🍔', '🍕', '🍜', '🥗', '🍪'];
@@ -15,6 +17,8 @@ const FOOD_EMOJIS = ['🍳', '🍰', '🥩', '🍗', '🍣', '🍔', '🍕', '�
 let globalRequestId = 0;
 
 export default function AnalyzingScreen({ navigation, route }) {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const { url } = route.params ?? {};
   const { colors } = useTheme();
   const [phase,     setPhase]     = useState(-1); // index of currently processing step
@@ -93,7 +97,7 @@ useEffect(() => {
       }
     }
 
-    analyzeVideo(url, onProgress)
+    analyzeVideo(url, onProgress, language)
       .then(async recipe => {
         if (cancelled) return;
         if (myRequestId !== globalRequestId) {
@@ -113,7 +117,7 @@ useEffect(() => {
       .catch(err => {
         if (cancelled) return;
         console.log('[AnalyzingScreen] analysis failed:', err?.message ?? err);
-        setErrorMsg("Couldn't analyze this video. Please try another one.");
+        setErrorMsg(t('analyzing.errorMsg'));
       });
 
     return () => { cancelled = true; };
@@ -129,10 +133,10 @@ useEffect(() => {
         </Animated.Text>
 
         <Text style={[s.title, { color: colors.text }]}>
-          {errorMsg ? 'Analysis failed' : 'Analyzing your video'}
+          {errorMsg ? t('analyzing.errorTitle') : t('analyzing.title')}
         </Text>
         <Text style={[s.sub, { color: errorMsg ? colors.error : colors.textMuted }]}>
-          {errorMsg ?? 'This takes just a moment…'}
+          {errorMsg ?? t('analyzing.subtitle')}
         </Text>
 
         {/* Step rows — hidden on error */}

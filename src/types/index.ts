@@ -10,6 +10,7 @@ export interface UserProfile {
   protein: number;
   carbs: number;
   fat: number;
+  locale?: string;
   updated_at?: string;
 }
 

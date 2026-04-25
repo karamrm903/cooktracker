@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -9,26 +10,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
 import { SPACING, RADIUS, FONTS } from '../constants/theme';
 import { C_PROTEIN, C_CARBS, C_FAT } from '../components/NutritionExpansion';
 import { useTheme } from '../context/ThemeContext';
-import { TODAY_STATS } from '../data/placeholder';
 import { fetchAllRecipes } from '../services/recipeService';
-
-// ── Daily targets from user's existing goals ──────────────────────────────────
-const TARGETS = {
-  calories: TODAY_STATS.caloriesGoal,
-  protein:  TODAY_STATS.protein.goal,
-  carbs:    TODAY_STATS.carbs.goal,
-  fat:      TODAY_STATS.fat.goal,
-};
 
 // ── Slot definitions with calorie splits and static fallback options ───────────
 // Fallbacks are used when the DB has fewer than 3 matching recipes for a slot.
 const MEAL_SLOTS = [
   {
     id: 'breakfast',
-    label: 'Breakfast',
+    labelKey: 'breakfast',
     icon: '🌅',
     split: 0.25,
     fallbacks: [
@@ -39,7 +32,7 @@ const MEAL_SLOTS = [
   },
   {
     id: 'lunch',
-    label: 'Lunch',
+    labelKey: 'lunch',
     icon: '☀️',
     split: 0.35,
     fallbacks: [
@@ -50,7 +43,7 @@ const MEAL_SLOTS = [
   },
   {
     id: 'dinner',
-    label: 'Dinner',
+    labelKey: 'dinner',
     icon: '🌙',
     split: 0.30,
     fallbacks: [
@@ -61,7 +54,7 @@ const MEAL_SLOTS = [
   },
   {
     id: 'snack',
-    label: 'Snack',
+    labelKey: 'snack',
     icon: '🍎',
     split: 0.10,
     fallbacks: [
@@ -188,7 +181,17 @@ function MacroRow({ label, value, goal, color, colors }) {
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function PlanScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const onboardingPayload = useSelector((state) => state.auth.onboardingPayload);
+
+  const TARGETS = {
+    calories: onboardingPayload?.calories,
+    protein:  onboardingPayload?.protein,
+    carbs:    onboardingPayload?.carbs,
+    fat:      onboardingPayload?.fat,
+  };
+
   const [plan,            setPlan]     = useState(null);
   const [selectedIndices, setSelected] = useState({});
   const [loading,         setLoading]  = useState(false);
@@ -206,7 +209,7 @@ export default function PlanScreen({ navigation }) {
       setSelected(Object.fromEntries(slots.map((s) => [s.id, 0])));
     } catch (err) {
       console.warn('[PlanScreen] fetchAllRecipes failed:', err?.message ?? err);
-      setError('Could not load your recipes. Using suggestions instead.');
+      setError(t('plan.errorLoadRecipes'));
       // Fall back to all-static plan
       const slots = buildSlots([], TARGETS);
       setPlan(slots);
@@ -252,10 +255,10 @@ export default function PlanScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.topTitle, { color: colors.text }]}>Meal Plan</Text>
+        <Text style={[styles.topTitle, { color: colors.text }]}>{t('plan.title')}</Text>
         {plan ? (
           <TouchableOpacity onPress={handleReset} style={styles.resetBtn} activeOpacity={0.7}>
-            <Text style={[styles.resetText, { color: colors.textMuted }]}>Reset</Text>
+            <Text style={[styles.resetText, { color: colors.textMuted }]}>{t('plan.reset')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.backBtn} />
@@ -273,19 +276,19 @@ export default function PlanScreen({ navigation }) {
               <Ionicons name="calendar-outline" size={40} color={colors.text} />
             </View>
 
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Plan your day</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('plan.emptyTitle')}</Text>
 
             <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              Build a daily meal plan from your analyzed recipes, with smart suggestions to fill any gaps
+              {t('plan.emptySubtitle')}
             </Text>
 
             <View style={[styles.targetsCard, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.targetsTitle, { color: colors.textMuted }]}>YOUR DAILY TARGETS</Text>
+              <Text style={[styles.targetsTitle, { color: colors.textMuted }]}>{t('plan.yourTargets')}</Text>
               <View style={styles.targetsRow}>
-                <TargetPill label="Calories" value={`${TARGETS.calories}`} color={colors.primary} />
-                <TargetPill label="Protein"  value={`${TARGETS.protein}g`}  color={C_PROTEIN} />
-                <TargetPill label="Carbs"    value={`${TARGETS.carbs}g`}    color={C_CARBS} />
-                <TargetPill label="Fat"      value={`${TARGETS.fat}g`}      color={C_FAT} />
+                <TargetPill label={t('macros.calories')} value={`${TARGETS.calories}`} color={colors.primary} colors={colors} />
+                <TargetPill label={t('macros.protein')}  value={`${TARGETS.protein}g`}  color={C_PROTEIN} colors={colors} />
+                <TargetPill label={t('macros.carbs')}    value={`${TARGETS.carbs}g`}    color={C_CARBS} colors={colors} />
+                <TargetPill label={t('macros.fat')}      value={`${TARGETS.fat}g`}      color={C_FAT} colors={colors} />
               </View>
             </View>
 
@@ -299,7 +302,7 @@ export default function PlanScreen({ navigation }) {
                 <ActivityIndicator size="small" color={colors.background} />
               ) : (
                 <Text style={[styles.createBtnText, { color: colors.background }]}>
-                  Create Plan
+                  {t('plan.createPlan')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -316,7 +319,7 @@ export default function PlanScreen({ navigation }) {
                   color={error ? colors.error : colors.primary}
                 />
                 <Text style={[styles.sourceText, { color: error ? colors.error : colors.primary }]}>
-                  {error ?? `${dbCount} recipe${dbCount === 1 ? '' : 's'} from your library matched — ★ saved  ↑ analyzed`}
+                  {error ?? t('plan.recipesMatched', { count: dbCount })}
                 </Text>
               </View>
             )}
@@ -324,7 +327,7 @@ export default function PlanScreen({ navigation }) {
             {/* Daily summary */}
             <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
               <View style={styles.summaryHeader}>
-                <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>DAILY SUMMARY</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>{t('plan.dailySummary')}</Text>
                 <View style={styles.caloriesBadge}>
                   <Text style={[styles.caloriesValue, { color: colors.primary }]}>{totals.calories}</Text>
                   <Text style={[styles.caloriesTarget, { color: colors.textMuted }]}>
@@ -333,9 +336,9 @@ export default function PlanScreen({ navigation }) {
                 </View>
               </View>
               <View style={styles.macrosGrid}>
-                <MacroRow label="Protein" value={totals.protein} goal={TARGETS.protein} color={C_PROTEIN} colors={colors} />
-                <MacroRow label="Carbs"   value={totals.carbs}   goal={TARGETS.carbs}   color={C_CARBS}   colors={colors} />
-                <MacroRow label="Fat"     value={totals.fat}     goal={TARGETS.fat}     color={C_FAT}     colors={colors} />
+                <MacroRow label={t('macros.protein')} value={totals.protein} goal={TARGETS.protein} color={C_PROTEIN} colors={colors} />
+                <MacroRow label={t('macros.carbs')}   value={totals.carbs}   goal={TARGETS.carbs}   color={C_CARBS}   colors={colors} />
+                <MacroRow label={t('macros.fat')}     value={totals.fat}     goal={TARGETS.fat}     color={C_FAT}     colors={colors} />
               </View>
             </View>
 
@@ -345,9 +348,9 @@ export default function PlanScreen({ navigation }) {
                 {/* Slot header */}
                 <View style={styles.slotHeader}>
                   <Text style={styles.slotIcon}>{slot.icon}</Text>
-                  <Text style={[styles.slotLabel, { color: colors.text }]}>{slot.label}</Text>
+                  <Text style={[styles.slotLabel, { color: colors.text }]}>{t(`mealType.${slot.labelKey}`)}</Text>
                   <Text style={[styles.slotTarget, { color: colors.textMuted }]}>
-                    ~{slot.targetCal} kcal
+                    {t('plan.kcalTarget', { amount: slot.targetCal })}
                   </Text>
                 </View>
 
@@ -373,11 +376,11 @@ export default function PlanScreen({ navigation }) {
 }
 
 // ── Target pill (empty state) ─────────────────────────────────────────────────
-function TargetPill({ label, value, color }) {
+function TargetPill({ label, value, color, colors }) {
   return (
     <View style={styles.targetPill}>
       <Text style={[styles.targetPillValue, { color }]}>{value}</Text>
-      <Text style={styles.targetPillLabel}>{label}</Text>
+      <Text style={[styles.targetPillLabel, { color: colors.textMuted }]}>{label}</Text>
     </View>
   );
 }
@@ -414,7 +417,7 @@ const styles = StyleSheet.create({
   targetsRow:   { flexDirection: 'row', justifyContent: 'space-between' },
   targetPill:   { alignItems: 'center', gap: 2 },
   targetPillValue: { fontSize: 16, fontWeight: FONTS.bold },
-  targetPillLabel: { fontSize: 11, color: '#9CA3AF' },
+  targetPillLabel: { fontSize: 11 },
 
   createBtn:     { marginTop: 8, paddingHorizontal: SPACING.xl, paddingVertical: 14, borderRadius: RADIUS.full, minWidth: 160, alignItems: 'center' },
   createBtnText: { fontSize: 15, fontWeight: FONTS.semibold },

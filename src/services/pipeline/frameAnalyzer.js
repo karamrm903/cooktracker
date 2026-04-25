@@ -26,9 +26,10 @@ const VISION_SERVER_URL = `${getBaseUrl()}/vision`;
  * @param {string} url          Normalised video URL.
  * @param {string} platform     Detected platform.
  * @param {number} _durationSec Reserved for future use.
+ * @param {string} [locale]     BCP-47 language code (e.g. 'fr'). Server responds in this language.
  * @returns {Promise<FrameAnalysisResult>}
  */
-export async function analyzeFrames(url, platform, _durationSec) {
+export async function analyzeFrames(url, platform, _durationSec, locale) {
   if (!['youtube', 'tiktok', 'instagram'].includes(platform)) {
     throw new Error(`Frame analysis not yet supported for platform: ${platform}`);
   }
@@ -36,7 +37,7 @@ export async function analyzeFrames(url, platform, _durationSec) {
   const response = await fetch(VISION_SERVER_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, locale }),
   });
 
   if (!response.ok) {

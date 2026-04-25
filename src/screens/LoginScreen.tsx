@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ActivityIndicator } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { setPersistedAccessToken, setOnboardingStatus, setAuthSession } from "../store/slices/authSlice";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +34,7 @@ type Props = {
 };
 
 export default function LoginScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
@@ -75,12 +77,12 @@ export default function LoginScreen({ navigation }: Props) {
         // operation (e.g. sign in) is in progress already
         return;
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setAlert({ visible: true, message: 'Google Play Services not available or outdated.', variant: 'error', title: 'Play Services Error' });
+        setAlert({ visible: true, message: t('login.alerts.playServicesError'), variant: 'error', title: t('login.alerts.playServicesTitle') });
       } else if (error.code === statusCodes.SIGN_IN_CANCELLED || error.message?.includes('CANCELED')) {
         return; // User cancelled the login flow
       } else {
         console.error(error.message)
-        setAlert({ visible: true, message: `Google Sign In Failed: ${error.message}`, variant: 'error', title: 'Sign In Error' });
+        setAlert({ visible: true, message: t('login.alerts.signInErrorMsg', { error: error.message }), variant: 'error', title: t('login.alerts.signInErrorTitle') });
       }
     } finally {
       setLoading(false);
@@ -93,8 +95,8 @@ export default function LoginScreen({ navigation }: Props) {
         return {
           ...prev,
           visible: true,
-          title: "Missing Fields",
-          message: "Please enter your email and password",
+          title: t('login.alerts.missingFieldsTitle'),
+          message: t('login.alerts.missingFieldsMsg'),
           variant: 'warning',
         };
       });
@@ -118,7 +120,7 @@ export default function LoginScreen({ navigation }: Props) {
     } catch (error: any) {
       setAlert({
         visible: true,
-        title: "Sign In Failed",
+        title: t('login.alerts.signInFailedTitle'),
         message: error.message,
         variant: 'error',
       });
@@ -151,20 +153,18 @@ export default function LoginScreen({ navigation }: Props) {
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>
-              Sign in to continue tracking your meals
-            </Text>
+            <Text style={styles.title}>{t('login.title')}</Text>
+            <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('login.emailLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="you@example.com"
+                placeholder={t('login.emailPlaceholder')}
                 placeholderTextColor={colors.placeholder}
                 value={email}
                 onChangeText={setEmail}
@@ -176,11 +176,11 @@ export default function LoginScreen({ navigation }: Props) {
 
             {/* Password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('login.passwordLabel')}</Text>
               <View style={styles.passwordWrapper}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="••••••••"
+                  placeholder={t('login.passwordPlaceholder')}
                   placeholderTextColor={colors.placeholder}
                   value={password}
                   onChangeText={setPassword}
@@ -194,7 +194,7 @@ export default function LoginScreen({ navigation }: Props) {
                   style={styles.eyeBtn}
                 >
                   <Text style={styles.eyeText}>
-                    {passwordVisible ? "Hide" : "Show"}
+                    {passwordVisible ? t('common.hide') : t('common.show')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -202,7 +202,7 @@ export default function LoginScreen({ navigation }: Props) {
                 style={styles.forgotWrapper}
                 activeOpacity={0.7}
               >
-                <Text style={styles.forgotText}>Forgot password?</Text>
+                <Text style={styles.forgotText}>{t('login.forgotPassword')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -215,12 +215,12 @@ export default function LoginScreen({ navigation }: Props) {
               {loading ? (
                 <ActivityIndicator color={colors.btnPrimaryText} />
               ) : (
-                <Text style={styles.signInBtnText}>Sign In</Text>
+                <Text style={styles.signInBtnText}>{t('login.signInBtn')}</Text>
               )}
             </TouchableOpacity>
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>{t('common.or')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -231,18 +231,18 @@ export default function LoginScreen({ navigation }: Props) {
               disabled={loading}
             >
               <Text style={styles.googleLogo}>G</Text>
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
+              <Text style={styles.googleBtnText}>{t('login.continueWithGoogle')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Don't have an account?{" "}
+              {t('login.noAccount')}{" "}
               <Text
                 style={styles.footerLink}
                 onPress={() => navigation.navigate("Onboarding")}
               >
-                Sign Up
+                {t('login.signUp')}
               </Text>
             </Text>
           </View>
@@ -256,7 +256,7 @@ export default function LoginScreen({ navigation }: Props) {
       {alert.visible && (
         <CommonAlertModal
           visible={alert.visible}
-          title={alert.title || "Alert"}
+          title={alert.title || t('common.alert')}
           message={alert.message}
           variant={alert.variant}
           onClose={() => setAlert({ ...alert, visible: false })}

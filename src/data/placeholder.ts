@@ -352,6 +352,7 @@ export const PROFILE_SETTINGS: ProfileSettingType[] = [
   { id: '3', label: 'Health Goals', icon: 'fitness-outline', group: 'Account' },
   { id: '4', label: 'Notifications', icon: 'notifications-outline', group: 'Preferences' },
   { id: '5', label: 'Units & Measurements', icon: 'scale-outline', group: 'Preferences' },
+  { id: 'language', label: 'Language', icon: 'language-outline', group: 'Preferences' },
   { id: '6', label: 'Privacy & Security', icon: 'shield-outline', group: 'Preferences' },
   { id: '7', label: 'Help & Support', icon: 'help-circle-outline', group: 'More' },
   { id: '8', label: 'Rate the App', icon: 'star-outline', group: 'More' },

@@ -93,7 +93,7 @@ export class PipelineError extends Error {
  *     recipe._analysis.requiresConfirmation → boolean
  *     recipe._ingestion                 →  ingestion debug info
  */
-export async function analyzeVideo(rawUrl, onProgress) {
+export async function analyzeVideo(rawUrl, onProgress, locale) {
 
   // ── 0. URL normalisation & platform detection ──────────────────────────────
   const url                    = await normalizeUrl(rawUrl);
@@ -192,7 +192,7 @@ export async function analyzeVideo(rawUrl, onProgress) {
   let frames;
   tick(3, 'started');
   try {
-    frames = await analyzeFrames(url, platform, metadata.durationSec);
+    frames = await analyzeFrames(url, platform, metadata.durationSec, locale);
     sourcesAvailable.frames = frames.framesAnalyzed > 0;
     console.log('[pipeline] ✔ Frames');
     console.log('[pipeline]   Analyzed:', frames.framesAnalyzed, '| Dish:', frames.dishType);

@@ -8,6 +8,7 @@ import {
   Share,
   ScrollView,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
@@ -25,6 +26,7 @@ type Props = {
 const MY_REFERRAL_CODE = 'CCT7421';
 
 export default function ReferralScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
@@ -40,7 +42,7 @@ export default function ReferralScreen({ navigation }: Props) {
   async function handleShare() {
     try {
       await Share.share({
-        message: `Join CookTrack with my referral code ${MY_REFERRAL_CODE} and we both get 5% off! 🍳`,
+        message: t('referral.shareMessage', { code: MY_REFERRAL_CODE }),
       });
     } catch (_) {}
   }
@@ -63,15 +65,13 @@ export default function ReferralScreen({ navigation }: Props) {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Invite friends &{'\n'}unlock discounts</Text>
-          <Text style={styles.subtitle}>
-            For every friend who signs up with your code, you both receive 5% off — and discounts stack.
-          </Text>
+          <Text style={styles.title}>{t('referral.title')}</Text>
+          <Text style={styles.subtitle}>{t('referral.subtitle')}</Text>
         </View>
 
         {/* Section 1: Your code */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>YOUR REFERRAL CODE</Text>
+          <Text style={styles.sectionLabel}>{t('referral.yourCodeLabel')}</Text>
           <View style={styles.codeCard}>
             <View style={styles.codeBlock}>
               <Text style={styles.codeText}>{MY_REFERRAL_CODE}</Text>
@@ -83,39 +83,37 @@ export default function ReferralScreen({ navigation }: Props) {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.codeBtnText, copied && styles.codeBtnTextSuccess]}>
-                  {copied ? '✓ Copied!' : '⎘  Copy Code'}
+                  {copied ? t('referral.copied') : t('referral.copyCode')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.codeBtn, styles.codeBtnDark]} onPress={handleShare} activeOpacity={0.85}>
-                <Text style={styles.codeBtnTextDark}>↑  Share Code</Text>
+                <Text style={styles.codeBtnTextDark}>{t('referral.shareCode')}</Text>
               </TouchableOpacity>
             </View>
           </View>
           <View style={styles.rewardInfo}>
             <Text style={styles.rewardEmoji}>🎁</Text>
-            <Text style={styles.rewardText}>
-              Each successful referral gives you <Text style={styles.bold}>5% off</Text> your subscription. Discounts stack with no limit.
-            </Text>
+            <Text style={styles.rewardText}>{t('referral.rewardText')}</Text>
           </View>
         </View>
 
         {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>Have a referral code?</Text>
+          <Text style={styles.dividerText}>{t('referral.haveCode')}</Text>
           <View style={styles.dividerLine} />
         </View>
 
         {/* Section 2: Enter code */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ENTER REFERRAL CODE</Text>
+          <Text style={styles.sectionLabel}>{t('referral.enterCodeLabel')}</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={[styles.input, applied && styles.inputSuccess]}
-              placeholder="Enter referral code"
+              placeholder={t('referral.enterCodePlaceholder')}
               placeholderTextColor={colors.placeholder}
               value={referralInput}
-              onChangeText={(t) => { setReferralInput(t); setApplied(false); }}
+              onChangeText={(v) => { setReferralInput(v); setApplied(false); }}
               autoCapitalize="characters"
               autoCorrect={false}
             />
@@ -125,11 +123,11 @@ export default function ReferralScreen({ navigation }: Props) {
               disabled={referralInput.trim().length === 0}
               activeOpacity={0.85}
             >
-              <Text style={styles.applyBtnText}>{applied ? '✓' : 'Apply'}</Text>
+              <Text style={styles.applyBtnText}>{applied ? '✓' : t('common.apply')}</Text>
             </TouchableOpacity>
           </View>
           {applied && (
-            <Text style={styles.appliedMsg}>🎉 Code applied! You'll both receive 5% off.</Text>
+            <Text style={styles.appliedMsg}>{t('referral.appliedMsg')}</Text>
           )}
         </View>
 
@@ -142,7 +140,7 @@ export default function ReferralScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('SocialProof')}
           activeOpacity={0.85}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <Text style={styles.continueBtnText}>{t('referral.continue')}</Text>
         </TouchableOpacity>
       </View>
 

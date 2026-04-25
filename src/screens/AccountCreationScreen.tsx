@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setOnboardingStatus, setPersistedAccessToken, setAuthSession } from '../store/slices/authSlice';
@@ -20,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import CommonAlertModal, { CommonModalVariant } from "../components/CommonModal";
 
 type RootStackParamList = {
@@ -32,7 +34,9 @@ type Props = {
 };
 
 export default function AccountCreationScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const { language } = useLanguage();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { onboardingPayload } = useSelector((state: any) => state.auth);
@@ -62,7 +66,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
           if (data.session?.access_token) {
             if (onboardingPayload && data.session) {
               try {
-                await profileService.updateProfile(data.session, onboardingPayload);
+                await profileService.updateProfile(data.session, { ...onboardingPayload, locale: language });
               } catch (apiErr) {
                 console.error("Failed to sync profile after Google Login:", apiErr);
               }
@@ -82,11 +86,11 @@ export default function AccountCreationScreen({ navigation }: Props) {
         // operation (e.g. sign in) is in progress already
         return;
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setAlert({ visible: true, message: 'Google Play Services not available or outdated.', variant: 'error', title: 'Play Services Error' });
+        setAlert({ visible: true, message: t('accountCreation.alerts.playServicesError'), variant: 'error', title: t('accountCreation.alerts.playServicesTitle') });
       } else if (error.code === statusCodes.SIGN_IN_CANCELLED || error.message?.includes('CANCELED')) {
         return; // User cancelled the login flow
       } else {
-        setAlert({ visible: true, message: `Google Sign In Failed: ${error.message}`, variant: 'error', title: 'Sign In Error' });
+        setAlert({ visible: true, message: t('accountCreation.alerts.signInErrorMsg', { error: error.message }), variant: 'error', title: t('accountCreation.alerts.signInErrorTitle') });
       }
     } finally {
       setLoading(false);
@@ -99,9 +103,9 @@ export default function AccountCreationScreen({ navigation }: Props) {
     if (!email.trim() || password.length < 6) {
       setAlert({
         visible: true,
-        message: 'Please enter a valid email and a password of at least 6 characters.',
+        message: t('accountCreation.alerts.missingDetailsMsg'),
         variant: 'warning',
-        title: 'Missing Details'
+        title: t('accountCreation.alerts.missingDetailsTitle'),
       });
       return;
     }
@@ -119,15 +123,15 @@ export default function AccountCreationScreen({ navigation }: Props) {
         setLoading(false);
         setAlert({
           visible: true,
-          message: 'Confirm your email to finish signing up, then sign in.',
+          message: t('accountCreation.alerts.checkEmailMsg'),
           variant: 'info',
-          title: 'Check your email'
+          title: t('accountCreation.alerts.checkEmailTitle'),
         });
         return;
       }
 
       if (onboardingPayload) {
-        await profileService.updateProfile(session, onboardingPayload);
+        await profileService.updateProfile(session, { ...onboardingPayload, locale: language });
       }
 
       await authService.persistToken(session.access_token);
@@ -140,9 +144,9 @@ export default function AccountCreationScreen({ navigation }: Props) {
       console.error("Sign up/Sync error:", err);
       setAlert({
         visible: true,
-        message: err.message || 'Something went wrong saving your profile.',
+        message: err.message || t('accountCreation.alerts.genericError'),
         variant: 'error',
-        title: 'Registration Error'
+        title: t('accountCreation.alerts.registrationErrorTitle'),
       });
     } finally {
       setLoading(false);
@@ -167,17 +171,17 @@ export default function AccountCreationScreen({ navigation }: Props) {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create your{'\n'}account</Text>
-            <Text style={styles.subtitle}>Save your progress and start cooking smarter.</Text>
+            <Text style={styles.title}>{t('accountCreation.title')}</Text>
+            <Text style={styles.subtitle}>{t('accountCreation.subtitle')}</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('accountCreation.emailLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="you@example.com"
+                placeholder={t('accountCreation.emailPlaceholder')}
                 placeholderTextColor={colors.placeholder}
                 value={email}
                 onChangeText={setEmail}
@@ -188,11 +192,11 @@ export default function AccountCreationScreen({ navigation }: Props) {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('accountCreation.passwordLabel')}</Text>
               <View style={styles.passwordWrapper}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="At least 6 characters"
+                  placeholder={t('accountCreation.passwordPlaceholder')}
                   placeholderTextColor={colors.placeholder}
                   value={password}
                   onChangeText={setPassword}
@@ -201,7 +205,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
                   autoCorrect={false}
                 />
                 <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)} activeOpacity={0.7}>
-                  <Text style={styles.eyeText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
+                  <Text style={styles.eyeText}>{passwordVisible ? t('common.hide') : t('common.show')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -217,7 +221,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
                 <ActivityIndicator color={colors.btnPrimaryText} />
               ) : (
                 <Text style={[styles.primaryBtnText, !isReady && styles.primaryBtnTextDisabled]}>
-                  Start Cooking 🍳
+                  {t('accountCreation.startCookingBtn')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -225,7 +229,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>{t('common.or')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -237,15 +241,15 @@ export default function AccountCreationScreen({ navigation }: Props) {
               activeOpacity={0.85}
             >
               <Text style={styles.googleLogo}>G</Text>
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
+              <Text style={styles.googleBtnText}>{t('accountCreation.continueWithGoogle')}</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.termsText}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.termsLink}>Terms of Service</Text>
-            {' '}and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>.
+            {t('accountCreation.termsPrefix')}{' '}
+            <Text style={styles.termsLink}>{t('accountCreation.termsOfService')}</Text>
+            {' '}{t('accountCreation.and')}{' '}
+            <Text style={styles.termsLink}>{t('accountCreation.privacyPolicy')}</Text>.
           </Text>
 
         </ScrollView>
@@ -260,7 +264,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
       {alert.visible && (
         <CommonAlertModal
           visible={alert.visible}
-          title={alert.title || "Alert"}
+          title={alert.title || t('common.alert')}
           message={alert.message}
           variant={alert.variant}
           onClose={() => setAlert({ ...alert, visible: false })}

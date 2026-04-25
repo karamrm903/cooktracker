@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function AppleHealthScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
@@ -51,20 +53,18 @@ export default function AppleHealthScreen({ navigation }: Props) {
 
         {/* Text */}
         <View style={styles.textSection}>
-          <Text style={styles.title}>Connect to{'\n'}Apple Health</Text>
-          <Text style={styles.subtitle}>
-            Sync your activity and health data to improve calorie and nutrition calculations.
-          </Text>
+          <Text style={styles.title}>{t('appleHealth.title')}</Text>
+          <Text style={styles.subtitle}>{t('appleHealth.subtitle')}</Text>
         </View>
 
         {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryBtn} onPress={proceed} activeOpacity={0.85}>
             <Text style={styles.appleIcon}></Text>
-            <Text style={styles.primaryBtnText}>Connect Apple Health</Text>
+            <Text style={styles.primaryBtnText}>{t('appleHealth.connectBtn')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={proceed} activeOpacity={0.7}>
-            <Text style={styles.skipText}>Skip for now</Text>
+            <Text style={styles.skipText}>{t('appleHealth.skip')}</Text>
           </TouchableOpacity>
         </View>
 

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -18,10 +19,10 @@ import { useMealLogs } from '../context/MealLogsContext';
 import SaveModal from '../components/SaveModal';
 
 // ── Confidence colour map ─────────────────────────────────────────────────────
-const CONFIDENCE_CONFIG = {
-  high:   { color: '#16A34A', bg: '#F0FDF4', label: 'High confidence',   icon: 'checkmark-circle-outline', message: 'AI is highly confident about this recipe.' },
-  medium: { color: '#D97706', bg: '#FFFBEB', label: 'Medium confidence', icon: 'alert-circle-outline',     message: 'Some details may be imprecise — please review before cooking.' },
-  low:    { color: '#DC2626', bg: '#FEF2F2', label: 'Low confidence',    icon: 'close-circle-outline',     message: "We couldn't confidently extract this recipe. Please verify or try another video." },
+const CONFIDENCE_COLORS = {
+  high:   { color: '#16A34A', bg: '#F0FDF4', icon: 'checkmark-circle-outline' },
+  medium: { color: '#D97706', bg: '#FFFBEB', icon: 'alert-circle-outline' },
+  low:    { color: '#DC2626', bg: '#FEF2F2', icon: 'close-circle-outline' },
 };
 
 function estimateRecipeGrams(recipe) {
@@ -49,6 +50,7 @@ function estimateRecipeGrams(recipe) {
 }
 
 export default function RecipeSummaryScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { recipe, dbId } = route.params;
   const { colors, isDark } = useTheme();
   const { addMealLog } = useMealLogs();
@@ -70,7 +72,12 @@ export default function RecipeSummaryScreen({ navigation, route }) {
   const analysis   = recipe._analysis ?? {};
   const ingestion  = recipe._ingestion ?? {};
   const level      = analysis.confidenceLevel ?? 'high';
-  const conf       = CONFIDENCE_CONFIG[level];
+  const confColors = CONFIDENCE_COLORS[level] ?? CONFIDENCE_COLORS.high;
+  const conf = {
+    ...confColors,
+    label:   t(`recipeSummary.confidence.${level}.label`),
+    message: t(`recipeSummary.confidence.${level}.message`),
+  };
   const warnings   = analysis.warnings ?? [];
   const evidence   = analysis.evidenceSummary ?? {};
   const timedSteps = recipe.steps.filter(s => s.timerMinutes).length;
@@ -177,11 +184,11 @@ fat: recipe.nutrition?.total?.fat ?? 0,
 
   function handleEditManually() {
     Alert.alert(
-      'Edit manually',
-      'Manual recipe editing is coming soon. For now, you can continue and adjust quantities while cooking.',
+      t('recipeSummary.editManuallyTitle'),
+      t('recipeSummary.editManuallyMsg'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue anyway', onPress: () => navigation.navigate('CookingMode', { recipe }) },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('recipeSummary.continueAnyway'), onPress: () => navigation.navigate('CookingMode', { recipe }) },
       ]
     );
   }
@@ -198,7 +205,7 @@ fat: recipe.nutrition?.total?.fat ?? 0,
         >
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text }]}>Recipe</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>{t('recipeSummary.headerTitle')}</Text>
         <TouchableOpacity
           style={s.closeBtn}
           onPress={() => savedDbId && setSaveModalVisible(true)}
@@ -221,10 +228,10 @@ disabled={!savedDbId}
           <Text style={s.heroEmoji}>{recipe.emoji}</Text>
           <Text style={[s.recipeTitle, { color: colors.text }]}>{recipe.title}</Text>
           <View style={s.pills}>
-            <Pill icon="list-outline"  label={`${recipe.steps.length} steps`}     colors={colors} />
+            <Pill icon="list-outline"  label={t('recipeSummary.steps', { count: recipe.steps.length })}     colors={colors} />
             <Pill icon="flame-outline" label={`${displayedNutrition?.total?.calories ?? 0} kcal`} colors={colors} />
             {timedSteps > 0 && (
-              <Pill icon="timer-outline" label={`${timedSteps} timer${timedSteps > 1 ? 's' : ''}`} colors={colors} />
+              <Pill icon="timer-outline" label={t('recipeSummary.timers', { count: timedSteps })} colors={colors} />
             )}
           </View>
         </View>
@@ -246,13 +253,13 @@ disabled={!savedDbId}
         </View>
 
         {/* Nutrition */}
-        <SectionCard title="Nutrition" colors={colors}>
+        <SectionCard title={t('recipeSummary.nutritionSection')} colors={colors}>
           <View style={s.macroRow}>
             {[
-  { label: 'Calories', value: displayedNutrition?.total?.calories ?? 0, unit: 'kcal' },
-  { label: 'Protein', value: displayedNutrition?.total?.protein ?? 0, unit: 'g' },
-  { label: 'Carbs', value: displayedNutrition?.total?.carbs ?? 0, unit: 'g' },
-  { label: 'Fat', value: displayedNutrition?.total?.fat ?? 0, unit: 'g' },
+  { labelKey: 'calories', value: displayedNutrition?.total?.calories ?? 0, unit: 'kcal' },
+  { labelKey: 'protein',  value: displayedNutrition?.total?.protein ?? 0,  unit: 'g' },
+  { labelKey: 'carbs',    value: displayedNutrition?.total?.carbs ?? 0,    unit: 'g' },
+  { labelKey: 'fat',      value: displayedNutrition?.total?.fat ?? 0,      unit: 'g' },
 ].map((m, i) => (
               <React.Fragment key={m.label}>
                 {i > 0 && <View style={[s.macroDivider, { backgroundColor: colors.border }]} />}
@@ -261,7 +268,7 @@ disabled={!savedDbId}
                     {m.value}
                     <Text style={[s.macroUnit, { color: colors.textMuted }]}>{m.unit}</Text>
                   </Text>
-                  <Text style={[s.macroLabel, { color: colors.textMuted }]}>{m.label}</Text>
+                  <Text style={[s.macroLabel, { color: colors.textMuted }]}>{t(`macros.${m.labelKey}`)}</Text>
                 </View>
               </React.Fragment>
             ))}
@@ -270,9 +277,9 @@ disabled={!savedDbId}
 
         {/* Ingredients — explicit */}
         <SectionCard
-          title="Ingredients"
+          title={t('recipeSummary.ingredientsSection')}
           colors={colors}
-          badge={inferred.length > 0 ? `${recipe.ingredients.length} confirmed` : null}
+          badge={inferred.length > 0 ? t('recipeSummary.confirmed', { count: recipe.ingredients.length }) : null}
         >
           <Text
   style={{
@@ -282,7 +289,7 @@ disabled={!savedDbId}
     lineHeight: 18,
   }}
 >
-  Remove ingredients you didn’t use. Nutrition updates automatically.
+  {t('recipeSummary.ingredientsHint')}
 </Text>
           {editableIngredients.map((ing, i) => (
   <View
@@ -329,7 +336,9 @@ disabled={!savedDbId}
                   color={colors.textMuted}
                 />
                 <Text style={[s.inferredToggleText, { color: colors.textMuted }]}>
-                  {showInferred ? 'Hide' : 'Show'} {inferred.length} estimated ingredient{inferred.length > 1 ? 's' : ''}
+                  {showInferred
+                    ? t('recipeSummary.hideInferred', { count: inferred.length })
+                    : t('recipeSummary.showInferred', { count: inferred.length })}
                 </Text>
               </TouchableOpacity>
 
@@ -344,7 +353,7 @@ disabled={!savedDbId}
                   <Ionicons name="help-circle-outline" size={14} color={colors.textMuted} />
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[s.ingText, { color: colors.textSecondary }]}>{ing}</Text>
-                    <Text style={[s.estimatedTag, { color: colors.textMuted }]}>Estimated — not explicitly confirmed</Text>
+                    <Text style={[s.estimatedTag, { color: colors.textMuted }]}>{t('recipeSummary.estimated')}</Text>
                   </View>
                 </View>
               ))}
@@ -353,7 +362,7 @@ disabled={!savedDbId}
         </SectionCard>
 
         {/* Steps */}
-        <SectionCard title="Steps" colors={colors}>
+        <SectionCard title={t('recipeSummary.stepsSection')} colors={colors}>
           {recipe.steps.map((step, i) => (
             <View
               key={i}
@@ -387,7 +396,7 @@ disabled={!savedDbId}
           activeOpacity={0.7}
         >
           <Ionicons name="code-slash-outline" size={13} color={colors.textMuted} />
-          <Text style={[s.debugHeaderText, { color: colors.textMuted }]}>Debug info</Text>
+          <Text style={[s.debugHeaderText, { color: colors.textMuted }]}>{t('recipeSummary.debugInfo')}</Text>
           <Ionicons name={debugOpen ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
         </TouchableOpacity>
 
@@ -438,7 +447,7 @@ disabled={!savedDbId}
       {/* ── Fixed bottom: confirmation section ──────────────────────────── */}
       <View style={[s.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <Text style={[s.confirmQuestion, { color: colors.textSecondary }]}>
-          Does this recipe match your video?
+          {t('recipeSummary.confirmQuestion')}
         </Text>
         <View style={s.confirmRow}>
           <TouchableOpacity
@@ -447,7 +456,7 @@ disabled={!savedDbId}
             activeOpacity={0.7}
           >
             <Ionicons name="refresh-outline" size={16} color={colors.text} />
-            <Text style={[s.btnSecondaryText, { color: colors.text }]}>Reanalyze</Text>
+            <Text style={[s.btnSecondaryText, { color: colors.text }]}>{t('recipeSummary.reanalyze')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -456,7 +465,7 @@ disabled={!savedDbId}
             activeOpacity={0.7}
           >
             <Ionicons name="create-outline" size={16} color={colors.text} />
-            <Text style={[s.btnSecondaryText, { color: colors.text }]}>Edit</Text>
+            <Text style={[s.btnSecondaryText, { color: colors.text }]}>{t('recipeSummary.edit')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -489,7 +498,7 @@ navigation.navigate('CookingMode', {
             activeOpacity={0.85}
           >
             <Text style={[s.btnPrimaryText, { color: colors.btnPrimaryText }]}>
-  {isLoggingMeal ? 'Opening...' : level === 'low' ? 'Cook anyway' : "Yes, let's cook"}
+  {isLoggingMeal ? t('recipeSummary.opening') : level === 'low' ? t('recipeSummary.cookAnyway') : t('recipeSummary.letsCook')}
 </Text>
             <Ionicons name="arrow-forward" size={16} color={colors.btnPrimaryText} />
           </TouchableOpacity>

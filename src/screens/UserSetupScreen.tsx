@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { setOnboardingPayload } from '../store/slices/authSlice';
 import {
@@ -80,22 +81,23 @@ function feetInchesToCm(ft: string, inches: string) {
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const GOALS = [
-  { key: 'lose', emoji: '📉', label: 'Lose weight', sub: 'Burn fat and feel lighter' },
-  { key: 'maintain', emoji: '⚖️', label: 'Maintain weight', sub: 'Stay at your current weight' },
-  { key: 'muscle', emoji: '💪', label: 'Gain muscle', sub: 'Build strength and size' },
-  { key: 'healthy', emoji: '🥗', label: 'Eat healthier', sub: 'Better habits, better nutrition' },
+  { key: 'lose', emoji: '📉' },
+  { key: 'maintain', emoji: '⚖️' },
+  { key: 'muscle', emoji: '💪' },
+  { key: 'healthy', emoji: '🥗' },
 ];
 
 const ACTIVITIES = [
-  { key: 'sedentary', emoji: '🛋️', label: 'Sedentary', sub: 'Mostly sitting, little exercise' },
-  { key: 'light', emoji: '🚶', label: 'Lightly active', sub: 'Light exercise 1–3 days/week' },
-  { key: 'moderate', emoji: '🏃', label: 'Moderately active', sub: 'Exercise 3–5 days/week' },
-  { key: 'very', emoji: '🏋️', label: 'Very active', sub: 'Hard exercise 6–7 days/week' },
+  { key: 'sedentary', emoji: '🛋️' },
+  { key: 'light', emoji: '🚶' },
+  { key: 'moderate', emoji: '🏃' },
+  { key: 'very', emoji: '🏋️' },
 ];
 
 const TOTAL_STEPS = 4;
 
 export default function UserSetupScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
@@ -177,10 +179,10 @@ export default function UserSetupScreen({ navigation }: Props) {
   }
 
   const stepMeta: Record<number, { title: string; subtitle: string }> = {
-    1: { title: 'Basic info', subtitle: 'Help us personalize your experience' },
-    2: { title: "What's your goal?", subtitle: 'Choose what you want to achieve' },
-    3: { title: 'Activity level', subtitle: 'How active are you in a typical week?' },
-    4: { title: 'Your daily targets', subtitle: 'Calculated based on your profile' },
+    1: { title: t('userSetup.steps.1.title'), subtitle: t('userSetup.steps.1.subtitle') },
+    2: { title: t('userSetup.steps.2.title'), subtitle: t('userSetup.steps.2.subtitle') },
+    3: { title: t('userSetup.steps.3.title'), subtitle: t('userSetup.steps.3.subtitle') },
+    4: { title: t('userSetup.steps.4.title'), subtitle: t('userSetup.steps.4.subtitle') },
   };
 
   return (
@@ -192,7 +194,7 @@ export default function UserSetupScreen({ navigation }: Props) {
           <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.stepCounter}>{step} of {TOTAL_STEPS}</Text>
+          <Text style={styles.stepCounter}>{t('userSetup.stepOf', { step, total: TOTAL_STEPS })}</Text>
         </View>
 
         {/* Progress bar */}
@@ -214,17 +216,17 @@ export default function UserSetupScreen({ navigation }: Props) {
           {step === 1 && (
             <View style={styles.stepContent}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Gender</Text>
+                <Text style={styles.label}>{t('userSetup.genderLabel')}</Text>
                 <View style={styles.chipRow}>
-                  {(['Male', 'Female', 'Other'] as const).map((g) => (
+                  {(['male', 'female', 'other'] as const).map((g) => (
                     <TouchableOpacity
                       key={g}
-                      style={[styles.chip, gender === g.toLowerCase() && styles.chipActive]}
-                      onPress={() => setGender(g.toLowerCase())}
+                      style={[styles.chip, gender === g && styles.chipActive]}
+                      onPress={() => setGender(g)}
                       activeOpacity={0.8}
                     >
-                      <Text style={[styles.chipText, gender === g.toLowerCase() && styles.chipTextActive]}>
-                        {g}
+                      <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>
+                        {t(`userSetup.${g}`)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -232,10 +234,10 @@ export default function UserSetupScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Age</Text>
+                <Text style={styles.label}>{t('userSetup.ageLabel')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. 25"
+                  placeholder={t('userSetup.agePlaceholder')}
                   placeholderTextColor={colors.placeholder}
                   value={age}
                   onChangeText={setAge}
@@ -244,7 +246,7 @@ export default function UserSetupScreen({ navigation }: Props) {
                 />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Units</Text>
+                <Text style={styles.label}>{t('userSetup.unitsLabel')}</Text>
                 <View style={styles.chipRow}>
                   <TouchableOpacity
                     style={[styles.chip, unitSystem === 'metric' && styles.chipActive]}
@@ -252,7 +254,7 @@ export default function UserSetupScreen({ navigation }: Props) {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.chipText, unitSystem === 'metric' && styles.chipTextActive]}>
-                      Metric
+                      {t('userSetup.metric')}
                     </Text>
                   </TouchableOpacity>
 
@@ -262,7 +264,7 @@ export default function UserSetupScreen({ navigation }: Props) {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.chipText, unitSystem === 'imperial' && styles.chipTextActive]}>
-                      Imperial
+                      {t('userSetup.imperial')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -270,7 +272,7 @@ export default function UserSetupScreen({ navigation }: Props) {
               {unitSystem === 'metric' && (
                 <View style={styles.row}>
                   <View style={[styles.fieldGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>Height</Text>
+                    <Text style={styles.label}>{t('userSetup.heightLabel')}</Text>
                     <View style={styles.unitInput}>
                       <TextInput
                         style={styles.unitInputField}
@@ -286,7 +288,7 @@ export default function UserSetupScreen({ navigation }: Props) {
                   </View>
 
                   <View style={[styles.fieldGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>Weight</Text>
+                    <Text style={styles.label}>{t('userSetup.weightLabel')}</Text>
                     <View style={styles.unitInput}>
                       <TextInput
                         style={styles.unitInputField}
@@ -307,7 +309,7 @@ export default function UserSetupScreen({ navigation }: Props) {
                 <>
                   <View style={styles.row}>
                     <View style={[styles.fieldGroup, { flex: 1 }]}>
-                      <Text style={styles.label}>Height</Text>
+                      <Text style={styles.label}>{t('userSetup.heightLabel')}</Text>
                       <View style={styles.row}>
                         <View style={[styles.unitInput, { flex: 1 }]}>
                           <TextInput
@@ -339,7 +341,7 @@ export default function UserSetupScreen({ navigation }: Props) {
                   </View>
 
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.label}>Weight</Text>
+                    <Text style={styles.label}>{t('userSetup.weightLabel')}</Text>
                     <View style={styles.unitInput}>
                       <TextInput
                         style={styles.unitInputField}
@@ -372,8 +374,8 @@ export default function UserSetupScreen({ navigation }: Props) {
                     <Text style={styles.optionEmoji}>{g.emoji}</Text>
                   </View>
                   <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, goal === g.key && styles.optionLabelActive]}>{g.label}</Text>
-                    <Text style={[styles.optionSub, goal === g.key && styles.optionSubActive]}>{g.sub}</Text>
+                    <Text style={[styles.optionLabel, goal === g.key && styles.optionLabelActive]}>{t(`userSetup.goals.${g.key}.label`)}</Text>
+                    <Text style={[styles.optionSub, goal === g.key && styles.optionSubActive]}>{t(`userSetup.goals.${g.key}.sub`)}</Text>
                   </View>
                   {goal === g.key && <Text style={styles.checkmark}>✓</Text>}
                 </TouchableOpacity>
@@ -395,8 +397,8 @@ export default function UserSetupScreen({ navigation }: Props) {
                     <Text style={styles.optionEmoji}>{a.emoji}</Text>
                   </View>
                   <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, activity === a.key && styles.optionLabelActive]}>{a.label}</Text>
-                    <Text style={[styles.optionSub, activity === a.key && styles.optionSubActive]}>{a.sub}</Text>
+                    <Text style={[styles.optionLabel, activity === a.key && styles.optionLabelActive]}>{t(`userSetup.activities.${a.key}.label`)}</Text>
+                    <Text style={[styles.optionSub, activity === a.key && styles.optionSubActive]}>{t(`userSetup.activities.${a.key}.sub`)}</Text>
                   </View>
                   {activity === a.key && <Text style={styles.checkmark}>✓</Text>}
                 </TouchableOpacity>
@@ -411,30 +413,28 @@ export default function UserSetupScreen({ navigation }: Props) {
                 <View style={[styles.macroCard, styles.macroCardCalories]}>
                   <Text style={styles.macroEmoji}>🔥</Text>
                   <Text style={styles.macroValueLight}>{nutrition.calories}</Text>
-                  <Text style={styles.macroLabelLight}>Calories</Text>
-                  <Text style={styles.macroUnitLight}>kcal / day</Text>
+                  <Text style={styles.macroLabelLight}>{t('macros.calories')}</Text>
+                  <Text style={styles.macroUnitLight}>{t('macros.kcalPerDay')}</Text>
                 </View>
                 <View style={styles.macroRow}>
                   <View style={[styles.macroCard, styles.macroCardProtein]}>
                     <Text style={styles.macroEmoji}>🥩</Text>
                     <Text style={styles.macroValue}>{nutrition.protein}g</Text>
-                    <Text style={styles.macroLabel}>Protein</Text>
+                    <Text style={styles.macroLabel}>{t('macros.protein')}</Text>
                   </View>
                   <View style={[styles.macroCard, styles.macroCardCarbs]}>
                     <Text style={styles.macroEmoji}>🌾</Text>
                     <Text style={styles.macroValue}>{nutrition.carbs}g</Text>
-                    <Text style={styles.macroLabel}>Carbs</Text>
+                    <Text style={styles.macroLabel}>{t('macros.carbs')}</Text>
                   </View>
                   <View style={[styles.macroCard, styles.macroCardFat]}>
                     <Text style={styles.macroEmoji}>🥑</Text>
                     <Text style={styles.macroValue}>{nutrition.fat}g</Text>
-                    <Text style={styles.macroLabel}>Fat</Text>
+                    <Text style={styles.macroLabel}>{t('macros.fat')}</Text>
                   </View>
                 </View>
               </View>
-              <Text style={styles.macroNote}>
-                These are estimates based on your profile. You can adjust them later in settings.
-              </Text>
+              <Text style={styles.macroNote}>{t('userSetup.macroNote')}</Text>
             </View>
           )}
         </ScrollView>
@@ -448,7 +448,7 @@ export default function UserSetupScreen({ navigation }: Props) {
             activeOpacity={0.85}
           >
             <Text style={[styles.continueBtnText, !isComplete() && styles.continueBtnTextDisabled]}>
-              Continue
+              {t('userSetup.continue')}
             </Text>
           </TouchableOpacity>
         </View>

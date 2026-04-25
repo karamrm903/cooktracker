@@ -8,23 +8,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { SPACING, RADIUS, FONTS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { LANGUAGE_META } from '../i18n';
 import { USER, PROFILE_SETTINGS } from '../data/placeholder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthSession, setPersistedAccessToken, setOnboardingStatus } from '../store/slices/authSlice';
 import { authService } from '../services/auth.service';
 import { RootState } from '../store';
+import LanguagePickerModal from '../components/LanguagePickerModal';
 
 const GROUPS = ['Account', 'Preferences', 'More'] as const;
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const { language } = useLanguage();
   const [mealVisibility, setMealVisibility] = useState(USER.mealVisibility ?? 'friends');
   const [shareMealNames, setShareMealNames] = useState(USER.shareMealNames ?? true);
   const [shareCalories, setShareCalories] = useState(USER.shareCalories ?? true);
   const [shareMacros, setShareMacros] = useState(USER.shareMacros ?? true);
+  const [langPickerVisible, setLangPickerVisible] = useState(false);
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
 
@@ -257,6 +264,7 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                           style={styles.settingsRow}
                           activeOpacity={0.7}
+                          onPress={item.id === 'language' ? () => setLangPickerVisible(true) : undefined}
                         >
                           <Ionicons
                             name={item.icon}
@@ -275,14 +283,21 @@ export default function ProfileScreen() {
                               },
                             ]}
                           >
-                            {item.label}
+                            {item.id === 'language' ? t('profile.settings.language') : item.label}
                           </Text>
                           {!isDanger && (
-                            <Ionicons
-                              name="chevron-forward"
-                              size={14}
-                              color={colors.textMuted}
-                            />
+                            <>
+                              {item.id === 'language' && (
+                                <Text style={[styles.settingsBadge, { color: colors.textMuted }]}>
+                                  {LANGUAGE_META[language].flag} {language.toUpperCase()}
+                                </Text>
+                              )}
+                              <Ionicons
+                                name="chevron-forward"
+                                size={14}
+                                color={colors.textMuted}
+                              />
+                            </>
                           )}
                         </TouchableOpacity>
                       </React.Fragment>
@@ -308,6 +323,11 @@ export default function ProfileScreen() {
           CookTrack v1.0.0
         </Text>
       </ScrollView>
+
+      <LanguagePickerModal
+        visible={langPickerVisible}
+        onClose={() => setLangPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -432,6 +452,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: FONTS.medium,
+  },
+  settingsBadge: {
+    fontSize: 13,
+    fontWeight: FONTS.medium,
+    marginRight: 4,
   },
   rowHairline: {
     height: StyleSheet.hairlineWidth,

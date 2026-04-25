@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import type { Colors } from '../context/ThemeContext';
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function CalorieRolloverScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
@@ -34,10 +36,8 @@ export default function CalorieRolloverScreen({ navigation }: Props) {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Carry extra calories{'\n'}to tomorrow?</Text>
-          <Text style={styles.subtitle}>
-            If you eat fewer calories than your daily goal, unused calories can roll over to the next day.
-          </Text>
+          <Text style={styles.title}>{t('calorieRollover.title')}</Text>
+          <Text style={styles.subtitle}>{t('calorieRollover.subtitle')}</Text>
         </View>
 
         {/* Visual example */}
@@ -45,7 +45,7 @@ export default function CalorieRolloverScreen({ navigation }: Props) {
           <View style={styles.exampleCard}>
             <View style={styles.exampleRow}>
               <View style={styles.dayBlock}>
-                <Text style={styles.dayLabel}>Yesterday</Text>
+                <Text style={styles.dayLabel}>{t('calorieRollover.yesterday')}</Text>
                 <View style={styles.calBar}>
                   <View style={[styles.calFill, { width: '70%' }]} />
                 </View>
@@ -58,7 +58,7 @@ export default function CalorieRolloverScreen({ navigation }: Props) {
               <Text style={styles.arrow}>→</Text>
 
               <View style={styles.dayBlock}>
-                <Text style={styles.dayLabel}>Today</Text>
+                <Text style={styles.dayLabel}>{t('calorieRollover.today')}</Text>
                 <View style={[styles.calBar, { backgroundColor: colors.rolloverGreenBg }]}>
                   <View style={[styles.calFill, { width: '100%', backgroundColor: colors.secondary }]} />
                 </View>
@@ -80,9 +80,9 @@ export default function CalorieRolloverScreen({ navigation }: Props) {
           >
             <Text style={styles.optionEmoji}>🚫</Text>
             <View style={styles.optionTextBlock}>
-              <Text style={[styles.optionLabel, selected === 'no' && styles.optionLabelActive]}>No</Text>
+              <Text style={[styles.optionLabel, selected === 'no' && styles.optionLabelActive]}>{t('calorieRollover.noLabel')}</Text>
               <Text style={[styles.optionSub, selected === 'no' && styles.optionSubActive]}>
-                Start fresh every day
+                {t('calorieRollover.noSub')}
               </Text>
             </View>
             {selected === 'no' && <Text style={styles.check}>✓</Text>}
@@ -95,9 +95,9 @@ export default function CalorieRolloverScreen({ navigation }: Props) {
           >
             <Text style={styles.optionEmoji}>✅</Text>
             <View style={styles.optionTextBlock}>
-              <Text style={[styles.optionLabel, selected === 'yes' && styles.optionLabelActive]}>Yes</Text>
+              <Text style={[styles.optionLabel, selected === 'yes' && styles.optionLabelActive]}>{t('calorieRollover.yesLabel')}</Text>
               <Text style={[styles.optionSub, selected === 'yes' && styles.optionSubActive]}>
-                Carry unused calories forward
+                {t('calorieRollover.yesSub')}
               </Text>
             </View>
             {selected === 'yes' && <Text style={styles.check}>✓</Text>}
@@ -113,7 +113,7 @@ export default function CalorieRolloverScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('Referral')}
           activeOpacity={0.85}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <Text style={styles.continueBtnText}>{t('calorieRollover.continue')}</Text>
         </TouchableOpacity>
       </View>
 

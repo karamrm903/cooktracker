@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   fat               INTEGER NOT NULL DEFAULT 0,
   streak            INTEGER NOT NULL DEFAULT 1,
   last_logged_date  DATE,
+  locale            VARCHAR(5)  NOT NULL DEFAULT 'en',
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -16,6 +16,18 @@ export const profileService = {
   },
 
   /**
+   * Updates the user's locale preference on the backend.
+   */
+  updateLocale: async (session: any, locale: string): Promise<void> => {
+    const headers = await getAuthHeaders(session);
+    await fetch(`${getBaseUrl()}/api/profile`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ locale }),
+    });
+  },
+
+  /**
    * Updates or creates the user's profile on the backend.
    */
   updateProfile: async (session: any, profile: Partial<UserProfile>): Promise<UserProfile> => {

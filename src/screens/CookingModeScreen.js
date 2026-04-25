@@ -7,6 +7,7 @@ import {
   Animated,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FONTS, RADIUS } from '../constants/theme';
@@ -160,6 +161,7 @@ const tb = StyleSheet.create({
 });
 
 export default function CookingModeScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { recipe } = route.params;
   const { colors } = useTheme();
   const { addMealLog } = useMealLogs();
@@ -212,15 +214,19 @@ export default function CookingModeScreen({ navigation, route }) {
         if (next === 60 && !warnedRef.current) {
           warnedRef.current = true;
           Alert.alert(
-            '1 minute left',
-            `Your ${prev.label.toLowerCase()} is almost done.`,
-            [{ text: 'OK' }]
+            t('cookingMode.timerAlert.oneMinTitle'),
+            t('cookingMode.timerAlert.oneMinMsg', { label: prev.label.toLowerCase() }),
+            [{ text: t('cookingMode.timerAlert.ok') }]
           );
         }
 
         if (next <= 0) {
           clearInterval(intervalRef.current);
-          Alert.alert('Timer done! ✓', `${prev.label} is complete.`, [{ text: 'Got it' }]);
+          Alert.alert(
+            t('cookingMode.timerAlert.doneTitle'),
+            t('cookingMode.timerAlert.doneMsg', { label: prev.label }),
+            [{ text: t('cookingMode.timerAlert.gotIt') }]
+          );
           return null;
         }
 
@@ -254,27 +260,27 @@ export default function CookingModeScreen({ navigation, route }) {
 
   function handleLogWhatIAte() {
   Alert.alert(
-    'How many grams did you eat?',
+    t('cookingMode.howManyGrams'),
     '',
     [
       { text: '50 g', onPress: () => saveConsumedMeal(50) },
       { text: '100 g', onPress: () => saveConsumedMeal(100) },
       { text: '150 g', onPress: () => saveConsumedMeal(150) },
       { text: '200 g', onPress: () => saveConsumedMeal(200) },
-      { text: 'Custom grams', onPress: openCustomGramsPrompt },
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('cookingMode.customGrams'), onPress: openCustomGramsPrompt },
+      { text: t('common.cancel'), style: 'cancel' },
     ]
   );
 }
 
 function openCustomGramsPrompt() {
   Alert.prompt(
-    'Custom grams',
-    'Enter how many grams you ate',
+    t('cookingMode.customGrams'),
+    t('cookingMode.customGramsMsg'),
     [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Save',
+        text: t('common.save'),
         onPress: (value) => {
           const grams = Number(value);
           if (!grams || grams <= 0) return;
@@ -354,7 +360,7 @@ function saveConsumedMeal(gramsEaten) {
 
         {!done && (
           <Text style={[cm.counter, { color: colors.textMuted }]}>
-            Step {stepIndex + 1} of {totalSteps}
+            {t('cookingMode.stepOf', { current: stepIndex + 1, total: totalSteps })}
           </Text>
         )}
 
@@ -374,19 +380,19 @@ function saveConsumedMeal(gramsEaten) {
             <Text style={cm.doneEmoji}>{timer ? '⏳' : '✅'}</Text>
 
             <Text style={[cm.doneTitle, { color: colors.text }]}>
-              {timer ? 'Almost there!' : 'Cooking finished'}
+              {timer ? t('cookingMode.almostDone') : t('cookingMode.cookingFinished')}
             </Text>
 
             <Text style={[cm.doneSub, { color: colors.textMuted }]}>
               {timer
-                ? `You've completed all the prep steps.\nNow wait for the ${timer.label.toLowerCase()} to finish.`
-                : `Your ${recipe.title} is ready.\nYou can go back to the dashboard or log what you actually ate.`}
+                ? t('cookingMode.almostDoneSub', { label: timer.label.toLowerCase() })
+                : t('cookingMode.finishedSub', { title: recipe.title })}
             </Text>
           </View>
         ) : (
           <View style={cm.stepWrap}>
             <Text style={[cm.stepNum, { color: colors.textMuted }]}>
-              Step {stepIndex + 1}
+              {t('cookingMode.stepLabel', { number: stepIndex + 1 })}
             </Text>
 
             <Text style={[cm.stepText, { color: colors.text }]}>
@@ -397,7 +403,7 @@ function saveConsumedMeal(gramsEaten) {
               <View style={[cm.timerHint, { backgroundColor: colors.surfaceAlt }]}>
                 <Ionicons name="timer-outline" size={14} color={colors.textSecondary} />
                 <Text style={[cm.timerHintText, { color: colors.textSecondary }]}>
-                  {currentStep.timerMinutes} min timer — started automatically
+                  {t('cookingMode.timerHint', { minutes: currentStep.timerMinutes })}
                 </Text>
               </View>
             )}
@@ -416,7 +422,7 @@ function saveConsumedMeal(gramsEaten) {
               activeOpacity={0.7}
             >
               <Ionicons name="home-outline" size={18} color={colors.text} />
-              <Text style={[cm.btnText, { color: colors.text }]}>Dashboard</Text>
+              <Text style={[cm.btnText, { color: colors.text }]}>{t('cookingMode.dashboard')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -424,7 +430,7 @@ function saveConsumedMeal(gramsEaten) {
               onPress={handleLogWhatIAte}
               activeOpacity={0.85}
             >
-              <Text style={[cm.btnText, { color: colors.btnPrimaryText }]}>Log what I ate</Text>
+              <Text style={[cm.btnText, { color: colors.btnPrimaryText }]}>{t('cookingMode.logWhatIAte')}</Text>
               <Ionicons name="restaurant-outline" size={18} color={colors.btnPrimaryText} />
             </TouchableOpacity>
           </>
@@ -442,7 +448,7 @@ function saveConsumedMeal(gramsEaten) {
               activeOpacity={0.7}
             >
               <Ionicons name="arrow-back" size={18} color={colors.text} />
-              <Text style={[cm.btnText, { color: colors.text }]}>Back</Text>
+              <Text style={[cm.btnText, { color: colors.text }]}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -451,7 +457,7 @@ function saveConsumedMeal(gramsEaten) {
               activeOpacity={0.85}
             >
               <Text style={[cm.btnText, { color: colors.btnPrimaryText }]}>
-                {stepIndex === totalSteps - 1 ? 'Finish' : 'Next'}
+                {stepIndex === totalSteps - 1 ? t('common.finish') : t('common.next')}
               </Text>
               <Ionicons
                 name={stepIndex === totalSteps - 1 ? 'checkmark' : 'arrow-forward'}
