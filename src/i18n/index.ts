@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import en from './locales/en.json';
@@ -24,11 +23,7 @@ export async function detectInitialLanguage(): Promise<SupportedLanguage> {
   if (saved && SUPPORTED_LANGUAGES.includes(saved as SupportedLanguage)) {
     return saved as SupportedLanguage;
   }
-  // expo-localization reads OS locale — no permission required
-  const deviceLang = Localization.getLocales()[0]?.languageCode ?? 'en';
-  return SUPPORTED_LANGUAGES.includes(deviceLang as SupportedLanguage)
-    ? (deviceLang as SupportedLanguage)
-    : 'en';
+  return 'en';
 }
 
 i18n.use(initReactI18next).init({

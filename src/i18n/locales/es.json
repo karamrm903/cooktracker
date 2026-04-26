@@ -273,9 +273,8 @@
       "gotIt": "Entendido",
       "ok": "Aceptar"
     },
-    "howManyGrams": "¿Cuántos gramos comiste?",
-    "customGrams": "Gramos personalizados",
-    "customGramsMsg": "Introduce cuántos gramos comiste"
+    "logMealTitle": "¿Registrar esta comida?",
+    "logMealMessage": "Añadir {{title}} a tu registro de comidas de hoy."
   },
   "logMeal": {
     "headerTitle": "Registrar comida",
@@ -318,11 +317,13 @@
   },
   "explore": {
     "title": "Explorar",
-    "searchPlaceholder": "Buscar recetas…",
-    "trendingNow": "Tendencias ahora",
-    "highProtein": "Alto en proteínas",
-    "quickAndEasy": "Rápido y fácil",
-    "healthyDinners": "Cenas saludables",
+    "searchPlaceholder": "Buscar cualquier alimento o receta…",
+    "emptyHint": "Prueba \"pasta\", \"ensalada de pollo\" o \"desayuno proteico\"",
+    "result": "resultado",
+    "results": "resultados",
+    "pressEnter": "Presiona Enter para buscar",
+    "noResults": "Sin resultados",
+    "noResultsSub": "Intenta con otro nombre de alimento o receta",
     "categories": {
       "all": "Todos",
       "breakfast": "Desayuno",

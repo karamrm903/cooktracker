@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+import { config } from './config.js';
 import express from 'express';
 import cors from 'cors';
 import { execFile } from 'child_process';
@@ -252,6 +253,10 @@ app.post('/frames', async (req, res) => {
 const LOCALE_TO_LANGUAGE = {
   en: 'English', fr: 'French', es: 'Spanish', de: 'German',
 };
+
+app.get('/api/config', (req, res) => {
+  res.json({ searchResultsCount: config.search.resultsCount });
+});
 
 function buildVisionPrompt(languageName) {
   return (
@@ -598,6 +603,104 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
     res.json({ meals, totals, streak: prof?.streak ?? 0 });
   } catch (err) {
     console.error('[dashboard GET] ✖', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Explore: AI food search ───────────────────────────────────────────────────
+
+app.post('/api/search', requireAuth, async (req, res) => {
+  const { q, locale } = req.body ?? {};
+  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+    return res.status(400).json({ error: 'q (search query) required' });
+  }
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
+
+  const languageName = LOCALE_TO_LANGUAGE[locale] ?? 'English';
+  const query = q.trim();
+  const resultCount = config.search.resultsCount;
+
+  const prompt =
+    `The user is searching for: "${query}"\n\n` +
+    `Return ONLY a JSON object — no markdown, no code fences — with this exact shape:\n` +
+    `{\n` +
+    `  "results": [\n` +
+    `    {\n` +
+    `      "id": "unique_string",\n` +
+    `      "name": "recipe name",\n` +
+    `      "emoji": "single emoji",\n` +
+    `      "calories": 500,\n` +
+    `      "time": "20 min",\n` +
+    `      "difficulty": "Easy",\n` +
+    `      "category": "breakfast|lunch|dinner|snack",\n` +
+    `      "macros": { "protein": 25, "carbs": 55, "fat": 18 },\n` +
+    `      "ingredients": ["200g pasta", "2 eggs"],\n` +
+    `      "steps": [\n` +
+    `        { "text": "step description", "timerMinutes": null, "timerLabel": null }\n` +
+    `      ],\n` +
+    `      "nutrition": { "total": { "calories": 500, "protein": 25, "carbs": 55, "fat": 18 } },\n` +
+    `      "estimatedGrams": 400\n` +
+    `    }\n` +
+    `  ]\n` +
+    `}\n\n` +
+    `Rules:\n` +
+    `- Return exactly ${resultCount} diverse recipe variants for the query.\n` +
+    `- steps: minimum 4 steps, include timerMinutes for any step with a cooking time.\n` +
+    `- calories and macros must be realistic and consistent with ingredients.\n` +
+    `- estimatedGrams: realistic total weight of one serving.\n` +
+    `- Respond entirely in ${languageName}. All text fields must be in ${languageName}.`;
+
+  try {
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: config.search.maxTokens,
+        system: 'You are an expert culinary AI. Always respond with valid JSON only. No markdown fences.',
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!claudeRes.ok) throw new Error(`Anthropic API ${claudeRes.status}: ${await claudeRes.text()}`);
+
+    const claudeData = await claudeRes.json();
+    const raw = claudeData.content[0].text.trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Claude returned non-JSON: ' + raw.slice(0, 200));
+      parsed = JSON.parse(match[0]);
+    }
+
+    const results = (Array.isArray(parsed.results) ? parsed.results : []).map((r, i) => ({
+      id:             typeof r.id === 'string'      ? r.id             : `search_${Date.now()}_${i}`,
+      name:           typeof r.name === 'string'    ? r.name           : query,
+      emoji:          typeof r.emoji === 'string'   ? r.emoji          : '🍽️',
+      calories:       typeof r.calories === 'number'? r.calories       : 0,
+      time:           typeof r.time === 'string'    ? r.time           : '—',
+      difficulty:     typeof r.difficulty === 'string' ? r.difficulty  : 'Medium',
+      category:       typeof r.category === 'string'? r.category       : 'dinner',
+      macros:         r.macros ?? { protein: 0, carbs: 0, fat: 0 },
+      ingredients:    Array.isArray(r.ingredients)  ? r.ingredients    : [],
+      steps:          Array.isArray(r.steps)        ? r.steps          : [],
+      nutrition:      r.nutrition ?? { total: { calories: r.calories ?? 0, protein: r.macros?.protein ?? 0, carbs: r.macros?.carbs ?? 0, fat: r.macros?.fat ?? 0 } },
+      estimatedGrams: typeof r.estimatedGrams === 'number' ? r.estimatedGrams : 400,
+    }));
+
+    console.log(`[search] ✔ query: "${query}" | ${results.length} results`);
+    res.json({ results });
+  } catch (err) {
+    console.error('[search] ✖', err.message);
     res.status(500).json({ error: err.message });
   }
 });

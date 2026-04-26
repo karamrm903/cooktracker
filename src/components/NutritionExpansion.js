@@ -55,7 +55,7 @@ export function NutrientRow({ label, value, color, colors }) {
 }
 
 // ── Expanded nutrition panel ──────────────────────────────────────────────────
-export function ExpandedNutrition({ item, colors, buttonLabel = 'Start Cooking' }) {
+export function ExpandedNutrition({ item, colors, buttonLabel = 'Start Cooking', onPress }) {
   const { protein, carbs, fat } = item.macros;
 
   return (
@@ -72,14 +72,17 @@ export function ExpandedNutrition({ item, colors, buttonLabel = 'Start Cooking' 
         <NutrientRow label="Fat"     value={fat}     color={C_FAT}     colors={colors} />
       </View>
 
-      <TouchableOpacity
-        style={[exp.button, { backgroundColor: colors.btnPrimary }]}
-        activeOpacity={0.85}
-      >
-        <Text style={[exp.buttonText, { color: colors.btnPrimaryText }]}>
-          {buttonLabel}
-        </Text>
-      </TouchableOpacity>
+      {onPress && (
+        <TouchableOpacity
+          style={[exp.button, { backgroundColor: colors.btnPrimary }]}
+          activeOpacity={0.85}
+          onPress={onPress}
+        >
+          <Text style={[exp.buttonText, { color: colors.btnPrimaryText }]}>
+            {buttonLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

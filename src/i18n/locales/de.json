@@ -273,9 +273,8 @@
       "gotIt": "Verstanden",
       "ok": "OK"
     },
-    "howManyGrams": "Wie viele Gramm hast du gegessen?",
-    "customGrams": "Benutzerdefinierte Gramm",
-    "customGramsMsg": "Gib ein, wie viele Gramm du gegessen hast"
+    "logMealTitle": "Diese Mahlzeit protokollieren?",
+    "logMealMessage": "{{title}} zum heutigen Ernährungstagebuch hinzufügen."
   },
   "logMeal": {
     "headerTitle": "Mahlzeit eintragen",
@@ -318,11 +317,13 @@
   },
   "explore": {
     "title": "Entdecken",
-    "searchPlaceholder": "Rezepte suchen…",
-    "trendingNow": "Aktuell beliebt",
-    "highProtein": "Eiweißreich",
-    "quickAndEasy": "Schnell & einfach",
-    "healthyDinners": "Gesunde Abendessen",
+    "searchPlaceholder": "Lebensmittel oder Rezept suchen…",
+    "emptyHint": "Probiere \"Pasta\", \"Hähnchensalat\" oder \"proteinreiches Frühstück\"",
+    "result": "Ergebnis",
+    "results": "Ergebnisse",
+    "pressEnter": "Drücke Enter zum Suchen",
+    "noResults": "Keine Ergebnisse gefunden",
+    "noResultsSub": "Versuche einen anderen Lebensmittel- oder Rezeptnamen",
     "categories": {
       "all": "Alle",
       "breakfast": "Frühstück",

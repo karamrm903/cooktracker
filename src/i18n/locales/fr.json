@@ -273,9 +273,8 @@
       "gotIt": "Compris",
       "ok": "OK"
     },
-    "howManyGrams": "Combien de grammes avez-vous mangé ?",
-    "customGrams": "Grammes personnalisés",
-    "customGramsMsg": "Entrez le nombre de grammes mangés"
+    "logMealTitle": "Enregistrer ce repas ?",
+    "logMealMessage": "Ajouter {{title}} à votre journal alimentaire d'aujourd'hui."
   },
   "logMeal": {
     "headerTitle": "Enregistrer un repas",
@@ -318,11 +317,13 @@
   },
   "explore": {
     "title": "Explorer",
-    "searchPlaceholder": "Rechercher des recettes…",
-    "trendingNow": "Tendances actuelles",
-    "highProtein": "Riche en protéines",
-    "quickAndEasy": "Rapide et facile",
-    "healthyDinners": "Dîners sains",
+    "searchPlaceholder": "Rechercher un aliment ou une recette…",
+    "emptyHint": "Essayez \"pâtes\", \"salade de poulet\" ou \"petit-déjeuner protéiné\"",
+    "result": "résultat",
+    "results": "résultats",
+    "pressEnter": "Appuyez sur Entrée pour rechercher",
+    "noResults": "Aucun résultat trouvé",
+    "noResultsSub": "Essayez un autre nom d'aliment ou de recette",
     "categories": {
       "all": "Tous",
       "breakfast": "Petit-déjeuner",

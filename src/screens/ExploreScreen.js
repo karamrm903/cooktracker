@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,72 +6,29 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Animated,
-  LayoutAnimation,
-  Platform,
-  UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { SPACING, RADIUS, FONTS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
-import { useSavedMeals } from '../context/SavedMealsContext';
-import { RECIPES } from '../data/placeholder';
+import { useLanguage } from '../context/LanguageContext';
 import { ExpandedNutrition } from '../components/NutritionExpansion';
-import SaveModal from '../components/SaveModal';
+import { exploreService } from '../services/exploreService';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-// ── Data (dessert excluded) ───────────────────────────────────────────────────
-const ALL_RECIPES = RECIPES.filter((r) => r.category !== 'dessert');
-
-const isQuick = (r) => {
-  const m = r.time.match(/^(\d+)\s*min$/);
-  return (m && parseInt(m[1], 10) <= 15) ||
-    r.tags?.some((t) => t === 'Quick' || t === 'No Cook');
-};
-
-const SECTIONS = [
-  {
-    id: 'trending',
-    title: 'Trending Now',
-    icon: 'flame-outline',
-    recipes: [...ALL_RECIPES]
-      .filter((r) => r.rating >= 4.6)
-      .sort((a, b) => b.reviews - a.reviews),
-  },
-  {
-    id: 'high_protein',
-    title: 'High Protein',
-    icon: 'barbell-outline',
-    recipes: ALL_RECIPES.filter((r) => r.tags?.includes('High Protein')),
-  },
-  {
-    id: 'quick',
-    title: 'Quick & Easy',
-    icon: 'timer-outline',
-    recipes: ALL_RECIPES.filter(isQuick),
-  },
-  {
-    id: 'healthy_dinners',
-    title: 'Healthy Dinners',
-    icon: 'moon-outline',
-    recipes: ALL_RECIPES.filter((r) => r.category === 'dinner'),
-  },
-];
 
 const CATEGORIES = [
-  { id: 'all',       label: 'All'       },
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'lunch',     label: 'Lunch'     },
-  { id: 'dinner',    label: 'Dinner'    },
-  { id: 'snack',     label: 'Snacks'    },
+  { id: 'all',       labelKey: 'explore.categories.all'       },
+  { id: 'breakfast', labelKey: 'explore.categories.breakfast' },
+  { id: 'lunch',     labelKey: 'explore.categories.lunch'     },
+  { id: 'dinner',    labelKey: 'explore.categories.dinner'    },
+  { id: 'snack',     labelKey: 'explore.categories.snack'     },
 ];
 
-// ── Recipe row (accordion + bookmark) ────────────────────────────────────────
-function RecipeRow({ item, isLast, isExpanded, onToggle, onBookmark, isSaved, colors }) {
+// ── Recipe row (accordion) ────────────────────────────────────────────────────
+function RecipeRow({ item, isLast, isExpanded, onToggle, onStartCooking, colors, t }) {
   return (
     <>
       <TouchableOpacity
@@ -87,20 +44,9 @@ function RecipeRow({ item, isLast, isExpanded, onToggle, onBookmark, isSaved, co
             {item.name}
           </Text>
           <Text style={[styles.recipeMeta, { color: colors.textMuted }]}>
-            {item.time} · ⭐ {item.rating}
+            {item.time} · {item.difficulty}
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={onBookmark}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={styles.bookmarkBtn}
-        >
-          <Ionicons
-            name={isSaved ? 'bookmark' : 'bookmark-outline'}
-            size={17}
-            color={isSaved ? colors.text : colors.textMuted}
-          />
-        </TouchableOpacity>
         <View style={styles.recipeRight}>
           <Text style={[styles.recipeCalories, { color: colors.textSecondary }]}>
             {item.calories} kcal
@@ -115,7 +61,12 @@ function RecipeRow({ item, isLast, isExpanded, onToggle, onBookmark, isSaved, co
       </TouchableOpacity>
 
       {isExpanded && item.macros && (
-        <ExpandedNutrition item={item} colors={colors} buttonLabel="Start Cooking" />
+        <ExpandedNutrition
+          item={item}
+          colors={colors}
+          buttonLabel={t('recipeSummary.letsCook')}
+          onPress={() => onStartCooking(item)}
+        />
       )}
 
       {!isLast && !isExpanded && (
@@ -125,8 +76,8 @@ function RecipeRow({ item, isLast, isExpanded, onToggle, onBookmark, isSaved, co
   );
 }
 
-// ── Recipe list card ──────────────────────────────────────────────────────────
-function RecipeListCard({ recipes, expandedId, onToggle, onBookmark, isSavedFn, colors }) {
+// ── Results list card ─────────────────────────────────────────────────────────
+function ResultsCard({ recipes, expandedId, onToggle, onStartCooking, colors, t }) {
   return (
     <View style={[styles.listCard, { backgroundColor: colors.surface }]}>
       {recipes.map((item, i) => (
@@ -136,9 +87,9 @@ function RecipeListCard({ recipes, expandedId, onToggle, onBookmark, isSavedFn, 
           isLast={i === recipes.length - 1}
           isExpanded={expandedId === item.id}
           onToggle={() => onToggle(item.id)}
-          onBookmark={() => onBookmark(item)}
-          isSaved={isSavedFn(item.name)}
+          onStartCooking={onStartCooking}
           colors={colors}
+          t={t}
         />
       ))}
     </View>
@@ -147,34 +98,20 @@ function RecipeListCard({ recipes, expandedId, onToggle, onBookmark, isSavedFn, 
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function ExploreScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
-  const { isSaved, getSavedCategory, saveMeal, unsaveMeal } = useSavedMeals();
+  const { language } = useLanguage();
+  const session = useSelector((state) => state.auth.session);
+
   const [query,            setQuery]            = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedId,       setExpandedId]       = useState(null);
-  const [modalMeal,        setModalMeal]        = useState(null);
-  const [toastText,        setToastText]        = useState(null);
-  const toastAnim = useRef(new Animated.Value(0)).current;
-
-  const isSearching = query.trim().length > 0;
-
-  function showToast(text) {
-    setToastText(text);
-    toastAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(toastAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.delay(1600),
-      Animated.timing(toastAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
-    ]).start(() => setToastText(null));
-  }
+  const [aiResults,        setAiResults]        = useState([]);
+  const [loading,          setLoading]          = useState(false);
+  const [searchError,      setSearchError]      = useState(null);
+  const [hasSearched,      setHasSearched]      = useState(false);
 
   function handleToggle(id) {
-    LayoutAnimation.configureNext({
-      duration: 260,
-      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-      update: { type: LayoutAnimation.Types.easeInEaseOut },
-      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-    });
     setExpandedId((prev) => (prev === id ? null : id));
   }
 
@@ -183,33 +120,63 @@ export default function ExploreScreen({ navigation }) {
     setExpandedId(null);
   }
 
+  const runSearch = useCallback(async (q) => {
+    if (!q.trim()) {
+      setAiResults([]);
+      setSearchError(null);
+      setHasSearched(false);
+      return;
+    }
+    setLoading(true);
+    setSearchError(null);
+    setExpandedId(null);
+    setHasSearched(true);
+    try {
+      const results = await exploreService.searchFood(session, q.trim(), language);
+      setAiResults(results);
+    } catch (err) {
+      setSearchError(err.message);
+      setAiResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [session, language]);
+
   function handleQueryChange(text) {
     setQuery(text);
-    setExpandedId(null);
+    if (!text.trim()) {
+      setAiResults([]);
+      setSearchError(null);
+      setLoading(false);
+      setHasSearched(false);
+    } else {
+      setHasSearched(false);
+    }
   }
 
-  function handleSave(category) {
-    saveMeal(modalMeal, category);
-    setModalMeal(null);
-    showToast(`Saved to ${category}`);
+  function handleSubmitSearch() {
+    runSearch(query);
   }
 
-  function handleRemove() {
-    unsaveMeal(modalMeal.name);
-    setModalMeal(null);
-    showToast('Removed from Saved');
+  function handleStartCooking(item) {
+    navigation.navigate('RecipeSummary', {
+      recipe: {
+        id:             item.id,
+        title:          item.name,
+        emoji:          item.emoji,
+        steps:          item.steps,
+        ingredients:    item.ingredients,
+        nutrition:      item.nutrition,
+        estimatedGrams: item.estimatedGrams,
+      },
+    });
   }
 
-  const searchResults = ALL_RECIPES.filter((r) => {
-    const matchesQuery = r.name.toLowerCase().includes(query.toLowerCase());
-    const matchesCat = selectedCategory === 'all' || r.category === selectedCategory;
-    return matchesQuery && matchesCat;
-  });
+  const isSearching = query.trim().length > 0;
 
-  const browseList =
-    selectedCategory === 'all'
-      ? null
-      : ALL_RECIPES.filter((r) => r.category === selectedCategory);
+  const filteredResults = selectedCategory === 'all'
+    ? aiResults
+    : aiResults.filter((r) => r.category === selectedCategory);
 
   return (
     <SafeAreaView
@@ -224,21 +191,24 @@ export default function ExploreScreen({ navigation }) {
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Explore</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('explore.title')}</Text>
         </View>
 
-        {/* ── AI Search bar ────────────────────────────────────────────── */}
+        {/* ── Search bar ───────────────────────────────────────────────── */}
         <View style={[styles.searchBar, { backgroundColor: colors.surfaceAlt }]}>
           <Ionicons name="search-outline" size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search any food or recipe..."
+            placeholder={t('explore.searchPlaceholder')}
             placeholderTextColor={colors.placeholder}
             value={query}
             onChangeText={handleQueryChange}
+            onSubmitEditing={handleSubmitSearch}
             returnKeyType="search"
           />
-          {isSearching ? (
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.textMuted} />
+          ) : isSearching ? (
             <TouchableOpacity
               onPress={() => handleQueryChange('')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -274,7 +244,7 @@ export default function ExploreScreen({ navigation }) {
                     { color: isActive ? colors.background : colors.textSecondary },
                   ]}
                 >
-                  {cat.label}
+                  {t(cat.labelKey)}
                 </Text>
               </TouchableOpacity>
             );
@@ -292,9 +262,9 @@ export default function ExploreScreen({ navigation }) {
               <Ionicons name="calendar-outline" size={20} color={colors.text} />
             </View>
             <View style={styles.planText}>
-              <Text style={[styles.planTitle, { color: colors.text }]}>Plan My Meals</Text>
+              <Text style={[styles.planTitle, { color: colors.text }]}>{t('plan.title')}</Text>
               <Text style={[styles.planSub, { color: colors.textMuted }]}>
-                Build a full day based on your goals
+                {t('plan.emptySubtitle').split(',')[0]}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -302,113 +272,69 @@ export default function ExploreScreen({ navigation }) {
         )}
 
         {/* ── Content ─────────────────────────────────────────────────── */}
-        {isSearching ? (
-          searchResults.length > 0 ? (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-                {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
-              </Text>
-              <RecipeListCard
-                recipes={searchResults}
-                expandedId={expandedId}
-                onToggle={handleToggle}
-                onBookmark={setModalMeal}
-                isSavedFn={isSaved}
-                colors={colors}
-              />
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No results found</Text>
-              <Text style={[styles.emptySub, { color: colors.textMuted }]}>
-                Try a different food or recipe name
-              </Text>
-            </View>
-          )
-        ) : browseList !== null ? (
-          browseList.length > 0 ? (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-                {browseList.length} {browseList.length === 1 ? 'recipe' : 'recipes'}
-              </Text>
-              <RecipeListCard
-                recipes={browseList}
-                expandedId={expandedId}
-                onToggle={handleToggle}
-                onBookmark={setModalMeal}
-                isSavedFn={isSaved}
-                colors={colors}
-              />
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🍽️</Text>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>Nothing here yet</Text>
-              <Text style={[styles.emptySub, { color: colors.textMuted }]}>
-                More recipes coming soon
-              </Text>
-            </View>
-          )
+        {!isSearching ? (
+          /* Default state — prompt to search */
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>✨</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {t('explore.searchPlaceholder')}
+            </Text>
+            <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+              {t('explore.emptyHint')}
+            </Text>
+          </View>
+        ) : searchError ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>⚠️</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('analyzing.errorTitle')}</Text>
+            <Text style={[styles.emptySub, { color: colors.textMuted }]}>{t('common.retry')}</Text>
+          </View>
+        ) : loading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={colors.text} />
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+              {t('common.loading')}
+            </Text>
+          </View>
+        ) : filteredResults.length > 0 ? (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+              {filteredResults.length} {filteredResults.length === 1 ? t('explore.result') : t('explore.results')}
+            </Text>
+            <ResultsCard
+              recipes={filteredResults}
+              expandedId={expandedId}
+              onToggle={handleToggle}
+              onStartCooking={handleStartCooking}
+              colors={colors}
+              t={t}
+            />
+          </>
+        ) : !hasSearched ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>⌨️</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('explore.pressEnter')}</Text>
+          </View>
         ) : (
-          SECTIONS.map((section) =>
-            section.recipes.length === 0 ? null : (
-              <View key={section.id} style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons
-                    name={section.icon}
-                    size={16}
-                    color={colors.textSecondary}
-                    style={styles.sectionIcon}
-                  />
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    {section.title}
-                  </Text>
-                </View>
-                <RecipeListCard
-                  recipes={section.recipes}
-                  expandedId={expandedId}
-                  onToggle={handleToggle}
-                  onBookmark={setModalMeal}
-                  isSavedFn={isSaved}
-                  colors={colors}
-                />
-              </View>
-            )
-          )
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('explore.noResults')}</Text>
+            <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+              {t('explore.noResultsSub')}
+            </Text>
+          </View>
         )}
       </ScrollView>
 
-      {/* ── Save modal ──────────────────────────────────────────────── */}
-      <SaveModal
-        meal={modalMeal}
-        visible={!!modalMeal}
-        onClose={() => setModalMeal(null)}
-        onSave={handleSave}
-        onRemove={handleRemove}
-        savedCategory={modalMeal ? getSavedCategory(modalMeal.name) : null}
-        colors={colors}
-      />
-
-      {/* ── Toast ───────────────────────────────────────────────────── */}
-      {toastText && (
-        <Animated.View
-          style={[styles.toast, { backgroundColor: colors.text, opacity: toastAnim }]}
-          pointerEvents="none"
-        >
-          <Text style={[styles.toastText, { color: colors.background }]}>{toastText}</Text>
-        </Animated.View>
-      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  scroll: { flex: 1 },
+  safe:    { flex: 1 },
+  scroll:  { flex: 1 },
   content: { paddingBottom: SPACING.xxl },
 
-  // ── Header ────────────────────────────────────────────────────────
   header: {
     paddingHorizontal: 24,
     paddingTop: SPACING.lg,
@@ -420,7 +346,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
 
-  // ── Search bar ────────────────────────────────────────────────────
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -438,7 +363,6 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 
-  // ── Category pills ────────────────────────────────────────────────
   pillsRow: {
     paddingHorizontal: 24,
     gap: SPACING.sm,
@@ -454,7 +378,6 @@ const styles = StyleSheet.create({
     fontWeight: FONTS.medium,
   },
 
-  // ── Plan My Meals card ────────────────────────────────────────────
   planCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -472,26 +395,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  planText: { flex: 1 },
+  planText:  { flex: 1 },
   planTitle: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 2 },
   planSub:   { fontSize: 12, fontWeight: FONTS.regular },
 
-  // ── Sections ──────────────────────────────────────────────────────
-  section: {
-    marginBottom: 28,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 12,
-  },
-  sectionIcon: { marginRight: 6 },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: FONTS.bold,
-    letterSpacing: -0.2,
-  },
   sectionLabel: {
     fontSize: 11,
     fontWeight: FONTS.semibold,
@@ -501,14 +408,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // ── List card ─────────────────────────────────────────────────────
   listCard: {
     marginHorizontal: 24,
     borderRadius: RADIUS.lg,
-    overflow: 'hidden',
   },
 
-  // ── Recipe row ────────────────────────────────────────────────────
   recipeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -516,24 +420,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  emojiBox: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiText:      { fontSize: 22 },
-  recipeInfo:     { flex: 1 },
-  recipeName:     { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 3 },
-  recipeMeta:     { fontSize: 12, fontWeight: FONTS.regular },
-  bookmarkBtn:    { padding: 2 },
-  recipeRight:    { alignItems: 'flex-end', gap: 3 },
-  recipeCalories: { fontSize: 13, fontWeight: FONTS.regular },
-  chevron:        { marginTop: 1 },
-  hairline:       { height: StyleSheet.hairlineWidth, marginLeft: 76 },
+  emojiBox:      { width: 44, height: 44, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
+  emojiText:     { fontSize: 22 },
+  recipeInfo:    { flex: 1 },
+  recipeName:    { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 3 },
+  recipeMeta:    { fontSize: 12, fontWeight: FONTS.regular },
+  recipeRight:   { alignItems: 'flex-end', gap: 3 },
+  recipeCalories:{ fontSize: 13, fontWeight: FONTS.regular },
+  chevron:       { marginTop: 1 },
+  hairline:      { height: StyleSheet.hairlineWidth, marginLeft: 76 },
 
-  // ── Empty state ───────────────────────────────────────────────────
   emptyState: {
     alignItems: 'center',
     paddingTop: SPACING.xxl * 2,
@@ -541,16 +437,16 @@ const styles = StyleSheet.create({
   },
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
   emptyTitle: { fontSize: 17, fontWeight: FONTS.semibold, marginBottom: SPACING.xs },
-  emptySub:   { fontSize: 14, fontWeight: FONTS.regular, textAlign: 'center' },
+  emptySub:   { fontSize: 14, fontWeight: FONTS.regular, textAlign: 'center', lineHeight: 20 },
 
-  // ── Toast ─────────────────────────────────────────────────────────
-  toast: {
-    position: 'absolute',
-    bottom: 28,
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: RADIUS.full,
+  loadingState: {
+    alignItems: 'center',
+    paddingTop: SPACING.xxl * 2,
+    gap: 16,
   },
-  toastText: { fontSize: 14, fontWeight: FONTS.medium },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: FONTS.regular,
+  },
+
 });

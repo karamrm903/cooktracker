@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FONTS, RADIUS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useMealLogs } from '../context/MealLogsContext';
+import CommonAlertModal from '../components/CommonModal';
 
 // ── Helpers ─────────────────────────────────────────────
 
@@ -170,6 +170,7 @@ export default function CookingModeScreen({ navigation, route }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [timer, setTimer] = useState(null);
+  const [alertModal, setAlertModal] = useState({ visible: false, title: '', message: '', variant: 'info', isLogConfirm: false });
 
   const intervalRef = useRef(null);
   const warnedRef = useRef(false);
@@ -204,6 +205,12 @@ export default function CookingModeScreen({ navigation, route }) {
   }, [stepIndex, done, currentStep, startTimer]);
 
   useEffect(() => {
+    if (done) {
+      clearInterval(intervalRef.current);
+      setTimer(null);
+      return;
+    }
+
     if (!timer || timer.remainingSeconds <= 0) return;
 
     intervalRef.current = setInterval(() => {
@@ -213,20 +220,22 @@ export default function CookingModeScreen({ navigation, route }) {
 
         if (next === 60 && !warnedRef.current) {
           warnedRef.current = true;
-          Alert.alert(
-            t('cookingMode.timerAlert.oneMinTitle'),
-            t('cookingMode.timerAlert.oneMinMsg', { label: prev.label.toLowerCase() }),
-            [{ text: t('cookingMode.timerAlert.ok') }]
-          );
+          setAlertModal({
+            visible: true,
+            title: t('cookingMode.timerAlert.oneMinTitle'),
+            message: t('cookingMode.timerAlert.oneMinMsg', { label: prev.label.toLowerCase() }),
+            variant: 'warning',
+          });
         }
 
         if (next <= 0) {
           clearInterval(intervalRef.current);
-          Alert.alert(
-            t('cookingMode.timerAlert.doneTitle'),
-            t('cookingMode.timerAlert.doneMsg', { label: prev.label }),
-            [{ text: t('cookingMode.timerAlert.gotIt') }]
-          );
+          setAlertModal({
+            visible: true,
+            title: t('cookingMode.timerAlert.doneTitle'),
+            message: t('cookingMode.timerAlert.doneMsg', { label: prev.label }),
+            variant: 'success',
+          });
           return null;
         }
 
@@ -235,7 +244,7 @@ export default function CookingModeScreen({ navigation, route }) {
     }, 1000);
 
     return () => clearInterval(intervalRef.current);
-  }, [timer?.label, timer?.totalSeconds]);
+  }, [done, timer?.label, timer?.totalSeconds]);
 
   useEffect(() => () => clearInterval(intervalRef.current), []);
 
@@ -259,41 +268,17 @@ export default function CookingModeScreen({ navigation, route }) {
   }
 
   function handleLogWhatIAte() {
-  Alert.alert(
-    t('cookingMode.howManyGrams'),
-    '',
-    [
-      { text: '50 g', onPress: () => saveConsumedMeal(50) },
-      { text: '100 g', onPress: () => saveConsumedMeal(100) },
-      { text: '150 g', onPress: () => saveConsumedMeal(150) },
-      { text: '200 g', onPress: () => saveConsumedMeal(200) },
-      { text: t('cookingMode.customGrams'), onPress: openCustomGramsPrompt },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]
-  );
-}
+    setAlertModal({
+      visible: true,
+      title: t('cookingMode.logMealTitle'),
+      message: t('cookingMode.logMealMessage', { title: recipe.title }),
+      variant: 'info',
+      isLogConfirm: true,
+    });
+  }
 
-function openCustomGramsPrompt() {
-  Alert.prompt(
-    t('cookingMode.customGrams'),
-    t('cookingMode.customGramsMsg'),
-    [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.save'),
-        onPress: (value) => {
-          const grams = Number(value);
-          if (!grams || grams <= 0) return;
-          saveConsumedMeal(grams);
-        },
-      },
-    ],
-    'plain-text',
-    ''
-  );
-}
-
-function saveConsumedMeal(gramsEaten) {
+function saveConsumedMeal() {
+  const gramsEaten = recipe.estimatedGrams ?? 600;
   const now = new Date();
   const mealType = inferMealType(recipe, now);
 
@@ -352,7 +337,7 @@ function saveConsumedMeal(gramsEaten) {
       <View style={cm.topBar}>
         <TouchableOpacity
           style={[cm.closeBtn, { backgroundColor: colors.surfaceAlt }]}
-          onPress={() => navigation.navigate('MainTabs')}
+          onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={18} color={colors.text} />
@@ -468,6 +453,19 @@ function saveConsumedMeal(gramsEaten) {
           </>
         )}
       </View>
+      <CommonAlertModal
+        visible={alertModal.visible}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant={alertModal.variant}
+        primaryText={alertModal.isLogConfirm ? t('common.yes') : t('cookingMode.timerAlert.ok')}
+        onPrimary={() => {
+          setAlertModal(a => ({ ...a, visible: false }));
+          if (alertModal.isLogConfirm) saveConsumedMeal();
+        }}
+        secondaryText={alertModal.isLogConfirm ? t('common.no') : undefined}
+        onSecondary={() => setAlertModal(a => ({ ...a, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

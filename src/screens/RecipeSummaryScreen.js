@@ -7,11 +7,9 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { StackActions } from '@react-navigation/native';
 import { FONTS, RADIUS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useSavedMeals } from '../context/SavedMealsContext';
@@ -57,7 +55,6 @@ export default function RecipeSummaryScreen({ navigation, route }) {
   const { savedMeals, saveMeal, unsaveMeal } = useSavedMeals();
 
   const [showInferred,    setShowInferred]    = useState(false);
-  const [debugOpen,       setDebugOpen]       = useState(false);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [isLoggingMeal, setIsLoggingMeal] = useState(false);
   const [editableIngredients, setEditableIngredients] = useState(
@@ -162,14 +159,6 @@ fat: recipe.nutrition?.total?.fat ?? 0,
   console.log('[RecipeSummaryScreen] rendering → title:', recipe.title,
     '| id:', recipe.id, '| confidence:', level);
 
-  function handleReanalyze() {
-    if (!recipe.sourceUrl) {
-      navigation.navigate('MainTabs');
-      return;
-    }
-    navigation.dispatch(StackActions.replace('Analyzing', { url: recipe.sourceUrl }));
-  }
-
   async function handleSave(category) {
     if (!dbId) return;
     await saveMeal(dbId, category);
@@ -182,17 +171,6 @@ fat: recipe.nutrition?.total?.fat ?? 0,
     setSaveModalVisible(false);
   }
 
-  function handleEditManually() {
-    Alert.alert(
-      t('recipeSummary.editManuallyTitle'),
-      t('recipeSummary.editManuallyMsg'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('recipeSummary.continueAnyway'), onPress: () => navigation.navigate('CookingMode', { recipe }) },
-      ]
-    );
-  }
-
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
 
@@ -200,7 +178,7 @@ fat: recipe.nutrition?.total?.fat ?? 0,
       <View style={[s.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={s.closeBtn}
-          onPress={() => navigation.navigate('MainTabs')}
+          onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={22} color={colors.text} />
@@ -261,7 +239,7 @@ disabled={!savedDbId}
   { labelKey: 'carbs',    value: displayedNutrition?.total?.carbs ?? 0,    unit: 'g' },
   { labelKey: 'fat',      value: displayedNutrition?.total?.fat ?? 0,      unit: 'g' },
 ].map((m, i) => (
-              <React.Fragment key={m.label}>
+              <React.Fragment key={m.labelKey}>
                 {i > 0 && <View style={[s.macroDivider, { backgroundColor: colors.border }]} />}
                 <View style={s.macroCell}>
                   <Text style={[s.macroValue, { color: colors.text }]}>
@@ -389,58 +367,6 @@ disabled={!savedDbId}
           ))}
         </SectionCard>
 
-        {/* ── Debug panel ──────────────────────────────────────────────── */}
-        <TouchableOpacity
-          style={[s.debugHeader, { backgroundColor: colors.surfaceAlt }]}
-          onPress={() => setDebugOpen(v => !v)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="code-slash-outline" size={13} color={colors.textMuted} />
-          <Text style={[s.debugHeaderText, { color: colors.textMuted }]}>{t('recipeSummary.debugInfo')}</Text>
-          <Ionicons name={debugOpen ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        {debugOpen && (
-          <View style={[s.debugBody, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-            <DebugRow label="URL"          value={recipe.sourceUrl ?? '—'} colors={colors} />
-            <DebugRow label="Platform"     value={ingestion.platform ? `${ingestion.platform}${ingestion.videoId ? ` · ${ingestion.videoId}` : ''}` : '—'} colors={colors} />
-            {ingestion.normalizedUrl && ingestion.normalizedUrl !== recipe.sourceUrl && (
-              <DebugRow label="Normalized" value={ingestion.normalizedUrl} colors={colors} />
-            )}
-            <DebugRow label="Language"     value={ingestion.detectedLanguage ?? '—'} colors={colors} />
-            <DebugRow label="Title"        value={recipe.title}            colors={colors} />
-            <DebugRow label="Recipe ID"    value={recipe.id}               colors={colors} />
-            <DebugRow label="Confidence"   value={`${Math.round((analysis.confidence ?? 1) * 100)}% (${level})`} colors={colors} />
-            <DebugRow
-              label="Transcript"
-              value={
-                ingestion.transcriptFallback
-                  ? `⚠ fallback: ${ingestion.transcriptFallback}`
-                  : `${ingestion.transcriptWords ?? '?'} words via ${ingestion.transcriptSource ?? '?'}`
-              }
-              colors={colors}
-            />
-            <DebugRow label="OCR text"     value={ingestion.ocrTextLength ? `${ingestion.ocrTextLength} chars` : '(none)'} colors={colors} />
-            <DebugRow label="Frames"       value={`${evidence.frameCount ?? '—'} analyzed`} colors={colors} />
-            {ingestion.sourcesAvailable && (
-              <DebugRow
-                label="Sources"
-                value={Object.entries(ingestion.sourcesAvailable).map(([k, v]) => `${k}:${v ? '✔' : '✖'}`).join('  ')}
-                colors={colors}
-              />
-            )}
-            {evidence.transcriptSnippet && (
-              <DebugRow label="Transcript preview" value={evidence.transcriptSnippet} colors={colors} />
-            )}
-            {evidence.ocrSnippet && (
-              <DebugRow label="OCR preview" value={evidence.ocrSnippet} colors={colors} />
-            )}
-            {warnings.length > 0 && (
-              <DebugRow label="Warnings" value={warnings.join('\n')} colors={colors} />
-            )}
-          </View>
-        )}
-
         <View style={{ height: 140 }} />
       </ScrollView>
 
@@ -450,24 +376,6 @@ disabled={!savedDbId}
           {t('recipeSummary.confirmQuestion')}
         </Text>
         <View style={s.confirmRow}>
-          <TouchableOpacity
-            style={[s.btnSecondary, { backgroundColor: colors.surfaceAlt }]}
-            onPress={handleReanalyze}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="refresh-outline" size={16} color={colors.text} />
-            <Text style={[s.btnSecondaryText, { color: colors.text }]}>{t('recipeSummary.reanalyze')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[s.btnSecondary, { backgroundColor: colors.surfaceAlt }]}
-            onPress={handleEditManually}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="create-outline" size={16} color={colors.text} />
-            <Text style={[s.btnSecondaryText, { color: colors.text }]}>{t('recipeSummary.edit')}</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={[
   s.btnPrimary,
@@ -481,8 +389,6 @@ disabled={isLoggingMeal}
   if (isLoggingMeal) return;
 
   setIsLoggingMeal(true);
-
-  const now = new Date();
 
   const estimatedGrams = estimateRecipeGrams(recipe);
 
@@ -540,14 +446,6 @@ function Pill({ icon, label, colors }) {
   );
 }
 
-function DebugRow({ label, value, colors }) {
-  return (
-    <View style={s.debugRowItem}>
-      <Text style={[s.debugLabel, { color: colors.textMuted }]}>{label}</Text>
-      <Text style={[s.debugValue, { color: colors.textSecondary }]} numberOfLines={3}>{value}</Text>
-    </View>
-  );
-}
 
 const s = StyleSheet.create({
   safe:        { flex: 1 },
@@ -597,14 +495,7 @@ const s = StyleSheet.create({
   timerBadge:   { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: RADIUS.full, marginTop: 2 },
   timerBadgeText: { fontSize: 11, fontWeight: FONTS.medium },
 
-  debugHeader:     { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.lg, marginBottom: 4 },
-  debugHeaderText: { flex: 1, fontSize: 12, fontWeight: FONTS.medium },
-  debugBody:       { borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, padding: 12, gap: 8, marginBottom: 8 },
-  debugRowItem:    { gap: 2 },
-  debugLabel:      { fontSize: 10, fontWeight: FONTS.semibold, letterSpacing: 0.6, textTransform: 'uppercase' },
-  debugValue:      { fontSize: 12, fontWeight: FONTS.regular, lineHeight: 17 },
-
-  bottomBar:       { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
+bottomBar:       { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
   confirmQuestion: { fontSize: 13, fontWeight: FONTS.medium, textAlign: 'center' },
   confirmRow:      { flexDirection: 'row', gap: 8 },
   btnSecondary:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 13, borderRadius: RADIUS.full },

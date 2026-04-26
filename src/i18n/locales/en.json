@@ -273,9 +273,8 @@
       "gotIt": "Got it",
       "ok": "OK"
     },
-    "howManyGrams": "How many grams did you eat?",
-    "customGrams": "Custom grams",
-    "customGramsMsg": "Enter how many grams you ate"
+    "logMealTitle": "Log this meal?",
+    "logMealMessage": "Add {{title}} to your meal log for today."
   },
   "logMeal": {
     "headerTitle": "Log Meal",
@@ -318,11 +317,13 @@
   },
   "explore": {
     "title": "Explore",
-    "searchPlaceholder": "Search recipes…",
-    "trendingNow": "Trending Now",
-    "highProtein": "High Protein",
-    "quickAndEasy": "Quick & Easy",
-    "healthyDinners": "Healthy Dinners",
+    "searchPlaceholder": "Search any food or recipe…",
+    "emptyHint": "Try \"pasta\", \"chicken salad\" or \"high protein breakfast\"",
+    "result": "result",
+    "results": "results",
+    "pressEnter": "Press Enter to search",
+    "noResults": "No results found",
+    "noResultsSub": "Try a different food or recipe name",
     "categories": {
       "all": "All",
       "breakfast": "Breakfast",
