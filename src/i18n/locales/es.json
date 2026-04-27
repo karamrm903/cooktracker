@@ -19,7 +19,9 @@
     "on": "Activado",
     "off": "Desactivado",
     "yes": "Sí",
-    "no": "No"
+    "no": "No",
+    "today": "Hoy",
+    "tomorrow": "Mañana"
   },
   "mealType": {
     "breakfast": "Desayuno",
@@ -396,7 +398,14 @@
     "recipesMatched_other": "{{count}} recetas de tu biblioteca — ★ guardado  ↑ analizado",
     "kcalTarget": "~{{amount}} kcal",
     "pro": "prot",
-    "carb": "carb"
+    "carb": "carb",
+    "savePlan": "Guardar plan",
+    "savedSuccess": "¡Plan guardado!",
+    "savedSuccessMsg": "Comidas añadidas a tu registro.",
+    "savedError": "Error al guardar el plan",
+    "conflictTitle": "Comidas ya registradas",
+    "conflictMsg": "Ya tienes comidas registradas para {{date}}. ¿Añadir de todas formas?",
+    "noRecipesHint": "No se encontraron recetas. Busca recetas en Explorar."
   },
   "language": {
     "title": "Idioma",

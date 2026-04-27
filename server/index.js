@@ -565,6 +565,45 @@ app.delete('/api/meals/:id', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/plan/save
+app.post('/api/plan/save', requireAuth, async (req, res) => {
+  const { dateKey, meals } = req.body;
+  if (!dateKey || !Array.isArray(meals) || meals.length === 0) {
+    return res.status(400).json({ error: 'dateKey and non-empty meals array required' });
+  }
+
+  try {
+    const insertData = meals.map(m => ({
+      user_id: req.user.id,
+      name: m.name,
+      emoji: m.emoji ?? null,
+      calories: m.calories ?? 0,
+      protein: m.protein ?? 0,
+      carbs: m.carbs ?? 0,
+      fat: m.fat ?? 0,
+      meal_type: m.mealType,
+      meal: m.meal ?? null,
+      date_key: dateKey,
+      logged_at: new Date().toISOString(),
+      source: m.source ?? 'manual',
+      recipe_id: m.recipeId ?? null,
+    }));
+
+    const { data, error } = await adminClient
+      .from('logged_meals')
+      .insert(insertData)
+      .select();
+
+    if (error) throw error;
+
+    console.log(`[plan save] ✔ user ${req.user.id} saved ${data.length} meals for ${dateKey}`);
+    res.status(201).json({ success: true, count: data.length, meals: data.map(mealToCamel) });
+  } catch (err) {
+    console.error('[plan save] ✖', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 // GET /api/dashboard?targetDate=YYYY-MM-DD

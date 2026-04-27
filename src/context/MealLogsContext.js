@@ -19,15 +19,15 @@ export function MealLogsProvider({ children }) {
     (state) => state.meals
   );
 
-  const currentDate = new Date().toISOString().slice(0, 10);
   // Tracks in-flight mutations so focus-refresh doesn't overwrite optimistic state
   const pendingMutations = useRef(0);
 
   const refreshMeals = useCallback(() => {
     if (session?.access_token) {
-      dispatch(fetchDashboard({ session, date: currentDate }));
+      const date = new Date().toISOString().slice(0, 10);
+      dispatch(fetchDashboard({ session, date }));
     }
-  }, [session, currentDate, dispatch]);
+  }, [session, dispatch]);
 
   // Safe refresh: skips if a mutation (patch/delete) is in-flight
   const safeRefreshMeals = useCallback(() => {
@@ -38,7 +38,8 @@ export function MealLogsProvider({ children }) {
 
   useEffect(() => {
     if (session?.access_token) {
-      dispatch(fetchDashboard({ session, date: currentDate }));
+      const date = new Date().toISOString().slice(0, 10);
+      dispatch(fetchDashboard({ session, date }));
     } else {
       dispatch(clearMeals());
     }

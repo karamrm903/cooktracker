@@ -1,24 +1,30 @@
 import { supabase } from '../lib/supabase';
 
-/**
- * Insert an extracted recipe row into Supabase.
- * Returns the saved row (including the generated `id`).
- */
-export async function saveRecipe(recipe, sourceUrl) {
+export async function saveRecipe(session, recipe, sourceUrl) {
+  const ingredients = Array.isArray(recipe.ingredients)
+    ? JSON.stringify(recipe.ingredients)
+    : (recipe.ingredients ?? null);
+
+  const instructions = Array.isArray(recipe.steps)
+    ? recipe.steps.map((s, i) => `${i + 1}. ${s.text ?? s}`).join('\n')
+    : null;
+
   const { data, error } = await supabase
     .from('recipes')
-    .insert({
-      title:       recipe.title,
-      ingredients: recipe.ingredients,
-      steps:       recipe.steps,
-      calories:    recipe.nutrition?.calories ?? null,
-      protein:     recipe.nutrition?.protein  ?? null,
-      carbs:       recipe.nutrition?.carbs    ?? null,
-      fat:         recipe.nutrition?.fat      ?? null,
-      emoji:       recipe.emoji ?? null,
-      source_url:  sourceUrl ?? null,
-      user_id:     null,
-    })
+    .upsert({
+      user_id:      session?.user?.id ?? null,
+      title:        recipe.title,
+      ingredients,
+      instructions,
+      steps:        recipe.steps ?? null,
+      nutrition:    recipe.nutrition ?? null,
+      calories:     recipe.nutrition?.total?.calories ?? recipe.nutrition?.calories ?? null,
+      protein:      recipe.nutrition?.total?.protein  ?? recipe.nutrition?.protein  ?? null,
+      carbs:        recipe.nutrition?.total?.carbs    ?? recipe.nutrition?.carbs    ?? null,
+      fat:          recipe.nutrition?.total?.fat      ?? recipe.nutrition?.fat      ?? null,
+      emoji:        recipe.emoji ?? null,
+      source_url:   sourceUrl ?? null,
+    }, { onConflict: 'user_id,title' })
     .select()
     .single();
 
@@ -26,54 +32,44 @@ export async function saveRecipe(recipe, sourceUrl) {
   return data;
 }
 
-/**
- * Fetch all recipes the user has saved (saved_category IS NOT NULL).
- */
-export async function fetchSavedRecipes() {
+export async function fetchSavedRecipes(session) {
   const { data, error } = await supabase
     .from('recipes')
     .select('*')
-    .not('saved_category', 'is', null)
+    .eq('user_id', session?.user?.id)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data;
 }
 
-/**
- * Set (or update) the saved category for a recipe row.
- */
-export async function setSavedCategory(id, category) {
+export async function setSavedCategory(session, id, category) {
   const { error } = await supabase
     .from('recipes')
     .update({ saved_category: category })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session?.user?.id);
 
   if (error) throw error;
 }
 
-/**
- * Fetch all recipes (saved or not) as candidates for meal planning.
- * Only fetches the columns needed for planning.
- */
-export async function fetchAllRecipes() {
+export async function fetchAllRecipes(session) {
   const { data, error } = await supabase
     .from('recipes')
-    .select('id, title, calories, protein, carbs, fat, emoji, saved_category')
+    .select('id, title, calories, protein, carbs, fat, emoji, steps, nutrition, ingredients')
+    .eq('user_id', session?.user?.id)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data;
 }
 
-/**
- * Remove a recipe from Saved by nulling its saved_category.
- */
-export async function unsaveRecipeById(id) {
+export async function unsaveRecipeById(session, id) {
   const { error } = await supabase
     .from('recipes')
     .update({ saved_category: null })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session?.user?.id);
 
   if (error) throw error;
 }

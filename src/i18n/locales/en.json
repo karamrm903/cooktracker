@@ -19,7 +19,9 @@
     "on": "On",
     "off": "Off",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
   },
   "mealType": {
     "breakfast": "Breakfast",
@@ -396,7 +398,14 @@
     "recipesMatched_other": "{{count}} recipes from your library matched — ★ saved  ↑ analyzed",
     "kcalTarget": "~{{amount}} kcal",
     "pro": "pro",
-    "carb": "carb"
+    "carb": "carb",
+    "savePlan": "Save Plan",
+    "savedSuccess": "Plan saved!",
+    "savedSuccessMsg": "Meals added to your log.",
+    "savedError": "Failed to save plan",
+    "conflictTitle": "Meals already logged",
+    "conflictMsg": "You already have meals logged for {{date}}. Add anyway?",
+    "noRecipesHint": "No recipes found. Search for recipes in Explore to get started."
   },
   "language": {
     "title": "Language",

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -170,6 +171,7 @@ export default function CookingModeScreen({ navigation, route }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [timer, setTimer] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [alertModal, setAlertModal] = useState({ visible: false, title: '', message: '', variant: 'info', isLogConfirm: false });
 
   const intervalRef = useRef(null);
@@ -277,7 +279,7 @@ export default function CookingModeScreen({ navigation, route }) {
     });
   }
 
-function saveConsumedMeal() {
+async function saveConsumedMeal() {
   const gramsEaten = recipe.estimatedGrams ?? 600;
   const now = new Date();
   const mealType = inferMealType(recipe, now);
@@ -309,25 +311,30 @@ function saveConsumedMeal() {
     mealType === 'dinner' ? '🍽️' :
     '🍪';
 
-  addMealLog({
-    id: `meal_${Date.now()}`,
-    name: recipe.title,
-    calories,
-    protein,
-    carbs,
-    fat,
-    macros: { protein, carbs, fat },
-    mealType,
-    meal: mealLabel,
-    time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-    loggedAt: now.toISOString(),
-    dateKey: now.toISOString().slice(0, 10),
-    source: 'recipe',
-    emoji: recipe.emoji ?? mealEmoji,
-    recipeId: recipe.id,
-    gramsEaten,
-    estimatedRecipeGrams,
-  });
+  setIsSaving(true);
+  try {
+    await addMealLog({
+      id: `meal_${Date.now()}`,
+      name: recipe.title,
+      calories,
+      protein,
+      carbs,
+      fat,
+      macros: { protein, carbs, fat },
+      mealType,
+      meal: mealLabel,
+      time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      loggedAt: now.toISOString(),
+      dateKey: now.toISOString().slice(0, 10),
+      source: 'recipe',
+      emoji: recipe.emoji ?? mealEmoji,
+      recipeId: recipe.id,
+      gramsEaten,
+      estimatedRecipeGrams,
+    });
+  } finally {
+    setIsSaving(false);
+  }
 
   navigation.navigate('MainTabs');
 }
@@ -411,12 +418,18 @@ function saveConsumedMeal() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[cm.btn, cm.btnNext, { backgroundColor: colors.btnPrimary }]}
+              style={[cm.btn, cm.btnNext, { backgroundColor: colors.btnPrimary, opacity: isSaving ? 0.6 : 1 }]}
               onPress={handleLogWhatIAte}
               activeOpacity={0.85}
+              disabled={isSaving}
             >
-              <Text style={[cm.btnText, { color: colors.btnPrimaryText }]}>{t('cookingMode.logWhatIAte')}</Text>
-              <Ionicons name="restaurant-outline" size={18} color={colors.btnPrimaryText} />
+              {isSaving
+                ? <ActivityIndicator size="small" color={colors.btnPrimaryText} />
+                : <>
+                    <Text style={[cm.btnText, { color: colors.btnPrimaryText }]}>{t('cookingMode.logWhatIAte')}</Text>
+                    <Ionicons name="restaurant-outline" size={18} color={colors.btnPrimaryText} />
+                  </>
+              }
             </TouchableOpacity>
           </>
         ) : (

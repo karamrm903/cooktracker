@@ -20,6 +20,17 @@ export const mealService = {
     return data.meal;
   },
 
+  savePlan: async (session: any, dateKey: string, meals: Omit<Meal, 'id'>[]): Promise<{ count: number; meals: Meal[] }> => {
+    const headers = await getAuthHeaders(session);
+    const response = await fetch(`${getBaseUrl()}/api/plan/save`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ dateKey, meals }),
+    });
+    return handleResponse<{ count: number; meals: Meal[] }>(response);
+  },
+
+
   updateMeal: async (
     session: any,
     id: string,

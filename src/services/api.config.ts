@@ -50,11 +50,21 @@ export async function getAuthHeaders(session: any): Promise<Record<string, strin
  * Standardized error handling for fetch responses.
  */
 export async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
-  
+  const text = await response.text();
+
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // Server returned non-JSON (HTML error page, empty body, crash)
+    throw new Error(
+      `Server returned ${response.status}: ${text.slice(0, 200) || '(empty body)'}`
+    );
+  }
+
   if (!response.ok) {
     throw new Error(data.error || data.message || `API Error: ${response.status}`);
   }
-  
+
   return data as T;
 }

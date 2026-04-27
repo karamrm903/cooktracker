@@ -15,6 +15,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useSavedMeals } from '../context/SavedMealsContext';
 import { useMealLogs } from '../context/MealLogsContext';
 import SaveModal from '../components/SaveModal';
+import { useSelector } from 'react-redux';
+import { saveRecipe } from '../services/recipeService';
 
 // ── Confidence colour map ─────────────────────────────────────────────────────
 const CONFIDENCE_COLORS = {
@@ -53,6 +55,7 @@ export default function RecipeSummaryScreen({ navigation, route }) {
   const { colors, isDark } = useTheme();
   const { addMealLog } = useMealLogs();
   const { savedMeals, saveMeal, unsaveMeal } = useSavedMeals();
+  const session = useSelector(state => state.auth.session);
 
   const [showInferred,    setShowInferred]    = useState(false);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
@@ -118,40 +121,20 @@ const displayedNutrition = hasIngredientNutrition
     }
   : recipe.nutrition;
   useEffect(() => {
-  const saveRecipeToSupabase = async () => {
-    if (savedDbId) return;
+    const saveRecipeToSupabase = async () => {
+      if (savedDbId) return;
 
-    const { data, error } = await supabase
-      .from('recipes')
-      .insert([
-        {
-          title: recipe.title,
-          calories: recipe.nutrition?.total?.calories ?? 0,
-protein: recipe.nutrition?.total?.protein ?? 0,
-carbs: recipe.nutrition?.total?.carbs ?? 0,
-fat: recipe.nutrition?.total?.fat ?? 0,
-          ingredients: Array.isArray(recipe.ingredients)
-            ? recipe.ingredients.join('\n')
-            : '',
-          instructions: Array.isArray(recipe.steps)
-            ? recipe.steps.map((s, i) => `${i + 1}. ${s.text}`).join('\n')
-            : '',
-        },
-      ])
-      .select()
-      .single();
+      try {
+        const data = await saveRecipe(session, recipe, recipe.sourceUrl || null);
+        console.log('RECIPE SAVED:', data);
+        setSavedDbId(data.id);
+      } catch (error) {
+        console.log('SAVE RECIPE ERROR:', error);
+      }
+    };
 
-    if (error) {
-      console.log('SAVE RECIPE ERROR:', error);
-      return;
-    }
-
-    console.log('RECIPE SAVED:', data);
-    setSavedDbId(data.id);
-  };
-
-  saveRecipeToSupabase();
-}, [recipe, savedDbId]);
+    saveRecipeToSupabase();
+  }, [recipe, savedDbId, session]);
 
   // Colors adapt so the banners look good in both light and dark mode
   const confBg     = isDark ? colors.surfaceAlt : conf.bg;

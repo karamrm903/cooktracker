@@ -19,7 +19,9 @@
     "on": "Ein",
     "off": "Aus",
     "yes": "Ja",
-    "no": "Nein"
+    "no": "Nein",
+    "today": "Heute",
+    "tomorrow": "Morgen"
   },
   "mealType": {
     "breakfast": "Frühstück",
@@ -396,7 +398,14 @@
     "recipesMatched_other": "{{count}} Rezepte aus deiner Bibliothek — ★ gespeichert  ↑ analysiert",
     "kcalTarget": "~{{amount}} kcal",
     "pro": "Eiweiß",
-    "carb": "Kohlenhydrate"
+    "carb": "Kohlenhydrate",
+    "savePlan": "Plan speichern",
+    "savedSuccess": "Plan gespeichert!",
+    "savedSuccessMsg": "Mahlzeiten zum Tagebuch hinzugefügt.",
+    "savedError": "Plan konnte nicht gespeichert werden",
+    "conflictTitle": "Mahlzeiten bereits geloggt",
+    "conflictMsg": "Du hast bereits Mahlzeiten für {{date}}. Trotzdem hinzufügen?",
+    "noRecipesHint": "Keine Rezepte gefunden. Suche in Entdecken nach Rezepten."
   },
   "language": {
     "title": "Sprache",

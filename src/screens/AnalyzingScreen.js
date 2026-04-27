@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { analyzeVideo, PIPELINE_STAGES } from '../services/videoAnalyzer';
 import { saveRecipe } from '../services/recipeService';
+import { useSelector } from 'react-redux';
 const FOOD_EMOJIS = ['🍳', '🍰', '🥩', '🍗', '🍣', '🍔', '🍕', '🍜', '🥗', '🍪'];
 
 // Module-level counter — survives re-renders and component reuse.
@@ -21,6 +22,7 @@ export default function AnalyzingScreen({ navigation, route }) {
   const { language } = useLanguage();
   const { url } = route.params ?? {};
   const { colors } = useTheme();
+  const session = useSelector(state => state.auth.session);
   const [phase,     setPhase]     = useState(-1); // index of currently processing step
   const [errorMsg,  setErrorMsg]  = useState(null);
   const [emojiIndex, setEmojiIndex] = useState(0);
@@ -107,7 +109,7 @@ useEffect(() => {
         console.log('[AnalyzingScreen] navigating to RecipeSummary → recipe title:', recipe.title);
         let dbId = null;
         try {
-          const saved = await saveRecipe(recipe, url);
+          const saved = await saveRecipe(session, recipe, url);
           dbId = saved.id;
         } catch (err) {
           console.warn('[AnalyzingScreen] saveRecipe failed:', err?.message ?? err);

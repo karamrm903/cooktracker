@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import {
   fetchSavedRecipes,
   setSavedCategory,
@@ -24,21 +25,25 @@ function rowToMeal(row) {
 export function SavedMealsProvider({ children }) {
   const [savedMeals, setSavedMeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const session = useSelector(state => state.auth.session);
 
   const reload = useCallback(async () => {
+    if (!session) return;
     try {
-      const rows = await fetchSavedRecipes();
+      const rows = await fetchSavedRecipes(session);
       setSavedMeals(rows.map(rowToMeal));
     } catch (err) {
       console.warn('[SavedMealsContext] fetch failed:', err?.message ?? err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    if (session) {
+      reload();
+    }
+  }, [reload, session]);
 
   function isSaved(identifier) {
     return savedMeals.some((m) => m.id === identifier || m.name === identifier);
@@ -49,7 +54,8 @@ export function SavedMealsProvider({ children }) {
   }
 
   async function saveMeal(dbId, category) {
-    await setSavedCategory(dbId, category);
+    if (!session) return;
+    await setSavedCategory(session, dbId, category);
 
     setSavedMeals((prev) => {
       const exists = prev.find((m) => m.id === dbId);
@@ -63,7 +69,8 @@ export function SavedMealsProvider({ children }) {
   }
 
   async function unsaveMeal(dbId) {
-    await unsaveRecipeById(dbId);
+    if (!session) return;
+    await unsaveRecipeById(session, dbId);
     setSavedMeals((prev) => prev.filter((m) => m.id !== dbId));
   }
 

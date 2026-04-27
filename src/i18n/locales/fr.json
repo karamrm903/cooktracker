@@ -19,7 +19,9 @@
     "on": "Activé",
     "off": "Désactivé",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain"
   },
   "mealType": {
     "breakfast": "Petit-déjeuner",
@@ -396,7 +398,14 @@
     "recipesMatched_other": "{{count}} recettes de votre bibliothèque — ★ sauvegardé  ↑ analysé",
     "kcalTarget": "~{{amount}} kcal",
     "pro": "prot",
-    "carb": "gluc"
+    "carb": "gluc",
+    "savePlan": "Enregistrer le plan",
+    "savedSuccess": "Plan enregistré !",
+    "savedSuccessMsg": "Repas ajoutés à votre journal.",
+    "savedError": "Échec de l'enregistrement",
+    "conflictTitle": "Repas déjà enregistrés",
+    "conflictMsg": "Vous avez déjà des repas pour le {{date}}. Ajouter quand même ?",
+    "noRecipesHint": "Aucune recette trouvée. Recherchez des recettes dans Explorer."
   },
   "language": {
     "title": "Langue",
