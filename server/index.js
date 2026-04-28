@@ -359,6 +359,7 @@ app.post('/api/profile', requireAuth, async (req, res) => {
       .from('users')
       .upsert({
         id: req.user.id,
+        ...(payload.name !== undefined && { name: payload.name || null }),
         gender: payload.gender,
         age: parseInt(payload.age) || null,
         height_cm: parseFloat(payload.height_cm) || null,

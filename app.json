@@ -21,6 +21,7 @@
         "backgroundColor": "#FF6B35"
       },
       "package": "com.anonymous.cooktrack",
+      "edgeToEdge": true,
       "intentFilters": [
         {
           "action": "VIEW",

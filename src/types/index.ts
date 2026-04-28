@@ -1,5 +1,6 @@
 export interface UserProfile {
   id: string;
+  name?: string | null;
   gender: 'male' | 'female' | 'other';
   age: number;
   height_cm: number;

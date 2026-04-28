@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
-import { setOnboardingPayload } from '../store/slices/authSlice';
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useDispatch } from "react-redux";
+import { setOnboardingPayload } from "../store/slices/authSlice";
 import {
   View,
   Text,
@@ -11,23 +11,24 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme } from '../context/ThemeContext';
-import type { Colors } from '../context/ThemeContext';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../context/ThemeContext";
+import type { Colors } from "../context/ThemeContext";
 
 type RootStackParamList = {
   Welcome: undefined;
   Onboarding: undefined;
   UserSetup: undefined;
   AppleHealth: undefined;
+  Subscription: undefined;
   Login: undefined;
   MainTabs: undefined;
 };
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'UserSetup'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, "UserSetup">;
 };
 
 // ── Nutrition calculation (Mifflin-St Jeor) ──────────────────────────────────
@@ -37,13 +38,13 @@ function calculateTargets(
   heightCm: string,
   weightKg: string,
   goal: string,
-  activity: string,
+  activity: string
 ) {
   const w = parseFloat(weightKg) || 70;
   const h = parseFloat(heightCm) || 170;
   const a = parseInt(age) || 25;
   const bmr =
-    gender === 'female'
+    gender === "female"
       ? 10 * w + 6.25 * h - 5 * a - 161
       : 10 * w + 6.25 * h - 5 * a + 5;
   const activityMap: Record<string, number> = {
@@ -58,7 +59,9 @@ function calculateTargets(
     muscle: 300,
     healthy: 0,
   };
-  const calories = Math.round(bmr * (activityMap[activity] ?? 1.375) + (goalMap[goal] ?? 0));
+  const calories = Math.round(
+    bmr * (activityMap[activity] ?? 1.375) + (goalMap[goal] ?? 0)
+  );
   let protein = Math.round(w * 1.8);
   let fat = Math.round(w * 0.8);
 
@@ -81,17 +84,17 @@ function feetInchesToCm(ft: string, inches: string) {
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const GOALS = [
-  { key: 'lose', emoji: '📉' },
-  { key: 'maintain', emoji: '⚖️' },
-  { key: 'muscle', emoji: '💪' },
-  { key: 'healthy', emoji: '🥗' },
+  { key: "lose", emoji: "📉" },
+  { key: "maintain", emoji: "⚖️" },
+  { key: "muscle", emoji: "💪" },
+  { key: "healthy", emoji: "🥗" },
 ];
 
 const ACTIVITIES = [
-  { key: 'sedentary', emoji: '🛋️' },
-  { key: 'light', emoji: '🚶' },
-  { key: 'moderate', emoji: '🏃' },
-  { key: 'very', emoji: '🏋️' },
+  { key: "sedentary", emoji: "🛋️" },
+  { key: "light", emoji: "🚶" },
+  { key: "moderate", emoji: "🏃" },
+  { key: "very", emoji: "🏋️" },
 ];
 
 const TOTAL_STEPS = 4;
@@ -105,49 +108,51 @@ export default function UserSetupScreen({ navigation }: Props) {
   const [step, setStep] = useState(1);
 
   const [gender, setGender] = useState<string | null>(null);
-  const [age, setAge] = useState('');
-  const [heightCm, setHeightCm] = useState('');
-  const [weightKg, setWeightKg] = useState('');
-  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>('metric');
-  const [heightFt, setHeightFt] = useState('');
-  const [heightIn, setHeightIn] = useState('');
-  const [weightLbs, setWeightLbs] = useState('');
+  const [age, setAge] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
+  const [weightLbs, setWeightLbs] = useState("");
   const [goal, setGoal] = useState<string | null>(null);
   const [activity, setActivity] = useState<string | null>(null);
 
   const normalizedHeightCm =
-    unitSystem === 'metric'
+    unitSystem === "metric"
       ? heightCm
       : String(feetInchesToCm(heightFt, heightIn));
 
   const normalizedWeightKg =
-    unitSystem === 'metric'
-      ? weightKg
-      : String(lbsToKg(weightLbs));
+    unitSystem === "metric" ? weightKg : String(lbsToKg(weightLbs));
 
   const nutrition = calculateTargets(
-    gender ?? 'male',
+    gender ?? "male",
     age,
     normalizedHeightCm,
     normalizedWeightKg,
-    goal ?? 'maintain',
-    activity ?? 'moderate',
+    goal ?? "maintain",
+    activity ?? "moderate"
   );
 
   function isComplete() {
     switch (step) {
       case 1:
-        return gender !== null &&
-          age !== '' &&
-          (
-            unitSystem === 'metric'
-              ? heightCm !== '' && weightKg !== ''
-              : heightFt !== '' && heightIn !== '' && weightLbs !== ''
-          );
-      case 2: return goal !== null;
-      case 3: return activity !== null;
-      case 4: return true;
-      default: return false;
+        return (
+          gender !== null &&
+          age !== "" &&
+          (unitSystem === "metric"
+            ? heightCm !== "" && weightKg !== ""
+            : heightFt !== "" && heightIn !== "" && weightLbs !== "")
+        );
+      case 2:
+        return goal !== null;
+      case 3:
+        return activity !== null;
+      case 4:
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -156,12 +161,12 @@ export default function UserSetupScreen({ navigation }: Props) {
       setStep(step + 1);
     } else {
       const payload = {
-        gender: gender ?? '',
+        gender: gender ?? "",
         age: parseInt(age) || null,
         height_cm: Math.round(parseFloat(normalizedHeightCm)) || null,
         weight_kg: Math.round(parseFloat(normalizedWeightKg)) || null,
-        goal: goal ?? '',
-        activity: activity ?? '',
+        goal: goal ?? "",
+        activity: activity ?? "",
         calories: nutrition.calories,
         protein: nutrition.protein,
         carbs: nutrition.carbs,
@@ -169,7 +174,7 @@ export default function UserSetupScreen({ navigation }: Props) {
       };
 
       dispatch(setOnboardingPayload(payload));
-      navigation.navigate('AppleHealth');
+      navigation.navigate("Login");
     }
   }
 
@@ -179,27 +184,52 @@ export default function UserSetupScreen({ navigation }: Props) {
   }
 
   const stepMeta: Record<number, { title: string; subtitle: string }> = {
-    1: { title: t('userSetup.steps.1.title'), subtitle: t('userSetup.steps.1.subtitle') },
-    2: { title: t('userSetup.steps.2.title'), subtitle: t('userSetup.steps.2.subtitle') },
-    3: { title: t('userSetup.steps.3.title'), subtitle: t('userSetup.steps.3.subtitle') },
-    4: { title: t('userSetup.steps.4.title'), subtitle: t('userSetup.steps.4.subtitle') },
+    1: {
+      title: t("userSetup.steps.1.title"),
+      subtitle: t("userSetup.steps.1.subtitle"),
+    },
+    2: {
+      title: t("userSetup.steps.2.title"),
+      subtitle: t("userSetup.steps.2.subtitle"),
+    },
+    3: {
+      title: t("userSetup.steps.3.title"),
+      subtitle: t("userSetup.steps.3.subtitle"),
+    },
+    4: {
+      title: t("userSetup.steps.4.title"),
+      subtitle: t("userSetup.steps.4.subtitle"),
+    },
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         {/* Top bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={handleBack}
+            activeOpacity={0.7}
+          >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.stepCounter}>{t('userSetup.stepOf', { step, total: TOTAL_STEPS })}</Text>
+          <Text style={styles.stepCounter}>
+            {t("userSetup.stepOf", { step, total: TOTAL_STEPS })}
+          </Text>
         </View>
 
         {/* Progress bar */}
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${(step / TOTAL_STEPS) * 100}%` },
+            ]}
+          />
         </View>
 
         <ScrollView
@@ -216,16 +246,21 @@ export default function UserSetupScreen({ navigation }: Props) {
           {step === 1 && (
             <View style={styles.stepContent}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>{t('userSetup.genderLabel')}</Text>
+                <Text style={styles.label}>{t("userSetup.genderLabel")}</Text>
                 <View style={styles.chipRow}>
-                  {(['male', 'female', 'other'] as const).map((g) => (
+                  {(["male", "female", "other"] as const).map((g) => (
                     <TouchableOpacity
                       key={g}
                       style={[styles.chip, gender === g && styles.chipActive]}
                       onPress={() => setGender(g)}
                       activeOpacity={0.8}
                     >
-                      <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>
+                      <Text
+                        style={[
+                          styles.chipText,
+                          gender === g && styles.chipTextActive,
+                        ]}
+                      >
                         {t(`userSetup.${g}`)}
                       </Text>
                     </TouchableOpacity>
@@ -234,10 +269,10 @@ export default function UserSetupScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>{t('userSetup.ageLabel')}</Text>
+                <Text style={styles.label}>{t("userSetup.ageLabel")}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder={t('userSetup.agePlaceholder')}
+                  placeholder={t("userSetup.agePlaceholder")}
                   placeholderTextColor={colors.placeholder}
                   value={age}
                   onChangeText={setAge}
@@ -246,33 +281,51 @@ export default function UserSetupScreen({ navigation }: Props) {
                 />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>{t('userSetup.unitsLabel')}</Text>
+                <Text style={styles.label}>{t("userSetup.unitsLabel")}</Text>
                 <View style={styles.chipRow}>
                   <TouchableOpacity
-                    style={[styles.chip, unitSystem === 'metric' && styles.chipActive]}
-                    onPress={() => setUnitSystem('metric')}
+                    style={[
+                      styles.chip,
+                      unitSystem === "metric" && styles.chipActive,
+                    ]}
+                    onPress={() => setUnitSystem("metric")}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.chipText, unitSystem === 'metric' && styles.chipTextActive]}>
-                      {t('userSetup.metric')}
+                    <Text
+                      style={[
+                        styles.chipText,
+                        unitSystem === "metric" && styles.chipTextActive,
+                      ]}
+                    >
+                      {t("userSetup.metric")}
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.chip, unitSystem === 'imperial' && styles.chipActive]}
-                    onPress={() => setUnitSystem('imperial')}
+                    style={[
+                      styles.chip,
+                      unitSystem === "imperial" && styles.chipActive,
+                    ]}
+                    onPress={() => setUnitSystem("imperial")}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.chipText, unitSystem === 'imperial' && styles.chipTextActive]}>
-                      {t('userSetup.imperial')}
+                    <Text
+                      style={[
+                        styles.chipText,
+                        unitSystem === "imperial" && styles.chipTextActive,
+                      ]}
+                    >
+                      {t("userSetup.imperial")}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
-              {unitSystem === 'metric' && (
+              {unitSystem === "metric" && (
                 <View style={styles.row}>
                   <View style={[styles.fieldGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>{t('userSetup.heightLabel')}</Text>
+                    <Text style={styles.label}>
+                      {t("userSetup.heightLabel")}
+                    </Text>
                     <View style={styles.unitInput}>
                       <TextInput
                         style={styles.unitInputField}
@@ -288,7 +341,9 @@ export default function UserSetupScreen({ navigation }: Props) {
                   </View>
 
                   <View style={[styles.fieldGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>{t('userSetup.weightLabel')}</Text>
+                    <Text style={styles.label}>
+                      {t("userSetup.weightLabel")}
+                    </Text>
                     <View style={styles.unitInput}>
                       <TextInput
                         style={styles.unitInputField}
@@ -305,11 +360,13 @@ export default function UserSetupScreen({ navigation }: Props) {
                 </View>
               )}
 
-              {unitSystem === 'imperial' && (
+              {unitSystem === "imperial" && (
                 <>
                   <View style={styles.row}>
                     <View style={[styles.fieldGroup, { flex: 1 }]}>
-                      <Text style={styles.label}>{t('userSetup.heightLabel')}</Text>
+                      <Text style={styles.label}>
+                        {t("userSetup.heightLabel")}
+                      </Text>
                       <View style={styles.row}>
                         <View style={[styles.unitInput, { flex: 1 }]}>
                           <TextInput
@@ -341,7 +398,9 @@ export default function UserSetupScreen({ navigation }: Props) {
                   </View>
 
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.label}>{t('userSetup.weightLabel')}</Text>
+                    <Text style={styles.label}>
+                      {t("userSetup.weightLabel")}
+                    </Text>
                     <View style={styles.unitInput}>
                       <TextInput
                         style={styles.unitInputField}
@@ -366,16 +425,38 @@ export default function UserSetupScreen({ navigation }: Props) {
               {GOALS.map((g) => (
                 <TouchableOpacity
                   key={g.key}
-                  style={[styles.optionCard, goal === g.key && styles.optionCardActive]}
+                  style={[
+                    styles.optionCard,
+                    goal === g.key && styles.optionCardActive,
+                  ]}
                   onPress={() => setGoal(g.key)}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.optionIconWrap, goal === g.key && styles.optionIconWrapActive]}>
+                  <View
+                    style={[
+                      styles.optionIconWrap,
+                      goal === g.key && styles.optionIconWrapActive,
+                    ]}
+                  >
                     <Text style={styles.optionEmoji}>{g.emoji}</Text>
                   </View>
                   <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, goal === g.key && styles.optionLabelActive]}>{t(`userSetup.goals.${g.key}.label`)}</Text>
-                    <Text style={[styles.optionSub, goal === g.key && styles.optionSubActive]}>{t(`userSetup.goals.${g.key}.sub`)}</Text>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        goal === g.key && styles.optionLabelActive,
+                      ]}
+                    >
+                      {t(`userSetup.goals.${g.key}.label`)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.optionSub,
+                        goal === g.key && styles.optionSubActive,
+                      ]}
+                    >
+                      {t(`userSetup.goals.${g.key}.sub`)}
+                    </Text>
                   </View>
                   {goal === g.key && <Text style={styles.checkmark}>✓</Text>}
                 </TouchableOpacity>
@@ -389,18 +470,42 @@ export default function UserSetupScreen({ navigation }: Props) {
               {ACTIVITIES.map((a) => (
                 <TouchableOpacity
                   key={a.key}
-                  style={[styles.optionCard, activity === a.key && styles.optionCardActive]}
+                  style={[
+                    styles.optionCard,
+                    activity === a.key && styles.optionCardActive,
+                  ]}
                   onPress={() => setActivity(a.key)}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.optionIconWrap, activity === a.key && styles.optionIconWrapActive]}>
+                  <View
+                    style={[
+                      styles.optionIconWrap,
+                      activity === a.key && styles.optionIconWrapActive,
+                    ]}
+                  >
                     <Text style={styles.optionEmoji}>{a.emoji}</Text>
                   </View>
                   <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, activity === a.key && styles.optionLabelActive]}>{t(`userSetup.activities.${a.key}.label`)}</Text>
-                    <Text style={[styles.optionSub, activity === a.key && styles.optionSubActive]}>{t(`userSetup.activities.${a.key}.sub`)}</Text>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        activity === a.key && styles.optionLabelActive,
+                      ]}
+                    >
+                      {t(`userSetup.activities.${a.key}.label`)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.optionSub,
+                        activity === a.key && styles.optionSubActive,
+                      ]}
+                    >
+                      {t(`userSetup.activities.${a.key}.sub`)}
+                    </Text>
                   </View>
-                  {activity === a.key && <Text style={styles.checkmark}>✓</Text>}
+                  {activity === a.key && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -412,29 +517,35 @@ export default function UserSetupScreen({ navigation }: Props) {
               <View style={styles.macroGrid}>
                 <View style={[styles.macroCard, styles.macroCardCalories]}>
                   <Text style={styles.macroEmoji}>🔥</Text>
-                  <Text style={styles.macroValueLight}>{nutrition.calories}</Text>
-                  <Text style={styles.macroLabelLight}>{t('macros.calories')}</Text>
-                  <Text style={styles.macroUnitLight}>{t('macros.kcalPerDay')}</Text>
+                  <Text style={styles.macroValueLight}>
+                    {nutrition.calories}
+                  </Text>
+                  <Text style={styles.macroLabelLight}>
+                    {t("macros.calories")}
+                  </Text>
+                  <Text style={styles.macroUnitLight}>
+                    {t("macros.kcalPerDay")}
+                  </Text>
                 </View>
                 <View style={styles.macroRow}>
                   <View style={[styles.macroCard, styles.macroCardProtein]}>
                     <Text style={styles.macroEmoji}>🥩</Text>
                     <Text style={styles.macroValue}>{nutrition.protein}g</Text>
-                    <Text style={styles.macroLabel}>{t('macros.protein')}</Text>
+                    <Text style={styles.macroLabel}>{t("macros.protein")}</Text>
                   </View>
                   <View style={[styles.macroCard, styles.macroCardCarbs]}>
                     <Text style={styles.macroEmoji}>🌾</Text>
                     <Text style={styles.macroValue}>{nutrition.carbs}g</Text>
-                    <Text style={styles.macroLabel}>{t('macros.carbs')}</Text>
+                    <Text style={styles.macroLabel}>{t("macros.carbs")}</Text>
                   </View>
                   <View style={[styles.macroCard, styles.macroCardFat]}>
                     <Text style={styles.macroEmoji}>🥑</Text>
                     <Text style={styles.macroValue}>{nutrition.fat}g</Text>
-                    <Text style={styles.macroLabel}>{t('macros.fat')}</Text>
+                    <Text style={styles.macroLabel}>{t("macros.fat")}</Text>
                   </View>
                 </View>
               </View>
-              <Text style={styles.macroNote}>{t('userSetup.macroNote')}</Text>
+              <Text style={styles.macroNote}>{t("userSetup.macroNote")}</Text>
             </View>
           )}
         </ScrollView>
@@ -442,17 +553,24 @@ export default function UserSetupScreen({ navigation }: Props) {
         {/* Bottom CTA */}
         <View style={styles.bottomBar}>
           <TouchableOpacity
-            style={[styles.continueBtn, !isComplete() && styles.continueBtnDisabled]}
+            style={[
+              styles.continueBtn,
+              !isComplete() && styles.continueBtnDisabled,
+            ]}
             onPress={handleContinue}
             disabled={!isComplete()}
             activeOpacity={0.85}
           >
-            <Text style={[styles.continueBtnText, !isComplete() && styles.continueBtnTextDisabled]}>
-              {t('userSetup.continue')}
+            <Text
+              style={[
+                styles.continueBtnText,
+                !isComplete() && styles.continueBtnTextDisabled,
+              ]}
+            >
+              {t("userSetup.continue")}
             </Text>
           </TouchableOpacity>
         </View>
-
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -463,9 +581,9 @@ function makeStyles(colors: Colors) {
     safe: { flex: 1, backgroundColor: colors.background },
 
     topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: 24,
       paddingTop: 8,
       paddingBottom: 12,
@@ -475,16 +593,21 @@ function makeStyles(colors: Colors) {
       height: 38,
       borderRadius: 999,
       backgroundColor: colors.backBtnBg,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.07,
       shadowRadius: 4,
       elevation: 2,
     },
     backArrow: { fontSize: 17, color: colors.text, lineHeight: 21 },
-    stepCounter: { fontSize: 13, fontWeight: '600', color: colors.textDisabled, letterSpacing: 0.3 },
+    stepCounter: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textDisabled,
+      letterSpacing: 0.3,
+    },
 
     progressTrack: {
       height: 3,
@@ -493,18 +616,32 @@ function makeStyles(colors: Colors) {
       borderRadius: 2,
       marginBottom: 8,
     },
-    progressFill: { height: '100%', backgroundColor: colors.progressFill, borderRadius: 2 },
+    progressFill: {
+      height: "100%",
+      backgroundColor: colors.progressFill,
+      borderRadius: 2,
+    },
 
     scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 16 },
 
     header: { paddingTop: 24, paddingBottom: 28, gap: 6 },
-    title: { fontSize: 30, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
-    subtitle: { fontSize: 15, color: colors.textMuted, fontWeight: '400' },
+    title: {
+      fontSize: 30,
+      fontWeight: "800",
+      color: colors.text,
+      letterSpacing: -0.4,
+    },
+    subtitle: { fontSize: 15, color: colors.textMuted, fontWeight: "400" },
 
     stepContent: { gap: 14 },
 
     fieldGroup: { gap: 8 },
-    label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, letterSpacing: 0.2 },
+    label: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      letterSpacing: 0.2,
+    },
     input: {
       backgroundColor: colors.inputBg,
       borderRadius: 14,
@@ -512,104 +649,161 @@ function makeStyles(colors: Colors) {
       paddingVertical: 15,
       fontSize: 15,
       color: colors.text,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 1,
     },
-    row: { flexDirection: 'row', gap: 12 },
+    row: { flexDirection: "row", gap: 12 },
     unitInput: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: colors.inputBg,
       borderRadius: 14,
       paddingHorizontal: 16,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 1,
     },
-    unitInputField: { flex: 1, paddingVertical: 15, fontSize: 15, color: colors.text },
-    unit: { fontSize: 14, fontWeight: '600', color: colors.textDisabled },
+    unitInputField: {
+      flex: 1,
+      paddingVertical: 15,
+      fontSize: 15,
+      color: colors.text,
+    },
+    unit: { fontSize: 14, fontWeight: "600", color: colors.textDisabled },
 
-    chipRow: { flexDirection: 'row', gap: 10 },
+    chipRow: { flexDirection: "row", gap: 10 },
     chip: {
       flex: 1,
       paddingVertical: 12,
       borderRadius: 12,
       backgroundColor: colors.surface,
-      alignItems: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 1,
     },
     chipActive: { backgroundColor: colors.cardActive },
-    chipText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+    chipText: { fontSize: 14, fontWeight: "600", color: colors.textMuted },
     chipTextActive: { color: colors.cardActiveText },
 
     optionCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 14,
       backgroundColor: colors.surface,
       borderRadius: 16,
       padding: 16,
       borderWidth: 2,
-      borderColor: 'transparent',
-      shadowColor: '#000',
+      borderColor: "transparent",
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 1,
     },
-    optionCardActive: { backgroundColor: colors.cardActive, borderColor: colors.cardActive },
-    optionIconWrap: {
-      width: 44, height: 44, borderRadius: 12,
-      backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center',
+    optionCardActive: {
+      backgroundColor: colors.cardActive,
+      borderColor: colors.cardActive,
     },
-    optionIconWrapActive: { backgroundColor: 'rgba(128,128,128,0.15)' },
+    optionIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    optionIconWrapActive: { backgroundColor: "rgba(128,128,128,0.15)" },
     optionEmoji: { fontSize: 22 },
     optionText: { flex: 1, gap: 2 },
-    optionLabel: { fontSize: 15, fontWeight: '700', color: colors.text },
+    optionLabel: { fontSize: 15, fontWeight: "700", color: colors.text },
     optionLabelActive: { color: colors.cardActiveText },
-    optionSub: { fontSize: 13, color: colors.textMuted, fontWeight: '400' },
+    optionSub: { fontSize: 13, color: colors.textMuted, fontWeight: "400" },
     optionSubActive: { color: colors.cardActiveSub },
-    checkmark: { fontSize: 16, color: colors.cardActiveText, fontWeight: '700' },
+    checkmark: {
+      fontSize: 16,
+      color: colors.cardActiveText,
+      fontWeight: "700",
+    },
 
     macroGrid: { gap: 12 },
-    macroRow: { flexDirection: 'row', gap: 12 },
-    macroCard: { flex: 1, borderRadius: 18, padding: 18, alignItems: 'center', gap: 4 },
-    macroCardCalories: { backgroundColor: colors.cardInverted, paddingVertical: 24 },
+    macroRow: { flexDirection: "row", gap: 12 },
+    macroCard: {
+      flex: 1,
+      borderRadius: 18,
+      padding: 18,
+      alignItems: "center",
+      gap: 4,
+    },
+    macroCardCalories: {
+      backgroundColor: colors.cardInverted,
+      paddingVertical: 24,
+    },
     macroCardProtein: { backgroundColor: colors.tintBlue },
     macroCardCarbs: { backgroundColor: colors.tintYellow },
     macroCardFat: { backgroundColor: colors.tintPink },
     macroEmoji: { fontSize: 28, marginBottom: 4 },
-    macroValue: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-    macroValueLight: { fontSize: 26, fontWeight: '800', color: colors.cardInvertedText, letterSpacing: -0.5 },
-    macroLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-    macroLabelLight: { fontSize: 13, fontWeight: '600', color: colors.cardInvertedSub },
-    macroUnit: { fontSize: 11, color: colors.textDisabled, fontWeight: '500' },
-    macroUnitLight: { fontSize: 11, fontWeight: '500', color: 'rgba(255,255,255,0.45)' },
-    macroNote: { fontSize: 13, color: colors.textDisabled, textAlign: 'center', lineHeight: 20, paddingHorizontal: 8 },
+    macroValue: {
+      fontSize: 26,
+      fontWeight: "800",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    macroValueLight: {
+      fontSize: 26,
+      fontWeight: "800",
+      color: colors.cardInvertedText,
+      letterSpacing: -0.5,
+    },
+    macroLabel: { fontSize: 13, fontWeight: "600", color: colors.textMuted },
+    macroLabelLight: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.cardInvertedSub,
+    },
+    macroUnit: { fontSize: 11, color: colors.textDisabled, fontWeight: "500" },
+    macroUnitLight: {
+      fontSize: 11,
+      fontWeight: "500",
+      color: "rgba(255,255,255,0.45)",
+    },
+    macroNote: {
+      fontSize: 13,
+      color: colors.textDisabled,
+      textAlign: "center",
+      lineHeight: 20,
+      paddingHorizontal: 8,
+    },
 
     bottomBar: { paddingHorizontal: 24, paddingBottom: 16, paddingTop: 8 },
     continueBtn: {
       backgroundColor: colors.btnPrimary,
       paddingVertical: 17,
       borderRadius: 999,
-      alignItems: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.18,
       shadowRadius: 12,
       elevation: 6,
     },
-    continueBtnDisabled: { backgroundColor: colors.btnDisabled, shadowOpacity: 0 },
-    continueBtnText: { fontSize: 17, fontWeight: '700', color: colors.btnPrimaryText, letterSpacing: 0.2 },
+    continueBtnDisabled: {
+      backgroundColor: colors.btnDisabled,
+      shadowOpacity: 0,
+    },
+    continueBtnText: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: colors.btnPrimaryText,
+      letterSpacing: 0.2,
+    },
     continueBtnTextDisabled: { color: colors.btnDisabledText },
   });
 }

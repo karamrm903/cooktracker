@@ -13,6 +13,7 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { supabase } from "./src/lib/supabase";
 import {
   SafeAreaProvider,
+  SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -69,6 +70,7 @@ import AnalyzingScreen from "./src/screens/AnalyzingScreen";
 import RecipeSummaryScreen from "./src/screens/RecipeSummaryScreen";
 import CookingModeScreen from "./src/screens/CookingModeScreen";
 import LogMealScreen from "./src/screens/LogMealScreen";
+import EditProfileScreen from "./src/screens/EditProfileScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -225,9 +227,7 @@ const ftt = StyleSheet.create({
 // ── Tab navigator ──────────────────────────────────────────────────────────────
 function MainTabs() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-
-  const bottomPad = Math.max(insets.bottom - 14, 4);
+  const bottomPad = 16;
   const tabBarHeight = 56 + bottomPad;
 
   return (
@@ -258,8 +258,8 @@ function MainTabs() {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
-      <Tab.Screen name="Friends" component={FriendsScreen} />
-      <Tab.Screen name="Calories" component={CaloriesScreen} />
+      {/* <Tab.Screen name="Friends" component={FriendsScreen} />
+      <Tab.Screen name="Calories" component={CaloriesScreen} /> */}
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -284,7 +284,7 @@ function AppContent({ onRouteChange }) {
   }
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <NavigationContainer
         key={canAccessMain ? "main" : "auth"}
@@ -303,6 +303,7 @@ function AppContent({ onRouteChange }) {
               component={RecipeSummaryScreen}
             />
             <Stack.Screen name="LogMeal" component={LogMealScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="CookingMode" component={CookingModeScreen} />
           </Stack.Navigator>
         ) : (
@@ -327,7 +328,7 @@ function AppContent({ onRouteChange }) {
           </Stack.Navigator>
         )}
       </NavigationContainer>
-    </>
+    </SafeAreaView>
   );
 }
 

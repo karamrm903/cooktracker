@@ -84,34 +84,21 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const { session, user } = useSelector((state: RootState) => state.auth);
   const streak = useSelector((state: RootState) => state.meals.streak);
 
-  // Re-fetch meals silently whenever Dashboard comes into focus (e.g. returning from LogMeal)
+  // Re-fetch meals + profile whenever Dashboard comes into focus
   useFocusEffect(
     useCallback(() => {
       refreshMeals();
-    }, [refreshMeals])
+      if (!session?.access_token) { setIsLoadingProfile(false); return; }
+      setIsLoadingProfile(true);
+      profileService.getProfile(session)
+        .then(p => setProfileData(p))
+        .catch((err: any) => {
+          console.error("Dashboard profile fetch error:", err);
+          setErrorAlert({ visible: true, message: err.message || t('dashboard.profileLoadFailedMsg') });
+        })
+        .finally(() => setIsLoadingProfile(false));
+    }, [refreshMeals, session])
   );
-
-  useEffect(() => {
-    async function fetchProfile() {
-      if (!session?.access_token) {
-        setIsLoadingProfile(false);
-        return;
-      }
-      try {
-        const profile = await profileService.getProfile(session);
-        setProfileData(profile);
-      } catch (err: any) {
-        console.error("Dashboard profile fetch error:", err);
-        setErrorAlert({
-          visible: true,
-          message: err.message || t('dashboard.profileLoadFailedMsg'),
-        });
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    }
-    fetchProfile();
-  }, [session]);
 
   function handleImport() {
     const url = importUrl.trim();
@@ -146,7 +133,8 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   }, [isLoadingProfile, showMealSkeleton]);
 
   // Use email prefix if available, otherwise just 'Chef'.
-  const firstName = user?.email ? user.email.split("@")[0] : "Chef";
+  const emailPrefix = user?.email ? user.email.split("@")[0] : "Chef";
+  const firstName = profileData?.name || emailPrefix;
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
