@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { checkRecipeImportUsage, checkSearchUsage } from '../middleware/checkUsage.js';
+import { checkRecipeImportUsage, checkSearchUsage, checkFoodSearchUsage } from '../middleware/checkUsage.js';
 import { callClaude, LOCALE_TO_LANGUAGE } from '../utils/claude.js';
 import { config } from '../config.js';
 
@@ -84,7 +84,7 @@ router.post('/search', requireAuth, checkSearchUsage, async (req, res) => {
 });
 
 // POST /api/food-search — food item search with per-serving nutrition data
-router.post('/food-search', requireAuth, async (req, res) => {
+router.post('/food-search', requireAuth, checkFoodSearchUsage, async (req, res) => {
   const { q, mode = 'results', locale } = req.body ?? {};
   if (!q || typeof q !== 'string' || q.trim().length === 0) {
     return res.status(400).json({ error: 'q (search query) required' });

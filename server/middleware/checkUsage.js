@@ -12,8 +12,12 @@ export async function checkRecipeImportUsage(req, res, next) {
 
     if (error) throw error;
 
-    if (isAccessGranted(user)) return next();
+    if (isAccessGranted(user)) {
+      console.log(`[usage] recipe_import GRANTED user=${userId} status=${user.subscription_status}`);
+      return next();
+    }
 
+    console.log(`[usage] recipe_import BLOCKED user=${userId} status=${user.subscription_status}`);
     return res.status(403).json({
       allowed: false,
       reason: 'limit_reached',
@@ -40,8 +44,12 @@ export async function checkSearchUsage(req, res, next) {
 
     if (error) throw error;
 
-    if (isAccessGranted(user)) return next();
+    if (isAccessGranted(user)) {
+      console.log(`[usage] search GRANTED user=${userId} status=${user.subscription_status}`);
+      return next();
+    }
 
+    console.log(`[usage] search BLOCKED user=${userId} status=${user.subscription_status}`);
     return res.status(403).json({
       allowed: false,
       reason: 'limit_reached',
@@ -54,6 +62,13 @@ export async function checkSearchUsage(req, res, next) {
     console.error('[checkSearchUsage] ✖', err.message);
     next();
   }
+}
+
+// Gate the AI food-search results, but leave the cheap autocomplete
+// (mode='suggestions') open so non-premium users still get a value preview.
+export async function checkFoodSearchUsage(req, res, next) {
+  if ((req.body?.mode ?? 'results') === 'suggestions') return next();
+  return checkSearchUsage(req, res, next);
 }
 
 /**

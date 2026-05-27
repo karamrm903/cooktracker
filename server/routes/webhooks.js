@@ -24,39 +24,49 @@ const REVENUECAT_STATUS_MAP = {
 router.post('/revenuecat', async (req, res) => {
   const webhookSecret = config.revenuecat.webhookSecret;
 
+  // RevenueCat does NOT send an HMAC signature header. It sends the value you
+  // configure in RC Dashboard → Webhooks → "Authorization header value" verbatim
+  // in the `Authorization` header. Verify by constant-time comparing that header
+  // to REVENUECAT_WEBHOOK_SECRET. The RC value must EXACTLY equal the env var.
   if (webhookSecret) {
-    const signature = req.headers['x-revenuecat-webhook-signature'];
-    if (!signature) {
-      console.warn('[webhook] Missing signature — ignoring event');
+    const authHeader = req.headers['authorization'] ?? '';
+    const a = Buffer.from(authHeader);
+    const b = Buffer.from(webhookSecret);
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    if (!ok) {
+      console.warn('[webhook] auth: REJECTED (Authorization header missing or ≠ REVENUECAT_WEBHOOK_SECRET)');
       return res.status(200).json({ received: true });
     }
-
-    const expectedSig = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(req.rawBody)
-      .digest('hex');
-
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
-      console.warn('[webhook] Invalid signature — ignoring event');
-      return res.status(200).json({ received: true });
-    }
+    console.log('[webhook] auth: VERIFIED');
   } else {
-    console.warn('[webhook] REVENUECAT_WEBHOOK_SECRET not set — skipping signature check (set it in server/.env)');
+    console.warn('[webhook] auth: SKIPPED (REVENUECAT_WEBHOOK_SECRET not set — set it in Render → Environment)');
   }
 
   const event = req.body?.event;
   if (!event?.type || !event?.app_user_id) {
+    console.warn('[webhook] ignored: missing event.type or app_user_id', JSON.stringify(req.body ?? {}));
     return res.status(200).json({ received: true });
   }
 
-  const { type: eventType, app_user_id: userId, expiration_at_ms: expiresAtMs } = event;
+  const {
+    type: eventType,
+    app_user_id: userId,
+    expiration_at_ms: expiresAtMs,
+    environment,
+    store,
+  } = event;
 
-  console.log(`[webhook] ${eventType} for user ${userId}`);
+  console.log(
+    `[webhook] received: type=${eventType} user=${userId} env=${environment ?? '?'} ` +
+    `store=${store ?? '?'} expires=${expiresAtMs ? new Date(expiresAtMs).toISOString() : 'none'}`,
+  );
+  console.log('[webhook] event payload:', JSON.stringify(event));
 
   try {
     const newStatus = REVENUECAT_STATUS_MAP[eventType];
 
     if (!newStatus && eventType !== 'BILLING_ISSUE') {
+      console.log(`[webhook] no status mapping for "${eventType}" — ignored (access unchanged)`);
       return res.status(200).json({ received: true });
     }
 
@@ -71,16 +81,20 @@ router.post('/revenuecat', async (req, res) => {
       updates.trial_ends_at = null;
     }
 
+    console.log(`[webhook] mapping: ${eventType} → status=${newStatus ?? 'unchanged'} | updates=`, JSON.stringify(updates));
+
     if (Object.keys(updates).length > 0) {
       const { error } = await adminClient.from('users').update(updates).eq('id', userId);
       if (error) {
-        console.error('[webhook] DB update failed:', error.message);
+        console.error('[webhook] ✖ DB update failed for', userId, '—', error.message, JSON.stringify(error));
       } else {
-        console.log(`[webhook] ✔ ${eventType} → status=${newStatus ?? 'unchanged'} for ${userId}`);
+        console.log(`[webhook] ✔ DB updated: user=${userId} status=${newStatus ?? 'unchanged'}`);
       }
+    } else {
+      console.log(`[webhook] no DB changes for ${eventType} (user=${userId})`);
     }
   } catch (err) {
-    console.error('[webhook] ✖', err.message);
+    console.error('[webhook] ✖ handler error:', err.message);
   }
 
   res.status(200).json({ received: true });
