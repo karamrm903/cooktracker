@@ -1,3 +1,15 @@
 node_modules/
 .env
 .expo/
+.dev/*
+
+# Android signing — never commit
+app/android/app/*.jks
+app/android/app/*.keystore
+!app/android/app/debug.keystore
+# app/android/gradle.properties — tracked (sanitized: build flags only,
+# secrets pasted from app/.env at release time then reverted before commit)
+
+# iOS — user-specific Xcode env (NODE_BINARY path etc.)
+**/.xcode.env
+**/.xcode.env.local

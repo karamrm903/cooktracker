@@ -1,0 +1,418 @@
+{
+  "common": {
+    "continue": "Continuar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "retry": "Reintentar",
+    "loading": "Cargando...",
+    "or": "o",
+    "alert": "Alerta",
+    "ok": "Aceptar",
+    "back": "Volver",
+    "skip": "Omitir",
+    "next": "Siguiente",
+    "finish": "Finalizar",
+    "reset": "Restablecer",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "apply": "Aplicar",
+    "on": "Activado",
+    "off": "Desactivado",
+    "yes": "Sí",
+    "no": "No",
+    "today": "Hoy",
+    "tomorrow": "Mañana"
+  },
+  "mealType": {
+    "breakfast": "Desayuno",
+    "lunch": "Almuerzo",
+    "dinner": "Cena",
+    "snack": "Merienda"
+  },
+  "macros": {
+    "calories": "Calorías",
+    "protein": "Proteínas",
+    "carbs": "Carbohidratos",
+    "fat": "Grasas",
+    "kcal": "kcal",
+    "kcalPerDay": "kcal / día"
+  },
+  "welcome": {
+    "headline": "Seguimiento calórico\nsimplificado",
+    "getStarted": "Empezar",
+    "signInRow": "¿Ya tienes una cuenta?",
+    "signInLink": "Iniciar sesión"
+  },
+  "onboarding": {
+    "skip": "Omitir",
+    "stepOf": "{{current}} de {{total}}",
+    "startCooking": "Empezar a cocinar",
+    "continue": "Continuar",
+    "back": "← Volver",
+    "slides": {
+      "0": {
+        "title": "Encuentra un video de receta",
+        "description": "Explora TikTok, Instagram o YouTube y copia el enlace de un video de cocina."
+      },
+      "1": {
+        "title": "Pega el enlace del video",
+        "description": "Pega el enlace en la app y la IA convertirá el video en una receta paso a paso."
+      },
+      "2": {
+        "title": "Cocina con pasos guiados",
+        "description": "Sigue instrucciones sencillas con temporizadores y alertas automáticas."
+      },
+      "3": {
+        "title": "Ve la nutrición al instante",
+        "description": "La app calcula calorías, proteínas, carbohidratos y grasas según los ingredientes y porciones."
+      }
+    }
+  },
+  "login": {
+    "title": "Bienvenido de nuevo",
+    "subtitle": "Inicia sesión para continuar el seguimiento de tus comidas",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "••••••••",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "signInBtn": "Iniciar sesión",
+    "continueWithGoogle": "Continuar con Google",
+    "noAccount": "¿No tienes una cuenta?",
+    "signUp": "Registrarse",
+    "alerts": {
+      "missingFieldsTitle": "Campos vacíos",
+      "missingFieldsMsg": "Por favor, introduce tu correo y contraseña",
+      "signInFailedTitle": "Error de inicio de sesión",
+      "playServicesError": "Google Play Services no disponible o desactualizado.",
+      "playServicesTitle": "Error de Play Services",
+      "signInErrorTitle": "Error de inicio de sesión",
+      "signInErrorMsg": "Error de inicio de sesión con Google: {{error}}"
+    }
+  },
+  "accountCreation": {
+    "title": "Crea tu\ncuenta",
+    "subtitle": "Guarda tu progreso y cocina de forma más inteligente.",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Al menos 6 caracteres",
+    "startCookingBtn": "Empezar a cocinar 🍳",
+    "continueWithGoogle": "Continuar con Google",
+    "termsPrefix": "Al continuar, aceptas nuestros",
+    "termsOfService": "Términos de servicio",
+    "and": "y",
+    "privacyPolicy": "Política de privacidad",
+    "alerts": {
+      "missingDetailsTitle": "Información incompleta",
+      "missingDetailsMsg": "Por favor, introduce un correo válido y una contraseña de al menos 6 caracteres.",
+      "checkEmailTitle": "Revisa tu correo",
+      "checkEmailMsg": "Confirma tu correo para finalizar el registro, luego inicia sesión.",
+      "registrationErrorTitle": "Error de registro",
+      "genericError": "Algo salió mal al guardar tu perfil.",
+      "playServicesError": "Google Play Services no disponible o desactualizado.",
+      "playServicesTitle": "Error de Play Services",
+      "signInErrorTitle": "Error de inicio de sesión",
+      "signInErrorMsg": "Error de inicio de sesión con Google: {{error}}"
+    }
+  },
+  "userSetup": {
+    "stepOf": "{{step}} de {{total}}",
+    "steps": {
+      "1": { "title": "Información básica", "subtitle": "Ayúdanos a personalizar tu experiencia" },
+      "2": { "title": "¿Cuál es tu objetivo?", "subtitle": "Elige lo que quieres lograr" },
+      "3": { "title": "Nivel de actividad", "subtitle": "¿Cuán activo eres en una semana típica?" },
+      "4": { "title": "Tus objetivos diarios", "subtitle": "Calculados según tu perfil" }
+    },
+    "genderLabel": "Género",
+    "male": "Hombre",
+    "female": "Mujer",
+    "other": "Otro",
+    "ageLabel": "Edad",
+    "agePlaceholder": "ej. 25",
+    "unitsLabel": "Unidades",
+    "metric": "Métrico",
+    "imperial": "Imperial",
+    "heightLabel": "Altura",
+    "weightLabel": "Peso",
+    "goals": {
+      "lose":     { "label": "Perder peso",         "sub": "Quemar grasa y sentirte más ligero" },
+      "maintain": { "label": "Mantener el peso",    "sub": "Quedarte en tu peso actual" },
+      "muscle":   { "label": "Ganar músculo",       "sub": "Desarrollar fuerza y volumen" },
+      "healthy":  { "label": "Comer más sano",      "sub": "Mejores hábitos, mejor nutrición" }
+    },
+    "activities": {
+      "sedentary": { "label": "Sedentario",          "sub": "Principalmente sentado, poco ejercicio" },
+      "light":     { "label": "Ligeramente activo",  "sub": "Ejercicio ligero 1–3 días/semana" },
+      "moderate":  { "label": "Moderadamente activo","sub": "Ejercicio 3–5 días/semana" },
+      "very":      { "label": "Muy activo",           "sub": "Ejercicio intenso 6–7 días/semana" }
+    },
+    "macroNote": "Estos son estimados según tu perfil. Puedes ajustarlos más tarde en la configuración.",
+    "continue": "Continuar"
+  },
+  "appleHealth": {
+    "title": "Conectar con\nApple Health",
+    "subtitle": "Sincroniza tus datos de actividad y salud para mejorar los cálculos calóricos.",
+    "connectBtn": "Conectar Apple Health",
+    "skip": "Omitir por ahora"
+  },
+  "calorieRollover": {
+    "title": "¿Transferir las calorías\nsobrantes al día siguiente?",
+    "subtitle": "Si consumes menos calorías que tu objetivo diario, las calorías no utilizadas pueden transferirse.",
+    "yesterday": "Ayer",
+    "today": "Hoy",
+    "leftover": "{{amount}} restantes",
+    "rollover": "+{{amount}} transferidas",
+    "noLabel": "No",
+    "noSub": "Empezar de cero cada día",
+    "yesLabel": "Sí",
+    "yesSub": "Transferir las calorías no utilizadas",
+    "continue": "Continuar"
+  },
+  "referral": {
+    "title": "Invita amigos y\ndesbloquea descuentos",
+    "subtitle": "Por cada amigo que se registre con tu código, ambos reciben un 5 % de descuento.",
+    "yourCodeLabel": "TU CÓDIGO DE REFERIDO",
+    "copied": "✓ ¡Copiado!",
+    "copyCode": "⎘  Copiar código",
+    "shareCode": "↑  Compartir código",
+    "shareMessage": "Únete a Nutrily con mi código de referido {{code}} y ¡los dos recibimos 5% de descuento! 🍳",
+    "rewardText": "Cada referido exitoso te da un 5 % de descuento en tu suscripción. Los descuentos se acumulan sin límite.",
+    "haveCode": "¿Tienes un código de referido?",
+    "enterCodeLabel": "INTRODUCE EL CÓDIGO DE REFERIDO",
+    "enterCodePlaceholder": "Introduce el código de referido",
+    "appliedMsg": "🎉 ¡Código aplicado! Ambos recibirán un 5 % de descuento.",
+    "continue": "Continuar"
+  },
+  "socialProof": {
+    "ratingCount": "200K+ reseñas",
+    "title": "A la gente le encanta\nesta app",
+    "subtitle": "Diseñada para quienes aman cocinar y quieren una forma más inteligente de seguir recetas y nutrición.",
+    "ratingLabel": "Valorada 4,8 sobre 5",
+    "verified": "Verificado",
+    "reviewText": "\"Solo pego un enlace de video y la app me da al instante la receta y el desglose nutricional. Es como tener un nutricionista personal.\"",
+    "reviewerName": "Alex M.",
+    "statUsers": "Usuarios",
+    "statRecipes": "Recetas registradas",
+    "statFoodTracker": "Rastreador de comida",
+    "continue": "Continuar"
+  },
+  "subscription": {
+    "eyebrow": "OFERTA LIMITADA",
+    "title": "Tu oferta única\nde lanzamiento",
+    "discountBadge": "80 % DE DESCUENTO",
+    "perMonth": "/ mes",
+    "billedAs": "Facturado como {{amount}} / año",
+    "yearlyPlan": "Plan anual",
+    "yearlyLabel": "{{amount}} anuales",
+    "freeTrial": "7 días de prueba gratuita",
+    "freeTrialSub": "Cancela antes de que termine la prueba",
+    "trialToggle": "Prueba gratuita {{state}}",
+    "features": {
+      "unlimited": "Análisis ilimitado de recetas",
+      "nutrition": "Seguimiento nutricional detallado",
+      "noAds": "Sin anuncios",
+      "offline": "Acceso a recetas sin conexión"
+    },
+    "moneyBack": "Garantía de devolución de 30 días",
+    "startTrialBtn": "Iniciar prueba gratuita",
+    "subscribeBtn": "Suscribirse ahora",
+    "noThanks": "No, gracias, continuar gratis",
+    "termsNote": "Cobro al finalizar la prueba. Cancela en cualquier momento."
+  },
+  "analyzing": {
+    "title": "Analizando tu video",
+    "subtitle": "Esto solo toma un momento…",
+    "errorTitle": "Error en el análisis",
+    "errorMsg": "No se pudo analizar este video. Por favor, prueba con otro."
+  },
+  "recipeSummary": {
+    "headerTitle": "Receta",
+    "steps": "{{count}} pasos",
+    "timers_one": "{{count}} temporizador",
+    "timers_other": "{{count}} temporizadores",
+    "confidence": {
+      "high":   { "label": "Alta confianza",   "message": "La IA tiene mucha confianza en esta receta." },
+      "medium": { "label": "Confianza media",  "message": "Algunos detalles pueden ser imprecisos — revisa antes de cocinar." },
+      "low":    { "label": "Baja confianza",   "message": "No pudimos extraer esta receta con certeza. Verifica o prueba otro video." }
+    },
+    "nutritionSection": "Nutrición",
+    "ingredientsSection": "Ingredientes",
+    "confirmed": "{{count}} confirmados",
+    "ingredientsHint": "Elimina los ingredientes que no usaste. La nutrición se actualiza automáticamente.",
+    "estimated": "Estimado — no confirmado explícitamente",
+    "showInferred_one": "Mostrar {{count}} ingrediente estimado",
+    "showInferred_other": "Mostrar {{count}} ingredientes estimados",
+    "hideInferred_one": "Ocultar {{count}} ingrediente estimado",
+    "hideInferred_other": "Ocultar {{count}} ingredientes estimados",
+    "stepsSection": "Pasos",
+    "debugInfo": "Información de depuración",
+    "confirmQuestion": "¿Esta receta coincide con tu video?",
+    "reanalyze": "Reanalizar",
+    "edit": "Editar",
+    "letsCook": "Sí, ¡a cocinar!",
+    "cookAnyway": "Cocinar de todas formas",
+    "opening": "Abriendo...",
+    "editManuallyTitle": "Editar manualmente",
+    "editManuallyMsg": "La edición manual de recetas estará disponible pronto. Por ahora, puedes continuar y ajustar las cantidades mientras cocinas.",
+    "continueAnyway": "Continuar de todas formas"
+  },
+  "cookingMode": {
+    "stepOf": "Paso {{current}} de {{total}}",
+    "stepLabel": "Paso {{number}}",
+    "timerHint": "Temporizador de {{minutes}} min — iniciado automáticamente",
+    "almostDone": "¡Casi listo!",
+    "cookingFinished": "Cocción terminada",
+    "almostDoneSub": "Has completado todos los pasos de preparación.\nAhora espera a que {{label}} termine.",
+    "finishedSub": "Tu {{title}} está listo.\nPuedes volver al panel o registrar lo que comiste.",
+    "dashboard": "Panel",
+    "logWhatIAte": "Registrar lo que comí",
+    "timerAlert": {
+      "oneMinTitle": "1 minuto restante",
+      "oneMinMsg": "Tu {{label}} está casi listo.",
+      "doneTitle": "¡Temporizador terminado! ✓",
+      "doneMsg": "{{label}} está listo.",
+      "gotIt": "Entendido",
+      "ok": "Aceptar"
+    },
+    "logMealTitle": "¿Registrar esta comida?",
+    "logMealMessage": "Añadir {{title}} a tu registro de comidas de hoy."
+  },
+  "logMeal": {
+    "headerTitle": "Registrar comida",
+    "heroTitle": "Añadir una comida",
+    "heroSubtitle": "Introduce los detalles y se añadirá a las comidas de hoy.",
+    "mealNameLabel": "Nombre de la comida",
+    "mealNamePlaceholder": "ej. Bol de pollo y arroz",
+    "mealTypeLabel": "Tipo de comida",
+    "caloriesLabel": "Calorías",
+    "caloriesPlaceholder": "Dejar en blanco para calcular automáticamente",
+    "manualCalories": "Calorías introducidas manualmente",
+    "autoCalculated": "Calculado automáticamente a partir de macros: {{amount}} kcal",
+    "proteinLabel": "Proteínas (g)",
+    "carbsLabel": "Carbohidratos (g)",
+    "fatLabel": "Grasas (g)",
+    "preview": "VISTA PREVIA",
+    "saveMeal": "Guardar comida",
+    "saveFailedTitle": "Error al guardar",
+    "saveFailedMsg": "No se pudo guardar la comida. Por favor, inténtalo de nuevo.",
+    "tryAgain": "Intentar de nuevo"
+  },
+  "dashboard": {
+    "welcomeBack": "Bienvenido de nuevo",
+    "today": "Hoy",
+    "pasteLinkPlaceholder": "Pega un enlace de YouTube, TikTok o Instagram…",
+    "todaysMeals": "Comidas de hoy",
+    "profileLoadFailed": "Error al cargar el perfil",
+    "profileLoadFailedMsg": "No se pudieron cargar tus objetivos. Mostrando valores predeterminados.",
+    "noMealsTitle": "Registra tu primera comida",
+    "noMealsSubtitle": "Empieza el seguimiento para alcanzar tu objetivo de {{goal}} kcal",
+    "addMealSection": "Añadir {{label}}",
+    "removeMeal": "Eliminar comida",
+    "removeFromToday": "¿Eliminar de hoy?",
+    "removedFromSaved": "Eliminado de guardados",
+    "movedTo": "Movido a {{category}}",
+    "portionEaten": "Porción consumida",
+    "editGrams": "Editar gramos",
+    "waterGlasses": "{{count}} vasos",
+    "weeklyTitle": "Esta semana"
+  },
+  "explore": {
+    "title": "Explorar",
+    "searchPlaceholder": "Buscar cualquier alimento o receta…",
+    "emptyHint": "Prueba \"pasta\", \"ensalada de pollo\" o \"desayuno proteico\"",
+    "result": "resultado",
+    "results": "resultados",
+    "pressEnter": "Presiona Enter para buscar",
+    "noResults": "Sin resultados",
+    "noResultsSub": "Intenta con otro nombre de alimento o receta",
+    "categories": {
+      "all": "Todos",
+      "breakfast": "Desayuno",
+      "lunch": "Almuerzo",
+      "dinner": "Cena",
+      "snack": "Meriendas",
+      "dessert": "Postres"
+    }
+  },
+  "savedMeals": {
+    "title": "Guardados",
+    "empty": "No hay comidas guardadas",
+    "emptySub": "Guarda recetas de tus análisis para encontrarlas aquí",
+    "movedTo": "Movido a {{category}}",
+    "removedFromSaved": "Eliminado de guardados"
+  },
+  "friends": {
+    "title": "Amigos",
+    "searchPlaceholder": "Buscar nombre de usuario para añadir amigo",
+    "noFriends": "Aún no tienes amigos",
+    "noFriendsSub": "Busca amigos para ver sus comidas"
+  },
+  "calories": {
+    "title": "Calorías",
+    "addMealPlaceholder": "ej. Pasta casera",
+    "addedTo": "Añadido a {{day}}"
+  },
+  "profile": {
+    "title": "Perfil",
+    "dayStreak": "Racha de días",
+    "mealsLogged": "Comidas registradas",
+    "goalsMet": "Objetivos alcanzados",
+    "mealPrivacy": "Privacidad de comidas",
+    "whoCanSeeMeals": "Quién puede ver mis comidas",
+    "private": "Privado",
+    "friends": "Amigos",
+    "public": "Público",
+    "shareMealNames": "Compartir nombres de comidas",
+    "shareCalories": "Compartir calorías",
+    "shareMacros": "Compartir macros",
+    "logOut": "Cerrar sesión",
+    "version": "Nutrily v1.0.0",
+    "groups": {
+      "account": "Cuenta",
+      "preferences": "Preferencias",
+      "more": "Más"
+    },
+    "settings": {
+      "editProfile": "Editar perfil",
+      "dietaryPrefs": "Preferencias alimentarias",
+      "healthGoals": "Objetivos de salud",
+      "notifications": "Notificaciones",
+      "units": "Unidades y medidas",
+      "privacy": "Privacidad y seguridad",
+      "help": "Ayuda y soporte",
+      "rate": "Valorar la app",
+      "language": "Idioma"
+    }
+  },
+  "plan": {
+    "title": "Plan de comidas",
+    "reset": "Restablecer",
+    "emptyTitle": "Planifica tu día",
+    "emptySubtitle": "Crea un plan de comidas diario con tus recetas analizadas y sugerencias inteligentes",
+    "yourTargets": "TUS OBJETIVOS DIARIOS",
+    "createPlan": "Crear plan",
+    "dailySummary": "RESUMEN DIARIO",
+    "errorLoadRecipes": "No se pudieron cargar tus recetas. Usando sugerencias.",
+    "recipesMatched_one": "{{count}} receta de tu biblioteca — ★ guardado  ↑ analizado",
+    "recipesMatched_other": "{{count}} recetas de tu biblioteca — ★ guardado  ↑ analizado",
+    "kcalTarget": "~{{amount}} kcal",
+    "pro": "prot",
+    "carb": "carb",
+    "savePlan": "Guardar plan",
+    "savedSuccess": "¡Plan guardado!",
+    "savedSuccessMsg": "Comidas añadidas a tu registro.",
+    "savedError": "Error al guardar el plan",
+    "conflictTitle": "Comidas ya registradas",
+    "conflictMsg": "Ya tienes comidas registradas para {{date}}. ¿Añadir de todas formas?",
+    "noRecipesHint": "No se encontraron recetas. Busca recetas en Explorar."
+  },
+  "language": {
+    "title": "Idioma",
+    "subtitle": "Elige tu idioma preferido",
+    "en": "English",
+    "fr": "Français",
+    "es": "Español",
+    "de": "Deutsch"
+  }
+}
