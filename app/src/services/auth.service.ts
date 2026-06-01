@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { saveAuthAccessToken, clearAuthAccessToken } from '../lib/authStorage';
 import { SignInWithPasswordCredentials } from '@supabase/supabase-js';
+import { getBaseUrl } from '../utils/api';
 
 export const authService = {
   /**
@@ -13,13 +14,24 @@ export const authService = {
   },
 
   /**
-   * Signs up a new user. Sends an OTP code via email (no magic link).
-   * Configure Supabase email template "Confirm signup" with `{{ .Token }}`.
+   * Signs up a new user via server. Server recycles unconfirmed rows so retry
+   * before OTP verify does not error with "User already registered".
+   * Confirmed email → 409 EMAIL_ALREADY_REGISTERED.
    */
-  signUp: async (credentials: any) => {
-    const { data, error } = await supabase.auth.signUp(credentials);
-    if (error) throw error;
-    return data;
+  signUp: async (credentials: { email: string; password: string }) => {
+    const res = await fetch(`${getBaseUrl()}/auth/signup-init`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err: any = new Error(json.error || 'Signup failed');
+      err.status = res.status;
+      err.code = json.error;
+      throw err;
+    }
+    return json;
   },
 
   /**

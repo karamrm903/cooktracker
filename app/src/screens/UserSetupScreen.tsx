@@ -30,7 +30,6 @@ import {
   TEXT_DARK,
   TEXT_MUTED,
   PLACEHOLDER,
-  ICON_COLOR,
   INPUT_BORDER,
 } from "../styles/colors";
 
@@ -54,6 +53,13 @@ const fireImg = require("../../assets/webp/Fire.webp");
 const proteinImg = require("../../assets/webp/Protein.webp");
 const carbsImg = require("../../assets/webp/Carbs.webp");
 const fatImg = require("../../assets/webp/Fat.webp");
+const maleImg = require("../../assets/webp/Male.webp");
+const femaleImg = require("../../assets/webp/Female.webp");
+const unitSelectedImg = require("../../assets/webp/UnitSelected.webp");
+const unitUnselectedImg = require("../../assets/webp/UnitUnselected.webp");
+const heightCmImg = require("../../assets/webp/HeightCm.webp");
+const weightKgImg = require("../../assets/webp/WeightKg.webp");
+const calendarImg = require("../../assets/webp/Calender.webp");
 
 const GOALS = [
   { key: "lose", img: require("../../assets/webp/LooseWeight.webp") },
@@ -298,15 +304,13 @@ export default function UserSetupScreen({ navigation }: Props) {
                 <View style={styles.chipRow}>
                   <GenderChip
                     label={t("userSetup.male")}
-                    icon="male"
-                    iconColor="#E07A3C"
+                    iconSource={maleImg}
                     active={gender === "male"}
                     onPress={() => setGender("male")}
                   />
                   <GenderChip
                     label={t("userSetup.female")}
-                    icon="female"
-                    iconColor="#D85F8A"
+                    iconSource={femaleImg}
                     active={gender === "female"}
                     onPress={() => setGender("female")}
                   />
@@ -322,11 +326,10 @@ export default function UserSetupScreen({ navigation }: Props) {
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>{t("userSetup.ageLabel")}</Text>
                 <View style={styles.inputWrap}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={20}
-                    color={ICON_COLOR}
-                    style={styles.inputIcon}
+                  <Image
+                    source={calendarImg}
+                    style={styles.inputAssetIcon}
+                    resizeMode="contain"
                   />
                   <TextInput
                     style={styles.input}
@@ -365,11 +368,10 @@ export default function UserSetupScreen({ navigation }: Props) {
                       {t("userSetup.heightLabel")}
                     </Text>
                     <View style={styles.inputWrap}>
-                      <Ionicons
-                        name="swap-vertical-outline"
-                        size={20}
-                        color={ICON_COLOR}
-                        style={styles.inputIcon}
+                      <Image
+                        source={heightCmImg}
+                        style={styles.inputAssetIcon}
+                        resizeMode="contain"
                       />
                       <TextInput
                         style={styles.input}
@@ -387,11 +389,10 @@ export default function UserSetupScreen({ navigation }: Props) {
                       {t("userSetup.weightLabel")}
                     </Text>
                     <View style={styles.inputWrap}>
-                      <Ionicons
-                        name="barbell-outline"
-                        size={20}
-                        color={ICON_COLOR}
-                        style={styles.inputIcon}
+                      <Image
+                        source={weightKgImg}
+                        style={styles.inputAssetIcon}
+                        resizeMode="contain"
                       />
                       <TextInput
                         style={styles.input}
@@ -552,14 +553,12 @@ export default function UserSetupScreen({ navigation }: Props) {
 
 function GenderChip({
   label,
-  icon,
-  iconColor,
+  iconSource,
   active,
   onPress,
 }: {
   label: string;
-  icon?: "male" | "female";
-  iconColor?: string;
+  iconSource?: any;
   active: boolean;
   onPress: () => void;
 }) {
@@ -569,12 +568,11 @@ function GenderChip({
       onPress={onPress}
       activeOpacity={0.85}
     >
-      {icon && (
-        <Ionicons
-          name={icon}
-          size={16}
-          color={iconColor || TEXT_DARK}
-          style={{ marginRight: 6 }}
+      {iconSource && (
+        <Image
+          source={iconSource}
+          style={styles.chipAssetIcon}
+          resizeMode="contain"
         />
       )}
       <Text style={styles.genderChipText}>{label}</Text>
@@ -597,11 +595,10 @@ function UnitChip({
       onPress={onPress}
       activeOpacity={0.85}
     >
-      <Ionicons
-        name={active ? "radio-button-on" : "radio-button-off"}
-        size={16}
-        color={active ? BRAND_COLOR : ICON_COLOR}
-        style={{ marginRight: 6 }}
+      <Image
+        source={active ? unitSelectedImg : unitUnselectedImg}
+        style={styles.chipAssetIcon}
+        resizeMode="contain"
       />
       <Text style={[styles.unitChipText, active && styles.unitChipTextActive]}>
         {label}
@@ -767,6 +764,8 @@ const styles = StyleSheet.create({
     borderColor: INPUT_BORDER,
   },
   inputIcon: { marginRight: 8 },
+  inputAssetIcon: { width: 20, height: 20, marginRight: 8 },
+  chipAssetIcon: { width: 16, height: 16, marginRight: 6 },
   input: {
     flex: 1,
     paddingVertical: 16,
@@ -813,10 +812,12 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: INPUT_BORDER,
+    gap: 8,
   },
   unitChipActive: {
     backgroundColor: "#FFE5D1",
-    borderColor: "#FFE5D1",
+    borderColor: "#FD9E5F",
+    borderWidth: 1,
   },
   unitChipText: {
     fontSize: 14,

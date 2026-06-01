@@ -19,7 +19,9 @@ import { RootState } from "../store";
 import Purchases, { PURCHASES_ERROR_CODE } from "react-native-purchases";
 import { RC_ENTITLEMENT_ID } from "../config/revenuecat";
 import { subscriptionService } from "../services/subscription.service";
-import CommonAlertModal, { CommonModalVariant } from "../components/CommonModal";
+import CommonAlertModal, {
+  CommonModalVariant,
+} from "../components/CommonModal";
 import {
   BRAND_COLOR,
   DEFAULT_BG,
@@ -57,7 +59,7 @@ const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
 // Figma-tuned tokens (kept local; not added to global colors.ts since they're
 // branding for this screen alone).
 const CARD_BG = "#FFFFFF";
-const FEATURE_TINT = "#EAF0E2";
+const FEATURE_TINT = "#F5F7F3";
 const TRIAL_TINT = "#FBE4D2";
 const PLAN_TAB_INACTIVE_BG = "#FFFFFF";
 const PLAN_TAB_ACTIVE_BG = BRAND_COLOR;
@@ -76,7 +78,10 @@ export default function SubscriptionScreen({ navigation }: Props) {
   const [offeringsLoading, setOfferingsLoading] = useState(true);
   const [offeringsError, setOfferingsError] = useState(false);
   const [alert, setAlert] = useState<AlertState>({
-    visible: false, title: "", message: "", variant: "info",
+    visible: false,
+    title: "",
+    message: "",
+    variant: "info",
   });
   const purchasingRef = useRef(false);
 
@@ -157,17 +162,25 @@ export default function SubscriptionScreen({ navigation }: Props) {
             ? o.current?.monthly
             : o.current?.weekly;
 
-      if (!pkg) throw new Error(`${PLAN_LABELS[selectedPlan]} plan not available. Please try again.`);
+      if (!pkg)
+        throw new Error(
+          `${PLAN_LABELS[selectedPlan]} plan not available. Please try again.`,
+        );
 
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_ID];
 
       if (entitlement) {
         const status = entitlement.periodType === "TRIAL" ? "trial" : "active";
-        const activeSub = (customerInfo.activeSubscriptions[0] ?? "").toLowerCase();
+        const activeSub = (
+          customerInfo.activeSubscriptions[0] ?? ""
+        ).toLowerCase();
         const plan = (
-          activeSub.includes("weekly") ? "weekly" :
-          activeSub.includes("monthly") ? "monthly" : "yearly"
+          activeSub.includes("weekly")
+            ? "weekly"
+            : activeSub.includes("monthly")
+              ? "monthly"
+              : "yearly"
         ) as PlanKey;
         finishSuccess(status, plan);
       } else {
@@ -175,7 +188,8 @@ export default function SubscriptionScreen({ navigation }: Props) {
           visible: true,
           variant: "success",
           title: "Purchase Successful",
-          message: "Your subscription is activating. If premium features aren't available yet, close and reopen the app.",
+          message:
+            "Your subscription is activating. If premium features aren't available yet, close and reopen the app.",
           primaryText: "OK",
           onPrimary: () => navigation.goBack(),
         });
@@ -186,11 +200,15 @@ export default function SubscriptionScreen({ navigation }: Props) {
         const info = await Purchases.getCustomerInfo();
         const entitlement = info.entitlements.active[RC_ENTITLEMENT_ID];
         if (entitlement) {
-          const status = entitlement.periodType === "TRIAL" ? "trial" : "active";
+          const status =
+            entitlement.periodType === "TRIAL" ? "trial" : "active";
           const activeSub = (info.activeSubscriptions[0] ?? "").toLowerCase();
           const plan = (
-            activeSub.includes("weekly") ? "weekly" :
-            activeSub.includes("monthly") ? "monthly" : "yearly"
+            activeSub.includes("weekly")
+              ? "weekly"
+              : activeSub.includes("monthly")
+                ? "monthly"
+                : "yearly"
           ) as PlanKey;
           finishSuccess(status, plan);
           return;
@@ -214,10 +232,15 @@ export default function SubscriptionScreen({ navigation }: Props) {
       const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_ID];
       if (entitlement) {
         const status = entitlement.periodType === "TRIAL" ? "trial" : "active";
-        const activeSub = (customerInfo.activeSubscriptions[0] ?? "").toLowerCase();
+        const activeSub = (
+          customerInfo.activeSubscriptions[0] ?? ""
+        ).toLowerCase();
         const plan = (
-          activeSub.includes("weekly") ? "weekly" :
-          activeSub.includes("monthly") ? "monthly" : "yearly"
+          activeSub.includes("weekly")
+            ? "weekly"
+            : activeSub.includes("monthly")
+              ? "monthly"
+              : "yearly"
         ) as "weekly" | "monthly" | "yearly";
         dispatch(setSubscription({ status, plan }));
         setAlert({
@@ -241,15 +264,19 @@ export default function SubscriptionScreen({ navigation }: Props) {
         visible: true,
         variant: "error",
         title: "Restore Failed",
-        message: err.message ?? "Could not restore purchases. Please try again.",
+        message:
+          err.message ?? "Could not restore purchases. Please try again.",
       });
     }
   }
 
   const ctaDisabled = purchasing || offeringsLoading || offeringsError;
-  const trialEligiblePlan = selectedPlan === "yearly" || selectedPlan === "monthly";
+  const trialEligiblePlan =
+    selectedPlan === "yearly" || selectedPlan === "monthly";
   const trialActive = trialEligiblePlan && showTrialToggle && trialEnabled;
-  const ctaLabel = trialActive ? "Start Free Trial" : `Get ${PLAN_LABELS[selectedPlan]} Plan`;
+  const ctaLabel = trialActive
+    ? "Start Free Trial"
+    : `Get ${PLAN_LABELS[selectedPlan]} Plan`;
   const footerText = trialActive
     ? "No commitment. Cancel anytime."
     : `Billed ${selectedPlan === "weekly" ? "weekly" : selectedPlan === "monthly" ? "monthly" : "yearly"}. Cancel anytime.`;
@@ -260,7 +287,11 @@ export default function SubscriptionScreen({ navigation }: Props) {
       return (
         <View style={styles.statusBlock}>
           <Text style={styles.statusText}>Could not load pricing</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={loadOfferings} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={loadOfferings}
+            activeOpacity={0.7}
+          >
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -302,7 +333,12 @@ export default function SubscriptionScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {showTrialToggle && <TrialToggle on={trialEnabled} onToggle={() => setTrialEnabled(v => !v)} />}
+          {showTrialToggle && (
+            <TrialToggle
+              on={trialEnabled}
+              onToggle={() => setTrialEnabled((v) => !v)}
+            />
+          )}
         </>
       );
     }
@@ -325,7 +361,12 @@ export default function SubscriptionScreen({ navigation }: Props) {
               <View style={styles.radioInner} />
             </View>
           </View>
-          {showTrialToggle && <TrialToggle on={trialEnabled} onToggle={() => setTrialEnabled(v => !v)} />}
+          {showTrialToggle && (
+            <TrialToggle
+              on={trialEnabled}
+              onToggle={() => setTrialEnabled((v) => !v)}
+            />
+          )}
         </>
       );
     }
@@ -353,26 +394,35 @@ export default function SubscriptionScreen({ navigation }: Props) {
 
   return (
     <SafeAreaViewCustom backgroundColor={DEFAULT_BG} statusBarBg={DEFAULT_BG}>
-      {/* Decorative leaf */}
-      <View style={styles.leafDecor} pointerEvents="none">
-        <Image source={leafImg} style={styles.fillImg} resizeMode="contain" />
-      </View>
-
       <View style={styles.topBar}>
         {navigation.canGoBack() && (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
         )}
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: insets.bottom + 110 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>LIMITED OFFER</Text>
-          <Text style={styles.title}>Your one-time{"\n"}launch offer</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.eyebrow}>LIMITED OFFER</Text>
+            <Text style={styles.title}>Your one-time{"\n"}launch offer</Text>
+          </View>
+          <Image
+            source={leafImg}
+            style={styles.headerLeaf}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Plan selector tabs (kept per request) */}
@@ -389,10 +439,20 @@ export default function SubscriptionScreen({ navigation }: Props) {
                 {plan === "yearly" && !active && (
                   <Text style={styles.bestValueBadge}>BEST VALUE</Text>
                 )}
-                <Text style={[styles.planTabLabel, active && styles.planTabLabelActive]}>
+                <Text
+                  style={[
+                    styles.planTabLabel,
+                    active && styles.planTabLabelActive,
+                  ]}
+                >
                   {PLAN_LABELS[plan]}
                 </Text>
-                <Text style={[styles.planTabPrice, active && styles.planTabPriceActive]}>
+                <Text
+                  style={[
+                    styles.planTabPrice,
+                    active && styles.planTabPriceActive,
+                  ]}
+                >
                   {offeringsLoading
                     ? "—"
                     : plan === "weekly"
@@ -429,7 +489,11 @@ export default function SubscriptionScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.scrollFooter}>
-          <TouchableOpacity onPress={handleRestore} disabled={purchasing || offeringsLoading} activeOpacity={0.6}>
+          <TouchableOpacity
+            onPress={handleRestore}
+            disabled={purchasing || offeringsLoading}
+            activeOpacity={0.6}
+          >
             <Text style={styles.restoreText}>Restore Purchases</Text>
           </TouchableOpacity>
           <Text style={styles.legalText}>
@@ -441,7 +505,12 @@ export default function SubscriptionScreen({ navigation }: Props) {
       </ScrollView>
 
       {/* Floating CTA */}
-      <View style={[styles.ctaFloat, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.ctaFloat,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.ctaBtn, ctaDisabled && { opacity: 0.6 }]}
           onPress={handlePurchase}
@@ -464,9 +533,15 @@ export default function SubscriptionScreen({ navigation }: Props) {
         variant={alert.variant}
         primaryText={alert.primaryText}
         secondaryText={alert.secondaryText}
-        onPrimary={() => { setAlert(a => ({ ...a, visible: false })); alert.onPrimary?.(); }}
-        onSecondary={() => { setAlert(a => ({ ...a, visible: false })); alert.onSecondary?.(); }}
-        onClose={() => setAlert(a => ({ ...a, visible: false }))}
+        onPrimary={() => {
+          setAlert((a) => ({ ...a, visible: false }));
+          alert.onPrimary?.();
+        }}
+        onSecondary={() => {
+          setAlert((a) => ({ ...a, visible: false }));
+          alert.onSecondary?.();
+        }}
+        onClose={() => setAlert((a) => ({ ...a, visible: false }))}
       />
     </SafeAreaViewCustom>
   );
@@ -474,7 +549,11 @@ export default function SubscriptionScreen({ navigation }: Props) {
 
 function TrialToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <TouchableOpacity style={styles.trialRow} onPress={onToggle} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={styles.trialRow}
+      onPress={onToggle}
+      activeOpacity={0.85}
+    >
       <View style={{ flex: 1 }}>
         <Text style={styles.trialLabel}>3-day free trial</Text>
         <Text style={styles.trialSub}>Cancel anytime before trial ends</Text>
@@ -487,15 +566,11 @@ function TrialToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  leafDecor: {
-    position: "absolute",
-    top: 130,
-    right: -20,
-    width: 160,
-    height: 150,
-    zIndex: 1,
+  headerLeaf: {
+    width: 130,
+    height: 120,
+    marginRight: -10,
   },
-  fillImg: { width: "100%", height: "100%" },
 
   topBar: {
     paddingHorizontal: 20,
@@ -523,6 +598,13 @@ const styles = StyleSheet.create({
 
   header: {
     paddingTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerText: {
+    flex: 1,
     gap: 6,
   },
   eyebrow: {
@@ -696,13 +778,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: "#E1EADA",
   },
   featureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   featureIconWrap: {
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: FEATURE_ICON_BG,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },

@@ -39,7 +39,7 @@ import CommonAlertModal, {
 type RootStackParamList = {
   AccountCreation: undefined;
   UserSetup: undefined;
-  OtpVerification: { email: string; type: 'signup' | 'recovery' };
+  OtpVerification: { email: string; type: "signup" | "recovery" };
   MainTabs: undefined;
 };
 
@@ -147,12 +147,22 @@ export default function AccountCreationScreen({ navigation }: Props) {
     try {
       const trimmedEmail = email.trim();
       await authService.signUp({ email: trimmedEmail, password });
-      navigation.navigate("OtpVerification", { email: trimmedEmail, type: "signup" });
+      navigation.navigate("OtpVerification", {
+        email: trimmedEmail,
+        type: "signup",
+      });
     } catch (err: any) {
       console.error("Sign up error:", err);
+      const alreadyRegistered =
+        err.code === "EMAIL_ALREADY_REGISTERED" ||
+        err.message?.toLowerCase().includes("already registered");
       setAlert({
         visible: true,
-        message: err.message || t("accountCreation.alerts.genericError"),
+        message: alreadyRegistered
+          ? t("accountCreation.alerts.emailAlreadyRegisteredMsg", {
+              defaultValue: "This email is already registered. Try logging in.",
+            })
+          : err.message || t("accountCreation.alerts.genericError"),
         variant: "error",
         title: t("accountCreation.alerts.registrationErrorTitle"),
       });
