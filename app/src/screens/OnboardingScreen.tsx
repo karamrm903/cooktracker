@@ -87,7 +87,11 @@ export default function OnboardingScreen({ navigation }: Props) {
         {SLIDE_IMAGES.map((src, i) => (
           <View key={i} style={styles.slide}>
             <View style={styles.heroWrap}>
-              <Image source={src} style={styles.heroImage} resizeMode="cover" />
+              <Image
+                source={src}
+                style={styles.heroImage}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.infoContainer}>
               <View style={styles.stepBadge}>
@@ -100,7 +104,7 @@ export default function OnboardingScreen({ navigation }: Props) {
               </View>
               <View
                 style={{
-                  // paddingHorizontal: 36,
+                  paddingHorizontal: 28,
                   width: "100%",
                 }}
               >
@@ -172,7 +176,6 @@ const styles = StyleSheet.create({
   slide: {
     width,
     flex: 1,
-    paddingHorizontal: 28,
     alignItems: "center",
   },
 
