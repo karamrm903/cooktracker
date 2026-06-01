@@ -39,6 +39,8 @@
   },
   "welcome": {
     "headline": "Suivi calorique\nsimplifié",
+    "headlineLine1": "Suivi calorique",
+    "headlineLine2": "simplifié",
     "getStarted": "Commencer",
     "signInRow": "Déjà un compte ?",
     "signInLink": "Se connecter"
@@ -51,30 +53,30 @@
     "back": "← Retour",
     "slides": {
       "0": {
-        "title": "Trouvez une vidéo de recette",
-        "description": "Parcourez TikTok, Instagram ou YouTube et copiez le lien d'une vidéo culinaire."
+        "title": "Découvrez des recettes\nque vous cuisinerez vraiment",
+        "description": "Enregistrez des recettes depuis TikTok, Instagram et YouTube en quelques secondes."
       },
       "1": {
-        "title": "Collez le lien de la vidéo",
-        "description": "Collez le lien dans l'application et l'IA convertira la vidéo en recette étape par étape."
+        "title": "Transformez des vidéos\nen recettes",
+        "description": "Collez un lien et nous organisons ingrédients, étapes et nutrition automatiquement."
       },
       "2": {
-        "title": "Cuisinez avec des étapes guidées",
-        "description": "Suivez des instructions simples avec des minuteries et des alertes automatiques."
+        "title": "Cuisinez\nétape par étape",
+        "description": "Suivez des instructions guidées simples avec des minuteries intelligentes."
       },
       "3": {
-        "title": "Consultez la nutrition instantanément",
-        "description": "L'application calcule les calories, protéines, glucides et lipides selon les ingrédients et les portions."
+        "title": "Suivez la nutrition\nsans effort",
+        "description": "Calories et macros calculées automatiquement depuis vos repas."
       }
     }
   },
   "login": {
     "title": "Bon retour",
-    "subtitle": "Connectez-vous pour continuer à suivre vos repas",
+    "subtitle": "Personnalisez votre expérience",
     "emailLabel": "E-mail",
-    "emailPlaceholder": "vous@exemple.com",
+    "emailPlaceholder": "Entrez votre e-mail",
     "passwordLabel": "Mot de passe",
-    "passwordPlaceholder": "••••••••",
+    "passwordPlaceholder": "Entrez votre mot de passe",
     "forgotPassword": "Mot de passe oublié ?",
     "signInBtn": "Se connecter",
     "continueWithGoogle": "Continuer avec Google",
@@ -94,9 +96,11 @@
     "title": "Créer votre\ncompte",
     "subtitle": "Sauvegardez vos progrès et cuisinez plus intelligemment.",
     "emailLabel": "E-mail",
-    "emailPlaceholder": "vous@exemple.com",
+    "emailPlaceholder": "Entrez votre e-mail",
     "passwordLabel": "Mot de passe",
-    "passwordPlaceholder": "Au moins 6 caractères",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "confirmPasswordLabel": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Entrez votre mot de passe",
     "startCookingBtn": "Commencer à cuisiner 🍳",
     "continueWithGoogle": "Continuer avec Google",
     "termsPrefix": "En continuant, vous acceptez nos",
@@ -106,6 +110,8 @@
     "alerts": {
       "missingDetailsTitle": "Informations manquantes",
       "missingDetailsMsg": "Veuillez saisir un e-mail valide et un mot de passe d'au moins 6 caractères.",
+      "passwordMismatchTitle": "Les mots de passe ne correspondent pas",
+      "passwordMismatchMsg": "Assurez-vous que les deux champs correspondent.",
       "checkEmailTitle": "Vérifiez votre e-mail",
       "checkEmailMsg": "Confirmez votre e-mail pour finaliser l'inscription, puis connectez-vous.",
       "registrationErrorTitle": "Erreur d'inscription",
@@ -116,13 +122,80 @@
       "signInErrorMsg": "Échec de la connexion Google : {{error}}"
     }
   },
+  "forgotPassword": {
+    "title": "Mot de passe\noublié",
+    "subtitle": "Entrez votre e-mail d'inscription pour réinitialiser le mot de passe",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "Entrez votre e-mail",
+    "sendBtn": "Envoyer l'e-mail",
+    "sentTitle": "E-mail envoyé",
+    "sentBody1": "Un e-mail vous a été envoyé avec un lien pour réinitialiser votre mot de passe.",
+    "sentBody2": "Si vous ne le recevez pas dans quelques minutes, vérifiez vos spams.",
+    "resendPrompt": "E-mail non reçu ?",
+    "resendLink": "Renvoyer",
+    "alerts": {
+      "missingEmailTitle": "E-mail manquant",
+      "missingEmailMsg": "Veuillez saisir votre adresse e-mail.",
+      "errorTitle": "Erreur",
+      "resentTitle": "E-mail renvoyé",
+      "resentMsg": "Vérifiez votre boîte pour le nouveau lien."
+    }
+  },
+  "otp": {
+    "title": "Vérifiez votre\ne-mail",
+    "subtitle": "Saisissez le code à 6 chiffres envoyé à {{email}}",
+    "codeLabel": "Code de vérification",
+    "codePlaceholder": "Code à 6 chiffres",
+    "verifyBtn": "Vérifier",
+    "resendPrompt": "Code non reçu ?",
+    "resendLink": "Renvoyer",
+    "alerts": {
+      "invalidCodeTitle": "Code invalide",
+      "invalidCodeMsg": "Saisissez le code à 6 chiffres de votre e-mail.",
+      "errorTitle": "Échec de la vérification",
+      "resentTitle": "Code renvoyé",
+      "resentMsg": "Vérifiez votre boîte pour un nouveau code."
+    }
+  },
+  "resetPassword": {
+    "title": "Réinitialiser\nle mot de passe",
+    "subtitle": "Créez un nouveau mot de passe pour votre compte",
+    "createLabel": "Nouveau mot de passe",
+    "confirmLabel": "Confirmer le mot de passe",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "resetBtn": "Réinitialiser le mot de passe",
+    "successTitle": "Mot de passe\nréinitialisé !",
+    "successBody": "Vous avez créé un nouveau mot de passe. Connectez-vous pour continuer !",
+    "goToLogin": "Aller à la connexion",
+    "alerts": {
+      "missingTitle": "Champs manquants",
+      "missingMsg": "Remplissez les deux champs (min. 6 caractères).",
+      "mismatchTitle": "Les mots de passe ne correspondent pas",
+      "mismatchMsg": "Assurez-vous que les deux champs correspondent.",
+      "errorTitle": "Erreur",
+      "noSessionTitle": "Session expirée",
+      "noSessionMsg": "Le lien est invalide ou expiré. Demandez-en un nouveau."
+    }
+  },
   "userSetup": {
     "stepOf": "{{step}} sur {{total}}",
     "steps": {
-      "1": { "title": "Informations de base", "subtitle": "Aidez-nous à personnaliser votre expérience" },
-      "2": { "title": "Quel est votre objectif ?", "subtitle": "Choisissez ce que vous souhaitez accomplir" },
-      "3": { "title": "Niveau d'activité", "subtitle": "Quelle est votre activité habituelle ?" },
-      "4": { "title": "Vos objectifs quotidiens", "subtitle": "Calculés selon votre profil" }
+      "1": {
+        "title": "Informations de base",
+        "subtitle": "Aidez-nous à personnaliser votre expérience"
+      },
+      "2": {
+        "title": "Quel est votre objectif ?",
+        "subtitle": "Choisissez ce que vous souhaitez accomplir"
+      },
+      "3": {
+        "title": "Niveau d'activité",
+        "subtitle": "Quelle est votre activité habituelle ?"
+      },
+      "4": {
+        "title": "Vos objectifs quotidiens",
+        "subtitle": "Calculés selon votre profil"
+      }
     },
     "genderLabel": "Genre",
     "male": "Homme",
@@ -136,16 +209,40 @@
     "heightLabel": "Taille",
     "weightLabel": "Poids",
     "goals": {
-      "lose":     { "label": "Perdre du poids",       "sub": "Brûler les graisses et se sentir plus léger" },
-      "maintain": { "label": "Maintenir le poids",    "sub": "Rester à votre poids actuel" },
-      "muscle":   { "label": "Prendre du muscle",     "sub": "Renforcer et développer la musculature" },
-      "healthy":  { "label": "Manger plus sainement", "sub": "De meilleures habitudes, une meilleure nutrition" }
+      "lose": {
+        "label": "Perdre du poids",
+        "sub": "Brûler les graisses et se sentir plus léger"
+      },
+      "maintain": {
+        "label": "Maintenir le poids",
+        "sub": "Rester à votre poids actuel"
+      },
+      "muscle": {
+        "label": "Prendre du muscle",
+        "sub": "Renforcer et développer la musculature"
+      },
+      "healthy": {
+        "label": "Manger plus sainement",
+        "sub": "De meilleures habitudes, une meilleure nutrition"
+      }
     },
     "activities": {
-      "sedentary": { "label": "Sédentaire",            "sub": "Principalement assis, peu d'exercice" },
-      "light":     { "label": "Légèrement actif",      "sub": "Exercice léger 1 à 3 jours/semaine" },
-      "moderate":  { "label": "Modérément actif",      "sub": "Exercice 3 à 5 jours/semaine" },
-      "very":      { "label": "Très actif",             "sub": "Exercice intense 6 à 7 jours/semaine" }
+      "sedentary": {
+        "label": "Sédentaire",
+        "sub": "Principalement assis, peu d'exercice"
+      },
+      "light": {
+        "label": "Légèrement actif",
+        "sub": "Exercice léger 1 à 3 jours/semaine"
+      },
+      "moderate": {
+        "label": "Modérément actif",
+        "sub": "Exercice 3 à 5 jours/semaine"
+      },
+      "very": {
+        "label": "Très actif",
+        "sub": "Exercice intense 6 à 7 jours/semaine"
+      }
     },
     "macroNote": "Ces valeurs sont des estimations basées sur votre profil. Vous pourrez les ajuster dans les paramètres.",
     "continue": "Continuer"
@@ -232,9 +329,18 @@
     "timers_one": "{{count}} minuterie",
     "timers_other": "{{count}} minuteries",
     "confidence": {
-      "high":   { "label": "Haute confiance",   "message": "L'IA est très confiante sur cette recette." },
-      "medium": { "label": "Confiance moyenne", "message": "Certains détails peuvent être imprécis — veuillez vérifier avant de cuisiner." },
-      "low":    { "label": "Faible confiance",  "message": "Nous n'avons pas pu extraire cette recette avec certitude. Veuillez vérifier ou essayer une autre vidéo." }
+      "high": {
+        "label": "Haute confiance",
+        "message": "L'IA est très confiante sur cette recette."
+      },
+      "medium": {
+        "label": "Confiance moyenne",
+        "message": "Certains détails peuvent être imprécis — veuillez vérifier avant de cuisiner."
+      },
+      "low": {
+        "label": "Faible confiance",
+        "message": "Nous n'avons pas pu extraire cette recette avec certitude. Veuillez vérifier ou essayer une autre vidéo."
+      }
     },
     "nutritionSection": "Nutrition",
     "ingredientsSection": "Ingrédients",

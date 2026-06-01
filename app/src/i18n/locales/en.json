@@ -39,6 +39,8 @@
   },
   "welcome": {
     "headline": "Calorie tracking\nmade easy",
+    "headlineLine1": "Calorie tracking",
+    "headlineLine2": "made easy",
     "getStarted": "Get Started",
     "signInRow": "Already have an account?",
     "signInLink": "Sign In"
@@ -51,31 +53,31 @@
     "back": "← Back",
     "slides": {
       "0": {
-        "title": "Find a recipe video",
-        "description": "Browse TikTok, Instagram, or YouTube and copy the link of a food video you want to cook."
+        "title": "Discover recipes\nyou'll actually cook",
+        "description": "Save recipes from TikTok, Instagram, and YouTube in seconds."
       },
       "1": {
-        "title": "Paste the video link",
-        "description": "Paste the link into the app and the AI will convert the video into a step-by-step recipe."
+        "title": "Turn videos\ninto recipes",
+        "description": "Paste a link and we'll organize ingredients, steps, and nutrition automatically."
       },
       "2": {
-        "title": "Cook with guided steps",
-        "description": "Follow simple instructions with automatic timers and alerts."
+        "title": "Cook\nstep by step",
+        "description": "Follow simple guided instructions with smart cooking timers."
       },
       "3": {
-        "title": "See nutrition instantly",
-        "description": "The app calculates calories, protein, carbs, and fats based on ingredients and servings."
+        "title": "Track nutrition\neffortlessly",
+        "description": "Calories and macros are calculated automatically from your meals."
       }
     }
   },
   "login": {
     "title": "Welcome back",
-    "subtitle": "Sign in to continue tracking your meals",
+    "subtitle": "Help us personalize your experience",
     "emailLabel": "Email",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "Enter your email",
     "passwordLabel": "Password",
-    "passwordPlaceholder": "••••••••",
-    "forgotPassword": "Forgot password?",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot Password?",
     "signInBtn": "Sign In",
     "continueWithGoogle": "Continue with Google",
     "noAccount": "Don't have an account?",
@@ -94,11 +96,13 @@
     "title": "Create your\naccount",
     "subtitle": "Save your progress and start cooking smarter.",
     "emailLabel": "Email",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "Enter your email",
     "passwordLabel": "Password",
-    "passwordPlaceholder": "At least 6 characters",
+    "passwordPlaceholder": "Enter your password",
+    "confirmPasswordLabel": "Confirm password",
+    "confirmPasswordPlaceholder": "Enter your password",
     "startCookingBtn": "Start Cooking 🍳",
-    "continueWithGoogle": "Continue with Google",
+    "continueWithGoogle": "Continue With Google",
     "termsPrefix": "By continuing, you agree to our",
     "termsOfService": "Terms of Service",
     "and": "and",
@@ -106,6 +110,8 @@
     "alerts": {
       "missingDetailsTitle": "Missing Details",
       "missingDetailsMsg": "Please enter a valid email and a password of at least 6 characters.",
+      "passwordMismatchTitle": "Passwords don't match",
+      "passwordMismatchMsg": "Make sure both password fields match.",
       "checkEmailTitle": "Check your email",
       "checkEmailMsg": "Confirm your email to finish signing up, then sign in.",
       "registrationErrorTitle": "Registration Error",
@@ -116,13 +122,80 @@
       "signInErrorMsg": "Google Sign In Failed: {{error}}"
     }
   },
+  "forgotPassword": {
+    "title": "Forget\npassword",
+    "subtitle": "Please enter your registration email to reset password",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email",
+    "sendBtn": "Send Email",
+    "sentTitle": "Email sent",
+    "sentBody1": "An email has been sent to your email address with a link to reset your password.",
+    "sentBody2": "If you haven't received the email after a few minutes, please check your spam folder.",
+    "resendPrompt": "Haven't Received Email?",
+    "resendLink": "Resend",
+    "alerts": {
+      "missingEmailTitle": "Missing Email",
+      "missingEmailMsg": "Please enter your email address.",
+      "errorTitle": "Error",
+      "resentTitle": "Email resent",
+      "resentMsg": "Check your inbox for the latest reset link."
+    }
+  },
+  "otp": {
+    "title": "Verify your\nemail",
+    "subtitle": "Enter the 6-digit code we sent to {{email}}",
+    "codeLabel": "Verification code",
+    "codePlaceholder": "Enter 6-digit code",
+    "verifyBtn": "Verify",
+    "resendPrompt": "Didn't get the code?",
+    "resendLink": "Resend",
+    "alerts": {
+      "invalidCodeTitle": "Invalid code",
+      "invalidCodeMsg": "Enter the 6-digit code from your email.",
+      "errorTitle": "Verification failed",
+      "resentTitle": "Code resent",
+      "resentMsg": "Check your inbox for a new code."
+    }
+  },
+  "resetPassword": {
+    "title": "Reset\npassword",
+    "subtitle": "Create new password to your account",
+    "createLabel": "Create password",
+    "confirmLabel": "Confirm password",
+    "passwordPlaceholder": "Enter your password",
+    "resetBtn": "Reset Password",
+    "successTitle": "Reset password\nsuccessfully!",
+    "successBody": "You created new password. Let's log in your account to continue your journey!",
+    "goToLogin": "Go To Log In",
+    "alerts": {
+      "missingTitle": "Missing fields",
+      "missingMsg": "Please fill both password fields (min 6 characters).",
+      "mismatchTitle": "Passwords don't match",
+      "mismatchMsg": "Make sure both password fields match.",
+      "errorTitle": "Error",
+      "noSessionTitle": "Session expired",
+      "noSessionMsg": "Reset link is invalid or expired. Request a new one."
+    }
+  },
   "userSetup": {
     "stepOf": "{{step}} of {{total}}",
     "steps": {
-      "1": { "title": "Basic info", "subtitle": "Help us personalize your experience" },
-      "2": { "title": "What's your goal?", "subtitle": "Choose what you want to achieve" },
-      "3": { "title": "Activity level", "subtitle": "How active are you in a typical week?" },
-      "4": { "title": "Your daily targets", "subtitle": "Calculated based on your profile" }
+      "1": {
+        "title": "Basic info",
+        "subtitle": "Help us personalize your experience"
+      },
+      "2": {
+        "title": "What's your goal?",
+        "subtitle": "Choose what you want to achieve"
+      },
+      "3": {
+        "title": "Activity level",
+        "subtitle": "How active are you in a typical week?"
+      },
+      "4": {
+        "title": "Your daily targets",
+        "subtitle": "Calculated based on your profile"
+      }
     },
     "genderLabel": "Gender",
     "male": "Male",
@@ -136,16 +209,31 @@
     "heightLabel": "Height",
     "weightLabel": "Weight",
     "goals": {
-      "lose":     { "label": "Lose weight",    "sub": "Burn fat and feel lighter" },
-      "maintain": { "label": "Maintain weight", "sub": "Stay at your current weight" },
-      "muscle":   { "label": "Gain muscle",     "sub": "Build strength and size" },
-      "healthy":  { "label": "Eat healthier",   "sub": "Better habits, better nutrition" }
+      "lose": { "label": "Lose weight", "sub": "Burn fat and feel lighter" },
+      "maintain": {
+        "label": "Maintain weight",
+        "sub": "Stay at your current weight"
+      },
+      "muscle": { "label": "Gain muscle", "sub": "Build strength and size" },
+      "healthy": {
+        "label": "Eat healthier",
+        "sub": "Better habits, better nutrition"
+      }
     },
     "activities": {
-      "sedentary": { "label": "Sedentary",          "sub": "Mostly sitting, little exercise" },
-      "light":     { "label": "Lightly active",     "sub": "Light exercise 1–3 days/week" },
-      "moderate":  { "label": "Moderately active",  "sub": "Exercise 3–5 days/week" },
-      "very":      { "label": "Very active",         "sub": "Hard exercise 6–7 days/week" }
+      "sedentary": {
+        "label": "Sedentary",
+        "sub": "Mostly sitting, little exercise"
+      },
+      "light": {
+        "label": "Lightly active",
+        "sub": "Light exercise 1–3 days/week"
+      },
+      "moderate": {
+        "label": "Moderately active",
+        "sub": "Exercise 3–5 days/week"
+      },
+      "very": { "label": "Very active", "sub": "Hard exercise 6–7 days/week" }
     },
     "macroNote": "These are estimates based on your profile. You can adjust them later in settings.",
     "continue": "Continue"
@@ -232,9 +320,18 @@
     "timers_one": "{{count}} timer",
     "timers_other": "{{count}} timers",
     "confidence": {
-      "high":   { "label": "High confidence",   "message": "AI is highly confident about this recipe." },
-      "medium": { "label": "Medium confidence", "message": "Some details may be imprecise — please review before cooking." },
-      "low":    { "label": "Low confidence",    "message": "We couldn't confidently extract this recipe. Please verify or try another video." }
+      "high": {
+        "label": "High confidence",
+        "message": "AI is highly confident about this recipe."
+      },
+      "medium": {
+        "label": "Medium confidence",
+        "message": "Some details may be imprecise — please review before cooking."
+      },
+      "low": {
+        "label": "Low confidence",
+        "message": "We couldn't confidently extract this recipe. Please verify or try another video."
+      }
     },
     "nutritionSection": "Nutrition",
     "ingredientsSection": "Ingredients",

@@ -25,14 +25,11 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { supabase } from "./src/lib/supabase";
 import {
   SafeAreaProvider,
-  SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import {
-  NavigationContainer,
-  createNavigationContainerRef,
-} from "@react-navigation/native";
+import { NavigationContainer } from "@react-navigation/native";
+import { navigationRef } from "./src/lib/navigationRef";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -71,6 +68,9 @@ import SocialProofScreen from "./src/screens/SocialProofScreen";
 import SubscriptionScreen from "./src/screens/SubscriptionScreen";
 import AccountCreationScreen from "./src/screens/AccountCreationScreen";
 import LoginScreen from "./src/screens/LoginScreen";
+import ForgotPasswordScreen from "./src/screens/ForgotPasswordScreen";
+import ResetPasswordScreen from "./src/screens/ResetPasswordScreen";
+import OtpVerificationScreen from "./src/screens/OtpVerificationScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import ExploreScreen from "./src/screens/ExploreScreen";
 import SavedMealsScreen from "./src/screens/SavedMealsScreen";
@@ -90,7 +90,6 @@ import ManageSubscriptionScreen from "./src/screens/ManageSubscriptionScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const navigationRef = createNavigationContainerRef();
 
 function AuthStateWrapper({ children }) {
   const dispatch = useDispatch();
@@ -162,6 +161,12 @@ function AuthStateWrapper({ children }) {
           });
         }
 
+        // After verifying a password-recovery OTP, route the user to the
+        // ResetPassword screen rather than the regular post-login destination.
+        if (event === 'PASSWORD_RECOVERY' && navigationRef.isReady()) {
+          navigationRef.reset({ index: 0, routes: [{ name: 'ResetPassword' }] });
+        }
+
         dispatch(
           setAuthSession({ user: newSession.user, session: newSession })
         );
@@ -205,7 +210,6 @@ function AuthStateWrapper({ children }) {
 
 // ── Screens where the theme toggle is visible ──────────────────────────────────
 const TOGGLE_ALLOWED = new Set([
-  "Welcome",
   "Dashboard",
   "Explore",
   "Friends",
@@ -267,12 +271,13 @@ const ftt = StyleSheet.create({
 // ── Tab navigator ──────────────────────────────────────────────────────────────
 function MainTabs() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   // Premium tab is only shown to users without an active subscription/trial.
   // Gated on hasResolved so it never flashes before the first real status sync
   // (avoids show-then-hide on relaunch). When a purchase lands, isSubscribed
   // flips and the tab unmounts automatically.
   const { isSubscribed, hasResolved } = useSubscription();
-  const bottomPad = 16;
+  const bottomPad = Math.max(insets.bottom, 16);
   const tabBarHeight = 56 + bottomPad;
 
   return (
@@ -341,7 +346,7 @@ function AppContent({ onRouteChange }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+    <View style={{ flex: 1 }}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <NavigationContainer
         key={canAccessMain ? "main" : "auth"}
@@ -366,6 +371,8 @@ function AppContent({ onRouteChange }) {
             <Stack.Screen name="CookingMode" component={CookingModeScreen} />
             <Stack.Screen name="Subscription" component={SubscriptionScreen} />
             <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="UserSetup" component={UserSetupScreen} />
           </Stack.Navigator>
         ) : (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -385,11 +392,14 @@ function AppContent({ onRouteChange }) {
               component={AccountCreationScreen}
             />
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
             <Stack.Screen name="MainTabs" component={MainTabs} />
           </Stack.Navigator>
         )}
       </NavigationContainer>
-    </SafeAreaView>
+    </View>
   );
 }
 

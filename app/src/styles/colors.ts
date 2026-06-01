@@ -16,7 +16,18 @@ export const colors = {
   googleBtn: "#FFFFFF",
   googleBtnText: "#4285F4",
   surface: "#FFFFFF",
-  error: '#FF3B30',
-  success: '#34C759',
-  warning: '#FFCC00'
+  error: "#FF3B30",
+  success: "#34C759",
+  warning: "#FFCC00",
 };
+
+export const BRAND_COLOR = "#FF8A45";
+export const DEFAULT_BG = "#FCF7F3";
+
+export const TEXT_DARK = "#3D2618";
+export const TEXT_MUTED = "#8C7363";
+export const PLACEHOLDER = "#B5A597";
+export const ICON_COLOR = "#7A5E4D";
+export const INPUT_BORDER = "#E8DDD0";
+export const DIVIDER = "#E0D3C2";
+export const FORGOT_GREEN = "#7BA77B";

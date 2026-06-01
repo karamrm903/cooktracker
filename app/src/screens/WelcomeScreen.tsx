@@ -1,42 +1,35 @@
-import React, { useState } from 'react';
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
   Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { VideoView, useVideoPlayer } from 'expo-video';
-import { useTranslation } from 'react-i18next';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme } from '../context/ThemeContext';
-import type { Colors } from '../context/ThemeContext';
-import { useLanguage } from '../context/LanguageContext';
-import { LANGUAGE_META } from '../i18n';
-import LanguagePickerModal from '../components/LanguagePickerModal';
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import SafeAreaViewCustom from "../components/atoms/SafeAreaViewCustom";
+import LanguagePickerModal from "../components/LanguagePickerModal";
+import { useLanguage } from "../context/LanguageContext";
+import { LANGUAGE_META } from "../i18n";
+import { BRAND_COLOR, DEFAULT_BG } from "../styles/colors";
 
-// ─── Assets ─────────────────────────────────────────────────────────────────
-const wowImage = require('../../assets/wow.png');
-const previewVideo = require('../../assets/preview.mov');
+const heroImage = require("../../assets/webp/WelcomeScreen.webp");
+const underlineImage = require("../../assets/webp/WelcomeScreenBottom.webp");
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
-// ─── Mockup container dimensions ────────────────────────────────────────────
-const MOCKUP_WIDTH  = width * 0.90;
-const MOCKUP_HEIGHT = MOCKUP_WIDTH * (1350 / 1080);
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  LEFT PHONE VIDEO — tweak these to align with the left phone in wow.png
-// ─────────────────────────────────────────────────────────────────────────────
-const LEFT_VIDEO_TOP           = '30%';
-const LEFT_VIDEO_LEFT          = '8.32%';
-const LEFT_VIDEO_WIDTH         = '26%';
-const LEFT_VIDEO_HEIGHT        = '49%';
-const LEFT_VIDEO_ROTATION      = '-15.3deg';
-const LEFT_VIDEO_BORDER_RADIUS = 19;
-// ─────────────────────────────────────────────────────────────────────────────
+const COLORS = {
+  bg: DEFAULT_BG,
+  brand: BRAND_COLOR,
+  titleBrown: "#3D2817",
+  green: "#A8B894",
+  subText: "#8B8680",
+  pillBg: "#FFFFFF",
+  pillText: "#2C2C2C",
+  btnText: "#FFFFFF",
+};
 
 type RootStackParamList = {
   Welcome: undefined;
@@ -45,26 +38,20 @@ type RootStackParamList = {
 };
 
 interface Props {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Welcome'>;
-  onPressLanguage?: () => void;
+  navigation: NativeStackNavigationProp<RootStackParamList, "Welcome">;
 }
 
 export default function WelcomeScreen({ navigation }: Props) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const { language } = useLanguage();
-  const styles = makeStyles(colors);
   const [langPickerVisible, setLangPickerVisible] = useState(false);
 
-  const player = useVideoPlayer(previewVideo, (p) => {
-    p.loop = true;
-    p.muted = true;
-    p.play();
-  });
-
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Top-right pills — leave right margin for global theme toggle */}
+    <SafeAreaViewCustom
+      backgroundColor={COLORS.bg}
+      statusBarBg={COLORS.bg}
+      edges={["top", "bottom"]}
+    >
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.languagePill}
@@ -76,49 +63,40 @@ export default function WelcomeScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Center content */}
       <View style={styles.body}>
-        {/* ── Phone mockup ── */}
-        <View style={styles.mockupWrapper}>
+        <Image
+          source={heroImage}
+          style={styles.heroImage}
+          resizeMode="contain"
+        />
 
-          {/* Video clipped to left phone screen — sits BEHIND the frame image */}
-          <View style={styles.leftVideoClip}>
-            <VideoView
-              player={player}
-              style={styles.leftVideo}
-              contentFit="contain"
-              nativeControls={false}
-            />
-          </View>
-
-          {/* wow.png frame sits on top so the video appears "inside" the phone */}
-          <View style={styles.mockupImageWrapper} pointerEvents="none">
-            <Image
-              source={wowImage}
-              style={styles.mockupImage}
-              resizeMode="contain"
-            />
-          </View>
+        <View style={styles.headlineWrap}>
+          <Text style={styles.headlineBrown}>{t("welcome.headlineLine1")}</Text>
+          <Text style={styles.headlineGreen}>{t("welcome.headlineLine2")}</Text>
+          <Image
+            source={underlineImage}
+            style={styles.underline}
+            resizeMode="contain"
+          />
         </View>
-
-        {/* Headline */}
-        <Text style={styles.headline}>{t('welcome.headline')}</Text>
       </View>
 
-      {/* Bottom actions */}
       <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.getStartedBtn}
-          onPress={() => navigation.navigate('Onboarding')}
+          style={styles.primaryBtn}
+          onPress={() => navigation.navigate("Onboarding")}
           activeOpacity={0.85}
         >
-          <Text style={styles.getStartedText}>{t('welcome.getStarted')}</Text>
+          <Text style={styles.primaryBtnText}>{t("welcome.getStarted")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Login")}
+          activeOpacity={0.7}
+        >
           <Text style={styles.signInRow}>
-            {t('welcome.signInRow')}{' '}
-            <Text style={styles.signInLink}>{t('welcome.signInLink')}</Text>
+            {t("welcome.signInRow")}{" "}
+            <Text style={styles.signInLink}>{t("welcome.signInLink")}</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -127,132 +105,108 @@ export default function WelcomeScreen({ navigation }: Props) {
         visible={langPickerVisible}
         onClose={() => setLangPickerVisible(false)}
       />
-    </SafeAreaView>
+    </SafeAreaViewCustom>
   );
 }
 
-function makeStyles(colors: Colors) {
-  return StyleSheet.create({
-    safe: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
+const styles = StyleSheet.create({
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  languagePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.pillBg,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  flagEmoji: { fontSize: 15 },
+  languageLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.pillText,
+    letterSpacing: 0.3,
+  },
 
-    topBar: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      gap: 8,
-      paddingLeft: 20,
-      paddingRight: 64, // leave room for global floating theme toggle (36px btn + 20px margin + 8px gap)
-      paddingTop: 8,
-    },
-    languagePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-      borderRadius: 999,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.07,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    flagEmoji: { fontSize: 15 },
-    languageLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-      letterSpacing: 0.3,
-    },
+  body: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  heroImage: {
+    width: width * 0.95,
+    height: width * 1.05,
+  },
 
-    body: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+  headlineWrap: {
+    alignItems: "center",
+    marginTop: 8,
+  },
+  headlineBrown: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: COLORS.titleBrown,
+    textAlign: "center",
+    letterSpacing: -0.5,
+  },
+  headlineGreen: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: COLORS.green,
+    textAlign: "center",
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  underline: {
+    width: 140,
+    height: 12,
+    marginTop: 2,
+  },
 
-    mockupWrapper: {
-      width: MOCKUP_WIDTH,
-      height: Math.min(MOCKUP_HEIGHT, height * 0.54),
-      marginBottom: 28,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.10,
-      shadowRadius: 20,
-    },
-
-    mockupImageWrapper: {
-      position: 'absolute',
-      width: '100%',
-      height: '100%',
-    },
-    mockupImage: {
-      width: '100%',
-      height: '100%',
-    },
-
-    leftVideoClip: {
-      position: 'absolute',
-      top:    LEFT_VIDEO_TOP,
-      left:   LEFT_VIDEO_LEFT,
-      width:  LEFT_VIDEO_WIDTH,
-      height: LEFT_VIDEO_HEIGHT,
-      borderRadius: LEFT_VIDEO_BORDER_RADIUS,
-      transform: [{ rotate: LEFT_VIDEO_ROTATION }],
-      overflow: 'hidden',
-    },
-
-    leftVideo: {
-      width: '100%',
-      height: '100%',
-    },
-
-    headline: {
-      fontSize: 34,
-      fontWeight: '800',
-      color: colors.text,
-      textAlign: 'center',
-      lineHeight: 42,
-      letterSpacing: -0.5,
-    },
-
-    actions: {
-      paddingHorizontal: 24,
-      paddingBottom: 16,
-      gap: 18,
-      alignItems: 'center',
-    },
-    getStartedBtn: {
-      width: '100%',
-      backgroundColor: colors.btnPrimary,
-      paddingVertical: 17,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.18,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    getStartedText: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: colors.btnPrimaryText,
-      letterSpacing: 0.2,
-    },
-    signInRow: {
-      fontSize: 14,
-      color: colors.textMuted,
-      fontWeight: '400',
-    },
-    signInLink: {
-      color: colors.text,
-      fontWeight: '700',
-    },
-  });
-}
+  actions: {
+    paddingHorizontal: 24,
+    marginBottom: 50,
+    gap: 16,
+    alignItems: "center",
+  },
+  primaryBtn: {
+    width: "100%",
+    backgroundColor: COLORS.brand,
+    paddingVertical: 18,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  primaryBtnText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.btnText,
+    letterSpacing: 0.2,
+  },
+  signInRow: {
+    fontSize: 14,
+    color: COLORS.subText,
+    fontWeight: "400",
+  },
+  signInLink: {
+    color: COLORS.brand,
+    fontWeight: "700",
+  },
+});

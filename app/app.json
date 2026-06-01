@@ -21,16 +21,13 @@
         "backgroundColor": "#FF6B35"
       },
       "package": "com.macrosai.nutrily",
-      "edgeToEdge": true,
+      "edgeToEdge": false,
       "intentFilters": [
         {
           "action": "VIEW",
           "data": [
-            {
-              "scheme": "nutrily",
-              "host": "auth",
-              "pathPrefix": "/callback"
-            }
+            { "scheme": "nutrily", "host": "auth", "pathPrefix": "/callback" },
+            { "scheme": "nutrily" }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }

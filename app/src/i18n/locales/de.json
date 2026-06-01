@@ -39,6 +39,8 @@
   },
   "welcome": {
     "headline": "Kalorientracking\nganz einfach",
+    "headlineLine1": "Kalorientracking",
+    "headlineLine2": "ganz einfach",
     "getStarted": "Loslegen",
     "signInRow": "Bereits ein Konto?",
     "signInLink": "Anmelden"
@@ -51,30 +53,30 @@
     "back": "← Zurück",
     "slides": {
       "0": {
-        "title": "Rezeptvideo finden",
-        "description": "Stöbere auf TikTok, Instagram oder YouTube und kopiere den Link eines Kochvideos."
+        "title": "Entdecke Rezepte,\ndie du wirklich kochst",
+        "description": "Speichere Rezepte aus TikTok, Instagram und YouTube in Sekunden."
       },
       "1": {
-        "title": "Videolink einfügen",
-        "description": "Füge den Link in die App ein und die KI wandelt das Video in ein Schritt-für-Schritt-Rezept um."
+        "title": "Verwandle Videos\nin Rezepte",
+        "description": "Füge einen Link ein und wir ordnen Zutaten, Schritte und Nährwerte automatisch."
       },
       "2": {
-        "title": "Mit geführten Schritten kochen",
-        "description": "Folge einfachen Anweisungen mit automatischen Timern und Benachrichtigungen."
+        "title": "Koche\nSchritt für Schritt",
+        "description": "Folge einfachen geführten Anleitungen mit smarten Kochtimern."
       },
       "3": {
-        "title": "Nährwerte sofort sehen",
-        "description": "Die App berechnet Kalorien, Eiweiß, Kohlenhydrate und Fett basierend auf Zutaten und Portionen."
+        "title": "Verfolge Nährwerte\nmühelos",
+        "description": "Kalorien und Makros werden automatisch aus deinen Mahlzeiten berechnet."
       }
     }
   },
   "login": {
     "title": "Willkommen zurück",
-    "subtitle": "Melde dich an, um deine Mahlzeiten weiter zu tracken",
+    "subtitle": "Personalisiere dein Erlebnis",
     "emailLabel": "E-Mail",
-    "emailPlaceholder": "du@beispiel.de",
+    "emailPlaceholder": "E-Mail eingeben",
     "passwordLabel": "Passwort",
-    "passwordPlaceholder": "••••••••",
+    "passwordPlaceholder": "Passwort eingeben",
     "forgotPassword": "Passwort vergessen?",
     "signInBtn": "Anmelden",
     "continueWithGoogle": "Mit Google fortfahren",
@@ -94,9 +96,11 @@
     "title": "Konto\nerstellen",
     "subtitle": "Speichere deinen Fortschritt und koche intelligenter.",
     "emailLabel": "E-Mail",
-    "emailPlaceholder": "du@beispiel.de",
+    "emailPlaceholder": "E-Mail eingeben",
     "passwordLabel": "Passwort",
-    "passwordPlaceholder": "Mindestens 6 Zeichen",
+    "passwordPlaceholder": "Passwort eingeben",
+    "confirmPasswordLabel": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort eingeben",
     "startCookingBtn": "Kochen beginnen 🍳",
     "continueWithGoogle": "Mit Google fortfahren",
     "termsPrefix": "Mit der Fortsetzung stimmst du unseren",
@@ -106,6 +110,8 @@
     "alerts": {
       "missingDetailsTitle": "Fehlende Angaben",
       "missingDetailsMsg": "Bitte gib eine gültige E-Mail und ein Passwort mit mindestens 6 Zeichen ein.",
+      "passwordMismatchTitle": "Passwörter stimmen nicht überein",
+      "passwordMismatchMsg": "Beide Passwortfelder müssen übereinstimmen.",
       "checkEmailTitle": "E-Mail prüfen",
       "checkEmailMsg": "Bestätige deine E-Mail, um die Registrierung abzuschließen, und melde dich dann an.",
       "registrationErrorTitle": "Registrierungsfehler",
@@ -116,13 +122,80 @@
       "signInErrorMsg": "Google-Anmeldung fehlgeschlagen: {{error}}"
     }
   },
+  "forgotPassword": {
+    "title": "Passwort\nvergessen",
+    "subtitle": "Bitte gib deine Registrierungs-E-Mail ein, um das Passwort zurückzusetzen",
+    "emailLabel": "E-Mail",
+    "emailPlaceholder": "E-Mail eingeben",
+    "sendBtn": "E-Mail senden",
+    "sentTitle": "E-Mail gesendet",
+    "sentBody1": "Eine E-Mail mit einem Link zum Zurücksetzen deines Passworts wurde an deine Adresse gesendet.",
+    "sentBody2": "Wenn du die E-Mail nach ein paar Minuten nicht erhältst, prüfe bitte deinen Spam-Ordner.",
+    "resendPrompt": "E-Mail nicht erhalten?",
+    "resendLink": "Erneut senden",
+    "alerts": {
+      "missingEmailTitle": "E-Mail fehlt",
+      "missingEmailMsg": "Bitte gib deine E-Mail-Adresse ein.",
+      "errorTitle": "Fehler",
+      "resentTitle": "E-Mail erneut gesendet",
+      "resentMsg": "Prüfe dein Postfach auf den neuen Reset-Link."
+    }
+  },
+  "otp": {
+    "title": "Bestätige deine\nE-Mail",
+    "subtitle": "Gib den 6-stelligen Code ein, den wir an {{email}} gesendet haben",
+    "codeLabel": "Bestätigungscode",
+    "codePlaceholder": "6-stelligen Code eingeben",
+    "verifyBtn": "Bestätigen",
+    "resendPrompt": "Code nicht erhalten?",
+    "resendLink": "Erneut senden",
+    "alerts": {
+      "invalidCodeTitle": "Ungültiger Code",
+      "invalidCodeMsg": "Gib den 6-stelligen Code aus deiner E-Mail ein.",
+      "errorTitle": "Bestätigung fehlgeschlagen",
+      "resentTitle": "Code erneut gesendet",
+      "resentMsg": "Prüfe dein Postfach auf einen neuen Code."
+    }
+  },
+  "resetPassword": {
+    "title": "Passwort\nzurücksetzen",
+    "subtitle": "Erstelle ein neues Passwort für dein Konto",
+    "createLabel": "Neues Passwort",
+    "confirmLabel": "Passwort bestätigen",
+    "passwordPlaceholder": "Passwort eingeben",
+    "resetBtn": "Passwort zurücksetzen",
+    "successTitle": "Passwort erfolgreich\nzurückgesetzt!",
+    "successBody": "Du hast ein neues Passwort erstellt. Melde dich an, um weiterzumachen!",
+    "goToLogin": "Zur Anmeldung",
+    "alerts": {
+      "missingTitle": "Fehlende Felder",
+      "missingMsg": "Bitte fülle beide Passwortfelder aus (mind. 6 Zeichen).",
+      "mismatchTitle": "Passwörter stimmen nicht überein",
+      "mismatchMsg": "Beide Passwortfelder müssen übereinstimmen.",
+      "errorTitle": "Fehler",
+      "noSessionTitle": "Sitzung abgelaufen",
+      "noSessionMsg": "Reset-Link ist ungültig oder abgelaufen. Fordere einen neuen an."
+    }
+  },
   "userSetup": {
     "stepOf": "{{step}} von {{total}}",
     "steps": {
-      "1": { "title": "Grundlegende Infos", "subtitle": "Hilf uns, dein Erlebnis zu personalisieren" },
-      "2": { "title": "Was ist dein Ziel?", "subtitle": "Wähle, was du erreichen möchtest" },
-      "3": { "title": "Aktivitätsniveau", "subtitle": "Wie aktiv bist du in einer typischen Woche?" },
-      "4": { "title": "Deine täglichen Ziele", "subtitle": "Basierend auf deinem Profil berechnet" }
+      "1": {
+        "title": "Grundlegende Infos",
+        "subtitle": "Hilf uns, dein Erlebnis zu personalisieren"
+      },
+      "2": {
+        "title": "Was ist dein Ziel?",
+        "subtitle": "Wähle, was du erreichen möchtest"
+      },
+      "3": {
+        "title": "Aktivitätsniveau",
+        "subtitle": "Wie aktiv bist du in einer typischen Woche?"
+      },
+      "4": {
+        "title": "Deine täglichen Ziele",
+        "subtitle": "Basierend auf deinem Profil berechnet"
+      }
     },
     "genderLabel": "Geschlecht",
     "male": "Männlich",
@@ -136,16 +209,37 @@
     "heightLabel": "Größe",
     "weightLabel": "Gewicht",
     "goals": {
-      "lose":     { "label": "Gewicht verlieren",  "sub": "Fett verbrennen und leichter fühlen" },
-      "maintain": { "label": "Gewicht halten",     "sub": "Am aktuellen Gewicht bleiben" },
-      "muscle":   { "label": "Muskeln aufbauen",   "sub": "Kraft und Muskelmasse aufbauen" },
-      "healthy":  { "label": "Gesünder essen",     "sub": "Bessere Gewohnheiten, bessere Ernährung" }
+      "lose": {
+        "label": "Gewicht verlieren",
+        "sub": "Fett verbrennen und leichter fühlen"
+      },
+      "maintain": {
+        "label": "Gewicht halten",
+        "sub": "Am aktuellen Gewicht bleiben"
+      },
+      "muscle": {
+        "label": "Muskeln aufbauen",
+        "sub": "Kraft und Muskelmasse aufbauen"
+      },
+      "healthy": {
+        "label": "Gesünder essen",
+        "sub": "Bessere Gewohnheiten, bessere Ernährung"
+      }
     },
     "activities": {
-      "sedentary": { "label": "Sitzend",             "sub": "Hauptsächlich sitzend, wenig Bewegung" },
-      "light":     { "label": "Leicht aktiv",        "sub": "Leichte Bewegung 1–3 Tage/Woche" },
-      "moderate":  { "label": "Mäßig aktiv",         "sub": "Sport 3–5 Tage/Woche" },
-      "very":      { "label": "Sehr aktiv",           "sub": "Intensives Training 6–7 Tage/Woche" }
+      "sedentary": {
+        "label": "Sitzend",
+        "sub": "Hauptsächlich sitzend, wenig Bewegung"
+      },
+      "light": {
+        "label": "Leicht aktiv",
+        "sub": "Leichte Bewegung 1–3 Tage/Woche"
+      },
+      "moderate": { "label": "Mäßig aktiv", "sub": "Sport 3–5 Tage/Woche" },
+      "very": {
+        "label": "Sehr aktiv",
+        "sub": "Intensives Training 6–7 Tage/Woche"
+      }
     },
     "macroNote": "Dies sind Schätzungen basierend auf deinem Profil. Du kannst sie später in den Einstellungen anpassen.",
     "continue": "Weiter"
@@ -232,9 +326,18 @@
     "timers_one": "{{count}} Timer",
     "timers_other": "{{count}} Timer",
     "confidence": {
-      "high":   { "label": "Hohe Konfidenz",   "message": "Die KI ist sehr sicher bei diesem Rezept." },
-      "medium": { "label": "Mittlere Konfidenz","message": "Einige Details könnten ungenau sein — bitte vor dem Kochen prüfen." },
-      "low":    { "label": "Niedrige Konfidenz","message": "Wir konnten dieses Rezept nicht sicher extrahieren. Bitte prüfen oder ein anderes Video versuchen." }
+      "high": {
+        "label": "Hohe Konfidenz",
+        "message": "Die KI ist sehr sicher bei diesem Rezept."
+      },
+      "medium": {
+        "label": "Mittlere Konfidenz",
+        "message": "Einige Details könnten ungenau sein — bitte vor dem Kochen prüfen."
+      },
+      "low": {
+        "label": "Niedrige Konfidenz",
+        "message": "Wir konnten dieses Rezept nicht sicher extrahieren. Bitte prüfen oder ein anderes Video versuchen."
+      }
     },
     "nutritionSection": "Nährwerte",
     "ingredientsSection": "Zutaten",

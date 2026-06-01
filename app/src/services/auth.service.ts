@@ -13,7 +13,8 @@ export const authService = {
   },
 
   /**
-   * Signs up a new user.
+   * Signs up a new user. Sends an OTP code via email (no magic link).
+   * Configure Supabase email template "Confirm signup" with `{{ .Token }}`.
    */
   signUp: async (credentials: any) => {
     const { data, error } = await supabase.auth.signUp(credentials);
@@ -77,5 +78,45 @@ export const authService = {
     const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
     if (error) throw error;
     return data;
-  }
+  },
+
+  /**
+   * Sends a password reset email containing a 6-digit OTP code (no magic link).
+   * Configure Supabase email template "Reset Password" with `{{ .Token }}`.
+   */
+  resetPasswordForEmail: async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+  },
+
+  /**
+   * Verifies an OTP code from an email. After success, a session is created.
+   * type: 'signup' for account confirmation, 'recovery' for password reset, 'email' for email-change.
+   */
+  verifyOtp: async (
+    email: string,
+    token: string,
+    type: 'signup' | 'recovery' | 'email',
+  ) => {
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Resends a signup confirmation OTP code.
+   */
+  resendSignupOtp: async (email: string) => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) throw error;
+  },
+
+  /**
+   * Updates the current user's password (requires an active recovery session).
+   */
+  updatePassword: async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    return data;
+  },
 };

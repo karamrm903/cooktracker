@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { ActivityIndicator } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { useDispatch, useSelector } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setOnboardingStatus, setPersistedAccessToken, setAuthSession } from '../store/slices/authSlice';
-import { GoogleSignin, statusCodes, isSuccessResponse } from '@react-native-google-signin/google-signin';
-import { authService } from '../services/auth.service';
-import { profileService } from '../services/profile.service';
+import React, { useState } from "react";
+import { ActivityIndicator } from "react-native";
+import { useTranslation } from "react-i18next";
+import {
+  GoogleSignin,
+  statusCodes,
+  isSuccessResponse,
+} from "@react-native-google-signin/google-signin";
+import { authService } from "../services/auth.service";
 import {
   View,
   Text,
@@ -16,39 +16,58 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme } from '../context/ThemeContext';
-import type { Colors } from '../context/ThemeContext';
-import { useLanguage } from '../context/LanguageContext';
-import CommonAlertModal, { CommonModalVariant } from "../components/CommonModal";
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import SafeAreaViewCustom from "../components/atoms/SafeAreaViewCustom";
+import {
+  BRAND_COLOR,
+  DEFAULT_BG,
+  TEXT_DARK,
+  TEXT_MUTED,
+  PLACEHOLDER,
+  ICON_COLOR,
+  INPUT_BORDER,
+  DIVIDER,
+  FORGOT_GREEN,
+} from "../styles/colors";
+import CommonAlertModal, {
+  CommonModalVariant,
+} from "../components/CommonModal";
 
 type RootStackParamList = {
   AccountCreation: undefined;
+  UserSetup: undefined;
+  OtpVerification: { email: string; type: 'signup' | 'recovery' };
   MainTabs: undefined;
 };
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'AccountCreation'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, "AccountCreation">;
 };
+
+const leafImg = require("../../assets/webp/SignUpLeaf.webp");
+const googleImg = require("../../assets/webp/Google.webp");
 
 export default function AccountCreationScreen({ navigation }: Props) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
-  const { language } = useLanguage();
-  const styles = makeStyles(colors);
-  const dispatch = useDispatch();
-  const { onboardingPayload } = useSelector((state: any) => state.auth);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState<{ visible: boolean; message: string; variant: CommonModalVariant; title?: string }>({
+  const [alert, setAlert] = useState<{
+    visible: boolean;
+    message: string;
+    variant: CommonModalVariant;
+    title?: string;
+  }>({
     visible: false,
     message: "",
-    variant: 'error',
+    variant: "error",
   });
 
   async function onGoogleButtonPress() {
@@ -64,89 +83,78 @@ export default function AccountCreationScreen({ navigation }: Props) {
           const data = await authService.signInWithGoogleIdToken(idToken);
 
           if (data.session?.access_token) {
-            if (onboardingPayload && data.session) {
-              try {
-                await profileService.updateProfile(data.session, { ...onboardingPayload, locale: language });
-              } catch (apiErr) {
-                console.error("Failed to sync profile after Google Login:", apiErr);
-              }
-            }
-
-            await authService.persistToken(data.session.access_token);
-            dispatch(setPersistedAccessToken(data.session.access_token));
-            dispatch(setAuthSession({ user: data.user, session: data.session }));
-
-            await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
-            dispatch(setOnboardingStatus(true));
+            navigation.navigate("UserSetup");
           }
         }
       }
     } catch (error: any) {
       if (error.code === statusCodes.IN_PROGRESS) {
-        // operation (e.g. sign in) is in progress already
         return;
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setAlert({ visible: true, message: t('accountCreation.alerts.playServicesError'), variant: 'error', title: t('accountCreation.alerts.playServicesTitle') });
-      } else if (error.code === statusCodes.SIGN_IN_CANCELLED || error.message?.includes('CANCELED')) {
-        return; // User cancelled the login flow
+        setAlert({
+          visible: true,
+          message: t("accountCreation.alerts.playServicesError"),
+          variant: "error",
+          title: t("accountCreation.alerts.playServicesTitle"),
+        });
+      } else if (
+        error.code === statusCodes.SIGN_IN_CANCELLED ||
+        error.message?.includes("CANCELED")
+      ) {
+        return;
       } else {
-        setAlert({ visible: true, message: t('accountCreation.alerts.signInErrorMsg', { error: error.message }), variant: 'error', title: t('accountCreation.alerts.signInErrorTitle') });
+        setAlert({
+          visible: true,
+          message: t("accountCreation.alerts.signInErrorMsg", {
+            error: error.message,
+          }),
+          variant: "error",
+          title: t("accountCreation.alerts.signInErrorTitle"),
+        });
       }
     } finally {
       setLoading(false);
     }
   }
 
-  const isReady = email.trim().length > 0 && password.length >= 6;
+  const isReady =
+    email.trim().length > 0 &&
+    password.length >= 6 &&
+    confirmPassword.length >= 6;
 
   async function handleSignUp() {
-    if (!email.trim() || password.length < 6) {
+    if (!email.trim() || password.length < 6 || confirmPassword.length < 6) {
       setAlert({
         visible: true,
-        message: t('accountCreation.alerts.missingDetailsMsg'),
-        variant: 'warning',
-        title: t('accountCreation.alerts.missingDetailsTitle'),
+        message: t("accountCreation.alerts.missingDetailsMsg"),
+        variant: "warning",
+        title: t("accountCreation.alerts.missingDetailsTitle"),
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setAlert({
+        visible: true,
+        message: t("accountCreation.alerts.passwordMismatchMsg"),
+        variant: "warning",
+        title: t("accountCreation.alerts.passwordMismatchTitle"),
       });
       return;
     }
 
     setLoading(true);
     try {
-      await authService.signUp({
-        email: email.trim(),
-        password,
-      });
-
-      const { data: { session } } = await authService.getSession();
-
-      if (!session?.access_token) {
-        setLoading(false);
-        setAlert({
-          visible: true,
-          message: t('accountCreation.alerts.checkEmailMsg'),
-          variant: 'info',
-          title: t('accountCreation.alerts.checkEmailTitle'),
-        });
-        return;
-      }
-
-      if (onboardingPayload) {
-        await profileService.updateProfile(session, { ...onboardingPayload, locale: language });
-      }
-
-      await authService.persistToken(session.access_token);
-      dispatch(setPersistedAccessToken(session.access_token));
-      dispatch(setAuthSession({ user: session.user, session }));
-
-      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
-      dispatch(setOnboardingStatus(true));
+      const trimmedEmail = email.trim();
+      await authService.signUp({ email: trimmedEmail, password });
+      navigation.navigate("OtpVerification", { email: trimmedEmail, type: "signup" });
     } catch (err: any) {
-      console.error("Sign up/Sync error:", err);
+      console.error("Sign up error:", err);
       setAlert({
         visible: true,
-        message: err.message || t('accountCreation.alerts.genericError'),
-        variant: 'error',
-        title: t('accountCreation.alerts.registrationErrorTitle'),
+        message: err.message || t("accountCreation.alerts.genericError"),
+        variant: "error",
+        title: t("accountCreation.alerts.registrationErrorTitle"),
       });
     } finally {
       setLoading(false);
@@ -154,14 +162,14 @@ export default function AccountCreationScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-
-        {/* Back */}
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backArrow}>←</Text>
-          </TouchableOpacity>
+    <SafeAreaViewCustom backgroundColor={DEFAULT_BG} statusBarBg={DEFAULT_BG}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {/* Decorative leaf top-right */}
+        <View style={styles.leafDecor} pointerEvents="none">
+          <Image source={leafImg} style={styles.leafImg} resizeMode="contain" />
         </View>
 
         <ScrollView
@@ -169,59 +177,134 @@ export default function AccountCreationScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
+          </TouchableOpacity>
+
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>{t('accountCreation.title')}</Text>
-            <Text style={styles.subtitle}>{t('accountCreation.subtitle')}</Text>
+            <Text style={styles.title}>{t("accountCreation.title")}</Text>
+            <Text style={styles.subtitle}>{t("accountCreation.subtitle")}</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>{t('accountCreation.emailLabel')}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={t('accountCreation.emailPlaceholder')}
-                placeholderTextColor={colors.placeholder}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                {t("accountCreation.emailLabel")}
+              </Text>
+              <View style={styles.inputWrap}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={ICON_COLOR}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder={t("accountCreation.emailPlaceholder")}
+                  placeholderTextColor={PLACEHOLDER}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>{t('accountCreation.passwordLabel')}</Text>
-              <View style={styles.passwordWrapper}>
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                {t("accountCreation.passwordLabel")}
+              </Text>
+              <View style={styles.inputWrap}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={ICON_COLOR}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={styles.passwordInput}
-                  placeholder={t('accountCreation.passwordPlaceholder')}
-                  placeholderTextColor={colors.placeholder}
+                  style={styles.input}
+                  placeholder={t("accountCreation.passwordPlaceholder")}
+                  placeholderTextColor={PLACEHOLDER}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!passwordVisible}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)} activeOpacity={0.7}>
-                  <Text style={styles.eyeText}>{passwordVisible ? t('common.hide') : t('common.show')}</Text>
+                <TouchableOpacity
+                  onPress={() => setPasswordVisible(!passwordVisible)}
+                  activeOpacity={0.7}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={passwordVisible ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color={ICON_COLOR}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                {t("accountCreation.confirmPasswordLabel")}
+              </Text>
+              <View style={styles.inputWrap}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={ICON_COLOR}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder={t("accountCreation.confirmPasswordPlaceholder")}
+                  placeholderTextColor={PLACEHOLDER}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!confirmVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => setConfirmVisible(!confirmVisible)}
+                  activeOpacity={0.7}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={confirmVisible ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color={ICON_COLOR}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* CTA */}
             <TouchableOpacity
-              style={[styles.primaryBtn, (!isReady || loading) && styles.primaryBtnDisabled]}
+              style={[
+                styles.primaryBtn,
+                (!isReady || loading) && styles.primaryBtnDisabled,
+              ]}
               onPress={handleSignUp}
               disabled={!isReady || loading}
               activeOpacity={0.85}
             >
               {loading ? (
-                <ActivityIndicator color={colors.btnPrimaryText} />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={[styles.primaryBtnText, !isReady && styles.primaryBtnTextDisabled]}>
-                  {t('accountCreation.startCookingBtn')}
+                <Text style={styles.primaryBtnText}>
+                  {t("accountCreation.startCookingBtn")}
                 </Text>
               )}
             </TouchableOpacity>
@@ -229,179 +312,213 @@ export default function AccountCreationScreen({ navigation }: Props) {
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t('common.or')}</Text>
+              <Text style={styles.dividerText}>{t("common.or")}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             {/* Google */}
             <TouchableOpacity
-              style={[styles.socialBtn, styles.googleBtn, loading && styles.primaryBtnDisabled]}
+              style={[styles.googleBtn, loading && styles.primaryBtnDisabled]}
               onPress={onGoogleButtonPress}
               disabled={loading}
               activeOpacity={0.85}
             >
-              <Text style={styles.googleLogo}>G</Text>
-              <Text style={styles.googleBtnText}>{t('accountCreation.continueWithGoogle')}</Text>
+              <Image
+                source={googleImg}
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.googleBtnText}>
+                {t("accountCreation.continueWithGoogle")}
+              </Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.termsText}>
-            {t('accountCreation.termsPrefix')}{' '}
-            <Text style={styles.termsLink}>{t('accountCreation.termsOfService')}</Text>
-            {' '}{t('accountCreation.and')}{' '}
-            <Text style={styles.termsLink}>{t('accountCreation.privacyPolicy')}</Text>.
+            {t("accountCreation.termsPrefix")}{" "}
+            <Text style={styles.termsLink}>
+              {t("accountCreation.termsOfService")}
+            </Text>{" "}
+            {t("accountCreation.and")}{" "}
+            <Text style={styles.termsLink}>
+              {t("accountCreation.privacyPolicy")}
+            </Text>
+            .
           </Text>
-
         </ScrollView>
       </KeyboardAvoidingView>
 
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={colors.btnPrimaryText} />
+          <ActivityIndicator size="large" color={BRAND_COLOR} />
         </View>
       )}
 
       {alert.visible && (
         <CommonAlertModal
           visible={alert.visible}
-          title={alert.title || t('common.alert')}
+          title={alert.title || t("common.alert")}
           message={alert.message}
           variant={alert.variant}
           onClose={() => setAlert({ ...alert, visible: false })}
         />
       )}
-    </SafeAreaView>
+    </SafeAreaViewCustom>
   );
 }
 
-function makeStyles(colors: Colors) {
-  return StyleSheet.create({
-    safe: { flex: 1, backgroundColor: colors.background },
-
-    topBar: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 4 },
-    backBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 999,
-      backgroundColor: colors.backBtnBg,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.07,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    backArrow: { fontSize: 17, color: colors.text, lineHeight: 21 },
-
-    scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
-
-    header: { paddingTop: 20, paddingBottom: 32, gap: 8 },
-    title: {
-      fontSize: 32,
-      fontWeight: '800',
-      color: colors.text,
-      letterSpacing: -0.5,
-      lineHeight: 40,
-    },
-    subtitle: { fontSize: 15, color: colors.textMuted, lineHeight: 24 },
-
-    form: { gap: 16 },
-
-    fieldGroup: { gap: 8 },
-    label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, letterSpacing: 0.2 },
-    input: {
-      backgroundColor: colors.inputBg,
-      borderRadius: 14,
-      paddingHorizontal: 16,
-      paddingVertical: 15,
-      fontSize: 15,
-      color: colors.text,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 1,
-    },
-    passwordWrapper: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.inputBg,
-      borderRadius: 14,
-      paddingHorizontal: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 1,
-    },
-    passwordInput: {
-      flex: 1,
-      paddingVertical: 15,
-      fontSize: 15,
-      color: colors.text,
-    },
-    eyeText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-
-    primaryBtn: {
-      backgroundColor: colors.btnPrimary,
-      paddingVertical: 17,
-      borderRadius: 999,
-      alignItems: 'center',
-      marginTop: 4,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.18,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    primaryBtnDisabled: { backgroundColor: colors.btnDisabled, shadowOpacity: 0 },
-    primaryBtnText: { fontSize: 17, fontWeight: '700', color: colors.btnPrimaryText, letterSpacing: 0.2 },
-    primaryBtnTextDisabled: { color: colors.btnDisabledText },
-
-    divider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginVertical: 4,
-    },
-    dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-    dividerText: { fontSize: 13, color: colors.textDisabled, fontWeight: '500' },
-
-    socialBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      backgroundColor: colors.appleBtn,
-      paddingVertical: 15,
-      borderRadius: 999,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.12,
-      shadowRadius: 8,
-      elevation: 3,
-    },
-    appleLogo: { fontSize: 18, color: colors.appleBtnText, lineHeight: 22 },
-    socialBtnText: { fontSize: 15, fontWeight: '600', color: colors.appleBtnText },
-    googleBtn: { backgroundColor: colors.googleBtn, shadowOpacity: 0.07 },
-    googleLogo: { fontSize: 16, fontWeight: '700', color: '#4285F4' },
-    googleBtnText: { fontSize: 15, fontWeight: '600', color: colors.googleBtnText },
-
-    termsText: {
-      fontSize: 12,
-      color: colors.textDisabled,
-      textAlign: 'center',
-      lineHeight: 18,
-      marginTop: 20,
-    },
-    termsLink: { color: colors.text, fontWeight: '600' },
-    loadingOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0, 0, 0, 0.3)",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 999,
-    },
-  });
-}
+const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  leafDecor: {
+    position: "absolute",
+    top: 6,
+    right: -20,
+    width: 170,
+    height: 180,
+    zIndex: 0,
+  },
+  leafImg: {
+    width: "100%",
+    height: "100%",
+  },
+  backBtn: {
+    marginTop: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  header: {
+    marginTop: 24,
+    marginBottom: 28,
+    gap: 8,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: TEXT_DARK,
+    letterSpacing: -0.5,
+    lineHeight: 42,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: TEXT_MUTED,
+    fontWeight: "400",
+    lineHeight: 22,
+  },
+  form: {
+    gap: 16,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: TEXT_DARK,
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: INPUT_BORDER,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 16,
+    fontSize: 15,
+    color: TEXT_DARK,
+  },
+  eyeBtn: {
+    paddingLeft: 10,
+  },
+  primaryBtn: {
+    backgroundColor: BRAND_COLOR,
+    paddingVertical: 18,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
+  },
+  primaryBtnText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.2,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: DIVIDER,
+  },
+  dividerText: {
+    fontSize: 14,
+    color: TEXT_MUTED,
+    fontWeight: "500",
+  },
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: INPUT_BORDER,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: TEXT_DARK,
+    letterSpacing: 0.1,
+  },
+  termsText: {
+    fontSize: 16,
+    color: TEXT_MUTED,
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 20,
+  },
+  termsLink: {
+    color: FORGOT_GREEN,
+    fontWeight: "700",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+});
