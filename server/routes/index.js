@@ -6,6 +6,7 @@ import dashboardRoutes from './dashboard.js';
 import searchRoutes   from './search.js';
 import webhookRoutes  from './webhooks.js';
 import accountRoutes  from './account.js';
+import authRoutes     from './auth.js';
 
 const router = Router();
 
@@ -14,6 +15,9 @@ router.get('/health', (_req, res) => res.json({ ok: true }));
 
 // Video pipeline (no auth — called from mobile pipeline before user is set)
 router.use('/', pipelineRoutes);
+
+// Auth helpers (no JWT — pre-signin)
+router.use('/auth', authRoutes);
 
 // Authenticated API routes
 router.use('/api', profileRoutes);
