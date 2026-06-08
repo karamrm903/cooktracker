@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 
-import { extractFrameFiles, makeTmpDir, cleanTmpDir } from '../utils/frames.js';
+import { extractFrameFiles, makeTmpDir, cleanTmpDir, getCacheFilePath, downloadVideoToCache, cleanupCache } from '../utils/frames.js';
 import { callClaude, LOCALE_TO_LANGUAGE } from '../utils/claude.js';
 
 const router = Router();
@@ -41,6 +41,7 @@ router.post('/metadata', async (req, res) => {
 router.post('/ocr', async (req, res) => {
   const { url } = req.body ?? {};
   if (!url) return res.status(400).json({ error: 'Body must contain { url }' });
+  cleanupCache();
 
   const visionKey = process.env.GOOGLE_VISION_API_KEY;
   if (!visionKey) return res.status(500).json({ error: 'GOOGLE_VISION_API_KEY not set' });
@@ -97,22 +98,32 @@ router.post('/ocr', async (req, res) => {
 router.post('/transcript', async (req, res) => {
   const { url, language } = req.body ?? {};
   if (!url) return res.status(400).json({ error: 'Body must contain { url }' });
+  cleanupCache();
 
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) return res.status(500).json({ error: 'GROQ_API_KEY not set' });
 
   const tmpDir = makeTmpDir('ct-stt-');
   try {
-    await execFileAsync('yt-dlp', [
-      '--force-ipv4', '--no-playlist', '--socket-timeout', '60',
-      '--no-check-certificates', '-x', '--audio-format', 'mp3',
-      '--audio-quality', '0', '-o', path.join(tmpDir, 'audio.%(ext)s'), url,
-    ], { timeout: 120000 });
+    const cachePath = getCacheFilePath(url);
+    if (!fs.existsSync(cachePath)) {
+      await downloadVideoToCache(url, cachePath);
+    } else {
+      console.log(`[cache] Cache HIT for transcript: using cached video file ${cachePath}`);
+    }
 
-    const audioFileName = fs.readdirSync(tmpDir).find(f => f.endsWith('.mp3'));
-    if (!audioFileName) throw new Error('yt-dlp produced no audio file');
+    const audioPath = path.join(tmpDir, 'audio.mp3');
+    console.log(`[transcript] Extracting audio to ${audioPath}`);
+    await execFileAsync('ffmpeg', [
+      '-y',
+      '-i', cachePath,
+      '-vn',
+      '-acodec', 'libmp3lame',
+      '-q:a', '9',
+      audioPath,
+    ], { timeout: 30000 });
 
-    const audioBuffer = fs.readFileSync(path.join(tmpDir, audioFileName));
+    const audioBuffer = fs.readFileSync(audioPath);
     const form = new FormData();
     form.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'audio.mp3');
     form.append('model', 'whisper-large-v3');
@@ -188,6 +199,7 @@ function buildVisionPrompt(languageName) {
 router.post('/vision', async (req, res) => {
   const { url, locale } = req.body ?? {};
   if (!url) return res.status(400).json({ error: 'Body must contain { url }' });
+  cleanupCache();
 
   const languageName = LOCALE_TO_LANGUAGE[locale] ?? 'English';
 
