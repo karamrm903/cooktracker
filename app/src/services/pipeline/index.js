@@ -138,73 +138,93 @@ export async function analyzeVideo(rawUrl, onProgress, locale) {
   }
   tick(0, 'done');
 
-  // ── Stage 2: Transcript (three-level fallback) ─────────────────────────────
+  // ── Stage 2, 3, 4: Parallel Extraction (Transcript, OCR, Frames) ───────────
   let transcript;
-  tick(1, 'started');
-  try {
-    transcript = await extractTranscript(url, metadata, platform, videoId);
-
-    if (!transcript.available || !transcript.text?.trim()) {
-      throw new Error('Transcript returned empty');
-    }
-    sourcesAvailable.transcript = true;
-    console.log('[pipeline] ✔ Transcript (primary)');
-    console.log('[pipeline]   Language :', transcript.language, '| Source:', transcript.source);
-    console.log('[pipeline]   Words    :', transcript.wordCount, '| Confidence:', transcript.confidence?.toFixed(2));
-    console.log('[pipeline]   Preview  :', transcript.text.slice(0, 100) + '…');
-  } catch (primaryErr) {
-    console.warn('[pipeline] ⚠ Primary transcript failed:', primaryErr.message);
-    console.warn('[pipeline]   → Trying metadata captions fallback…');
-
-    // Fallback 2: derive from metadata text
-    const fallback = buildMetadataFallbackTranscript(metadata);
-    if (fallback) {
-      transcript = fallback;
-      sourcesAvailable.transcript = true;
-      console.log('[pipeline] ✔ Transcript (metadata fallback)');
-      console.log('[pipeline]   Language :', transcript.language, '| Words:', transcript.wordCount);
-    } else {
-      // Fallback 3: visual-only mode
-      transcript = EMPTY_TRANSCRIPT;
-      console.warn('[pipeline] ⚠ No transcript — continuing in visual-only mode');
-      console.warn('[pipeline]   (frames + OCR will compensate)');
-    }
-  }
-  tick(1, 'done');
-
-  // ── Stage 3: OCR ───────────────────────────────────────────────────────────
   let ocr;
-  tick(2, 'started');
-  try {
-    ocr = await extractOCR(url, platform);
-    sourcesAvailable.ocr = ocr.framesScanned > 0;
-    console.log('[pipeline] ✔ OCR');
-    console.log('[pipeline]   Scanned :', ocr.framesScanned, 'frames |',
-      ocr.detectedFrames?.length ?? 0, 'with text');
-    console.log('[pipeline]   Language:', ocr.language);
-  } catch (err) {
-    console.error('[pipeline] ✖ OCR failed:', err.message, '— using empty result');
-    ocr = { language: 'unknown', framesScanned: 0, detectedFrames: [], combinedText: '' };
-  }
-  tick(2, 'done');
-
-  // ── Stage 4: Frame analysis ────────────────────────────────────────────────
   let frames;
-  tick(3, 'started');
-  try {
-    frames = await analyzeFrames(url, platform, metadata.durationSec, locale);
-    sourcesAvailable.frames = frames.framesAnalyzed > 0;
-    console.log('[pipeline] ✔ Frames');
-    console.log('[pipeline]   Analyzed:', frames.framesAnalyzed, '| Dish:', frames.dishType);
-    console.log('[pipeline]   Visual confidence:', frames.confidence);
-  } catch (err) {
-    console.error('[pipeline] ✖ Frame analysis failed:', err.message, '— using empty result');
-    frames = {
-      framesAnalyzed: 0, confidence: 0, dishType: '',
-      ingredients: [], cookingActions: [], tools: [], frameDescriptions: [],
-    };
-  }
-  tick(3, 'done');
+
+  const [transcriptResult, ocrResult, framesResult] = await Promise.all([
+    // Stage 2: Transcript (with three-level fallback)
+    (async () => {
+      tick(1, 'started');
+      let t;
+      try {
+        t = await extractTranscript(url, metadata, platform, videoId);
+
+        if (!t.available || !t.text?.trim()) {
+          throw new Error('Transcript returned empty');
+        }
+        sourcesAvailable.transcript = true;
+        console.log('[pipeline] ✔ Transcript (primary)');
+        console.log('[pipeline]   Language :', t.language, '| Source:', t.source);
+        console.log('[pipeline]   Words    :', t.wordCount, '| Confidence:', t.confidence?.toFixed(2));
+        console.log('[pipeline]   Preview  :', t.text.slice(0, 100) + '…');
+      } catch (primaryErr) {
+        console.warn('[pipeline] ⚠ Primary transcript failed:', primaryErr.message);
+        console.warn('[pipeline]   → Trying metadata captions fallback…');
+
+        // Fallback 2: derive from metadata text
+        const fallback = buildMetadataFallbackTranscript(metadata);
+        if (fallback) {
+          t = fallback;
+          sourcesAvailable.transcript = true;
+          console.log('[pipeline] ✔ Transcript (metadata fallback)');
+          console.log('[pipeline]   Language :', t.language, '| Words:', t.wordCount);
+        } else {
+          // Fallback 3: visual-only mode
+          t = EMPTY_TRANSCRIPT;
+          console.warn('[pipeline] ⚠ No transcript — continuing in visual-only mode');
+          console.warn('[pipeline]   (frames + OCR will compensate)');
+        }
+      }
+      tick(1, 'done');
+      return t;
+    })(),
+
+    // Stage 3: OCR
+    (async () => {
+      tick(2, 'started');
+      let o;
+      try {
+        o = await extractOCR(url, platform);
+        sourcesAvailable.ocr = o.framesScanned > 0;
+        console.log('[pipeline] ✔ OCR');
+        console.log('[pipeline]   Scanned :', o.framesScanned, 'frames |',
+          o.detectedFrames?.length ?? 0, 'with text');
+        console.log('[pipeline]   Language:', o.language);
+      } catch (err) {
+        console.error('[pipeline] ✖ OCR failed:', err.message, '— using empty result');
+        o = { language: 'unknown', framesScanned: 0, detectedFrames: [], combinedText: '' };
+      }
+      tick(2, 'done');
+      return o;
+    })(),
+
+    // Stage 4: Frame analysis
+    (async () => {
+      tick(3, 'started');
+      let f;
+      try {
+        f = await analyzeFrames(url, platform, metadata.durationSec, locale);
+        sourcesAvailable.frames = f.framesAnalyzed > 0;
+        console.log('[pipeline] ✔ Frames');
+        console.log('[pipeline]   Analyzed:', f.framesAnalyzed, '| Dish:', f.dishType);
+        console.log('[pipeline]   Visual confidence:', f.confidence);
+      } catch (err) {
+        console.error('[pipeline] ✖ Frame analysis failed:', err.message, '— using empty result');
+        f = {
+          framesAnalyzed: 0, confidence: 0, dishType: '',
+          ingredients: [], cookingActions: [], tools: [], frameDescriptions: [],
+        };
+      }
+      tick(3, 'done');
+      return f;
+    })(),
+  ]);
+
+  transcript = transcriptResult;
+  ocr = ocrResult;
+  frames = framesResult;
 
   // ── Guard: need at least one usable source ─────────────────────────────────
 const anySource = true;

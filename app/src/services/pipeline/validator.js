@@ -104,7 +104,7 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
 
   if (!titleConfirmed) {
     // For non-English source, this is expected — penalise less
-    const penalty = transcriptIsEnglish ? 0.10 : 0.04;
+    const penalty = transcriptIsEnglish ? 0.05 : 0.02;
     warnings.push(
       transcriptIsEnglish
         ? 'Recipe title could not be confirmed in the transcript or on-screen text — please verify the dish matches your video.'
@@ -118,15 +118,26 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
 
   // ── Check 2: Ingredient count vs visual evidence ─────────────────────────
   // Both visual ingredients (frames) and extracted ingredients are in English. Safe.
-  const visualIngCount    = frames.ingredients?.length ?? 0;
-  const extractedIngCount = recipe.ingredients?.length ?? 0;
-  if (visualIngCount > 0 && Math.abs(extractedIngCount - visualIngCount) > 3) {
+  const visualIngredients = frames.ingredients ?? [];
+  const extractedIngredients = recipe.ingredients ?? [];
+  const visualIngCount    = visualIngredients.length;
+  const extractedIngCount = extractedIngredients.length;
+
+  const unmatchedVisual = visualIngredients.filter(visIng => {
+    const cleanVis = visIng.toLowerCase().trim();
+    return !extractedIngredients.some(extIng => {
+      const cleanExt = (typeof extIng === 'string' ? extIng : extIng.name || '').toLowerCase();
+      return cleanExt.includes(cleanVis) || cleanVis.includes(cleanExt) ||
+        cleanVis.split(/\s+/).some(w => w.length > 3 && cleanExt.includes(w));
+    });
+  });
+
+  if (visualIngCount > 0 && unmatchedVisual.length > 3) {
     warnings.push('Ingredient count differs significantly from visual evidence — some items may be missing or incorrectly identified.');
-    confidence -= 0.08;
-    console.log('[validator] Check 2 FAILED — ingredient count mismatch:',
-      extractedIngCount, 'extracted vs', visualIngCount, 'visual');
+    confidence -= 0.04;
+    console.log('[validator] Check 2 FAILED — missing visual ingredients in recipe:', unmatchedVisual);
   } else {
-    console.log('[validator] Check 2 OK — ingredient counts agree');
+    console.log('[validator] Check 2 OK — visual ingredients are matched in recipe');
   }
 
   // ── Check 3: Dish type alignment ─────────────────────────────────────────
@@ -149,7 +160,7 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
 
     if (!dishConfirmed) {
       warnings.push('Dish type from visual analysis may not match the extracted recipe — please review the result.');
-      confidence -= 0.08;  // reduced from 0.12 — the check is less reliable for unusual dishes
+      confidence -= 0.04;  // reduced from 0.08 — the check is less reliable for unusual dishes
       console.log('[validator] Check 3 FAILED — dish type not confirmed:', frames.dishType);
     } else {
       console.log('[validator] Check 3 OK — dish type confirmed:', frames.dishType);
@@ -170,7 +181,7 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
 
     if (actionCoverage < 0.3) {
       warnings.push('Several cooking actions visible in the video are not reflected in the extracted steps — some steps may be missing.');
-      confidence -= 0.06;
+      confidence -= 0.03;
       console.log('[validator] Check 4 FAILED — action coverage:', (actionCoverage * 100).toFixed(0) + '%');
     } else {
       console.log('[validator] Check 4 OK — action coverage:', (actionCoverage * 100).toFixed(0) + '%');
@@ -182,7 +193,7 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
   // High cross-source agreement → boost confidence slightly.
   const agreementRatio = recipe._analysis.ingredientAgreementRatio ?? 0;
   if (agreementRatio >= 0.75) {
-    confidence += 0.05;
+    confidence += 0.08;
     console.log('[validator] Check 5 BONUS — high cross-source ingredient agreement:',
       (agreementRatio * 100).toFixed(0) + '%');
   } else if (agreementRatio > 0) {
@@ -192,11 +203,11 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
   // ── Transcript-fallback penalties ─────────────────────────────────────────
   if (transcript._fallback === 'metadata_captions') {
     warnings.push('No transcript was available — recipe was extracted from video title, description, and visual content only.');
-    confidence -= 0.08;
-    console.log('[validator] Fallback penalty: metadata_captions (-0.08)');
+    confidence -= 0.04;
+    console.log('[validator] Fallback penalty: metadata_captions (-0.04)');
   } else if (transcript._fallback === 'visual_only') {
     warnings.push('No audio transcript available — recipe was extracted from visual content and on-screen text only.');
-    const visualOnlyPenalty = (frames.ingredients?.length ?? 0) >= 3 ? 0.04 : 0.12;
+    const visualOnlyPenalty = (frames.ingredients?.length ?? 0) >= 3 ? 0.02 : 0.06;
     confidence -= visualOnlyPenalty;
     console.log(`[validator] Fallback penalty: visual_only (-${visualOnlyPenalty}) | visual ingredients: ${frames.ingredients?.length ?? 0}`);
   }
@@ -217,8 +228,8 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
     ing.split(/\s+/).filter(w => w.length > 3).some(w => metaTitleLower.includes(w))
   );
   if (visualSupportsTitleDish) {
-    confidence += 0.08;
-    console.log('[validator] Check 6 BONUS — visual ingredients support title (+0.08)');
+    confidence += 0.10;
+    console.log('[validator] Check 6 BONUS — visual ingredients support title (+0.10)');
   } else {
     console.log('[validator] Check 6 — visual ingredients do not overlap with title');
   }
@@ -233,8 +244,8 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
     );
     const coverageCheck7 = confirmedCheck7.length / frameActionsCheck7.length;
     if (coverageCheck7 >= 0.6) {
-      confidence += 0.06;
-      console.log('[validator] Check 7 BONUS — high visual action coverage in steps (+0.06)');
+      confidence += 0.08;
+      console.log('[validator] Check 7 BONUS — high visual action coverage in steps (+0.08)');
     } else {
       console.log('[validator] Check 7 — visual action coverage in steps:', (coverageCheck7 * 100).toFixed(0) + '%');
     }
@@ -244,8 +255,8 @@ export async function validateRecipe(recipe, { metadata, transcript, ocr, frames
   // Small bonus when the extracted recipe has solid ingredient + step coverage.
   // Capped at +0.08 to avoid inflating marginal results.
   if (recipe.ingredients?.length >= 3 && recipe.steps?.length >= 3) {
-    confidence += 0.08;
-    console.log('[validator] Completeness bonus (+0.08)');
+    confidence += 0.10;
+    console.log('[validator] Completeness bonus (+0.10)');
   }
   const finalConfidence = Math.max(0, Math.min(confidence, 1.0));
   const confidenceLevel =

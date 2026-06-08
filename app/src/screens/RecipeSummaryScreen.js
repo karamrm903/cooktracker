@@ -340,7 +340,7 @@ disabled={!savedDbId}
               <View style={[s.stepNum, { backgroundColor: colors.surfaceAlt }]}>
                 <Text style={[s.stepNumText, { color: colors.textSecondary }]}>{i + 1}</Text>
               </View>
-              <Text style={[s.stepText, { color: colors.text }]} numberOfLines={2}>
+              <Text style={[s.stepText, { color: colors.text }]}>
                 {step.text}
               </Text>
               {step.timerMinutes && (
