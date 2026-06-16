@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,17 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
+import { useSelector } from 'react-redux';
 import { useTheme } from '../context/ThemeContext';
 import { useMealLogs } from '../context/MealLogsContext';
 import { FONTS, RADIUS } from '../constants/theme';
 import CommonAlertModal from '../components/CommonModal';
+import { fetchRecipeImage, fetchFoodImage } from '../services/foodSearch.service';
 import type { FoodItem } from '../services/foodSearch.service';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -103,6 +106,7 @@ function DonutChart({ calories, carbsPct, fatPct, proteinPct }: DonutChartProps)
 export default function FoodDetailScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const { addMeal } = useMealLogs() as any;
+  const session = useSelector((s: any) => s.auth.session);
   const food: FoodItem = route.params?.food;
   const defaultMealType: MealType = route.params?.defaultMealType ?? 'breakfast';
 
@@ -115,6 +119,27 @@ export default function FoodDetailScreen({ navigation, route }: any) {
     variant: 'success',
     message: '',
   });
+
+  // Lazy-fetch a signed Pexels image on mount. UUID-looking ids refer to a
+  // persisted recipe row → /api/recipes/:id/image; everything else (AI search
+  // results without a DB row) falls back to /api/food/image keyed by name.
+  const [imageUrl, setImageUrl] = useState<string | null>(food?.imageUrl ?? null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+  useEffect(() => {
+    if (!food || imageUrl) return;
+    let cancelled = false;
+    setImageLoading(true);
+    const load = isUuid(food.id)
+      ? fetchRecipeImage(food.id, session, food.name)
+      : fetchFoodImage(food.name, session);
+    load
+      .then((url) => { if (!cancelled) setImageUrl(url); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setImageLoading(false); });
+    return () => { cancelled = true; };
+  }, [food?.id]);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -267,6 +292,23 @@ export default function FoodDetailScreen({ navigation, route }: any) {
             </View>
           </View>
         </View>
+
+        <View style={[styles.imageWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {imageLoading ? (
+            <View style={styles.imagePlaceholder}>
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            </View>
+          ) : imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.foodImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="image-outline" size={36} color={colors.textMuted} />
+              <Text style={[styles.imagePlaceholderText, { color: colors.textMuted }]}>
+                No photo available
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <CommonAlertModal
@@ -417,6 +459,26 @@ const styles = StyleSheet.create({
   },
   macroName: {
     fontSize: 12,
+  },
+  imageWrap: {
+    marginTop: 28,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+    height: 200,
+  },
+  foodImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  imagePlaceholderText: {
+    fontSize: 13,
   },
   donutCalories: {
     fontSize: 22,

@@ -38,6 +38,7 @@ import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
 import { LanguageProvider, useLanguage } from "./src/context/LanguageContext";
 import { SavedMealsProvider } from "./src/context/SavedMealsContext";
 import { MealLogsProvider } from "./src/context/MealLogsContext";
+import { ExploreProvider } from "./src/context/ExploreContext";
 import "./src/i18n";
 import { profileService } from "./src/services/profile.service";
 import { useSubscription, useSubscriptionSync } from "./src/hooks/useSubscription";
@@ -419,10 +420,12 @@ export default function App() {
           <LanguageProvider>
             <SavedMealsProvider>
               <MealLogsProvider>
-                <AuthStateWrapper>
-                  <AppContent onRouteChange={onRouteChange} />
-                  <FloatingThemeToggle routeName={routeName} />
-                </AuthStateWrapper>
+                <ExploreProvider>
+                  <AuthStateWrapper>
+                    <AppContent onRouteChange={onRouteChange} />
+                    <FloatingThemeToggle routeName={routeName} />
+                  </AuthStateWrapper>
+                </ExploreProvider>
               </MealLogsProvider>
             </SavedMealsProvider>
           </LanguageProvider>

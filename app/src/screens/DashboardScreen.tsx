@@ -32,6 +32,7 @@ import {
   isUsageLimitError,
 } from "../services/subscription.service";
 import { useSubscription } from "../hooks/useSubscription";
+import { useExplore } from "../context/ExploreContext";
 import { RootState } from "../store";
 import { Meal, UserProfile } from "../types";
 import PaywallModal, { PaywallFeature } from "../components/PaywallModal";
@@ -92,6 +93,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const { session, user } = useSelector((state: RootState) => state.auth);
   const streak = useSelector((state: RootState) => state.meals.streak);
   const { isSubscribed } = useSubscription();
+  const { ensure: ensureExplore } = useExplore();
 
   // Re-fetch meals + profile whenever Dashboard comes into focus
   useFocusEffect(
@@ -113,7 +115,11 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
           });
         })
         .finally(() => setIsLoadingProfile(false));
-    }, [refreshMeals, session]),
+
+      // Warm the Explore deck + image cache in the background so the swiper
+      // is instant when the user opens the Explore tab.
+      ensureExplore(session).catch(() => {});
+    }, [refreshMeals, session, ensureExplore]),
   );
 
   async function handleImport() {

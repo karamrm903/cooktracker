@@ -9,6 +9,44 @@ export interface FoodItem {
   servingSize: string;
   servingSizeGrams: number;
   macros: { protein: number; carbs: number; fat: number };
+  imageUrl?: string;
+}
+
+/**
+ * Fetch a 1-hour signed Pexels image URL for a saved recipe row.
+ * Returns null when the server has no image / no Pexels key.
+ */
+export async function fetchRecipeImage(
+  recipeId: string,
+  session: any,
+  q?: string,
+): Promise<string | null> {
+  const headers = await getAuthHeaders(session);
+  const res = await fetch(`${getBaseUrl()}/api/recipes/${recipeId}/image`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ q: q ?? '' }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  return data?.signedUrl ?? null;
+}
+
+/**
+ * Fetch a signed image URL by free-form food name. Used by FoodDetailScreen
+ * when the item isn't anchored to a persisted recipe row yet.
+ */
+export async function fetchFoodImage(q: string, session: any): Promise<string | null> {
+  if (!q.trim()) return null;
+  const headers = await getAuthHeaders(session);
+  const res = await fetch(`${getBaseUrl()}/api/food/image`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ q }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  return data?.signedUrl ?? null;
 }
 
 export async function searchFoodSuggestions(q: string, session: any): Promise<string[]> {
