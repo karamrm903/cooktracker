@@ -7,6 +7,8 @@ import searchRoutes   from './search.js';
 import webhookRoutes  from './webhooks.js';
 import accountRoutes  from './account.js';
 import authRoutes     from './auth.js';
+import swipeRoutes    from './swipe.js';
+import imageRoutes    from './images.js';
 
 const router = Router();
 
@@ -25,6 +27,8 @@ router.use('/api', mealsRoutes);
 router.use('/api', dashboardRoutes);
 router.use('/api', searchRoutes);
 router.use('/api', accountRoutes);
+router.use('/api', swipeRoutes);
+router.use('/api', imageRoutes);
 
 // Webhook (signature-verified, not JWT-authenticated)
 router.use('/webhooks', webhookRoutes);
