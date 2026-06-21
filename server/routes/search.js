@@ -11,11 +11,17 @@ const router = Router();
 // Cache hits skip the Claude call. Global rows (user_id IS NULL) act as the
 // shared cache; per-user rows are this user's saved library, not cache.
 
+// Categories whose rows are full recipes (carry steps + ingredients). Excludes
+// 'food_search' (nutrition-only items / suggestion stubs) so those never leak
+// into Explore search results or block recipe caching.
+const RECIPE_CATEGORIES = ['ai_cache', 'breakfast', 'lunch', 'dinner', 'snack'];
+
 async function findCachedRecipes(query, limit) {
   const { data, error } = await adminClient
     .from('recipes')
     .select('*')
     .is('user_id', null)
+    .in('saved_category', RECIPE_CATEGORIES)
     .ilike('title', `%${query}%`)
     .limit(limit);
   if (error) {
@@ -37,7 +43,8 @@ function dbRowToExploreResult(r, i) {
     calories: r.calories ?? 0,
     time: r.nutrition?.time ?? '—',
     difficulty: r.nutrition?.difficulty ?? 'Medium',
-    category: r.saved_category ?? r.nutrition?.category ?? 'dinner',
+    // Prefer nutrition.category — saved_category may be 'ai_cache' marker.
+    category: r.nutrition?.category ?? r.saved_category ?? 'dinner',
     macros: { protein: r.protein ?? 0, carbs: r.carbs ?? 0, fat: r.fat ?? 0 },
     ingredients,
     steps: r.steps ?? [],
@@ -56,6 +63,7 @@ async function cacheExploreResults(results) {
     .from('recipes')
     .select('title')
     .is('user_id', null)
+    .in('saved_category', RECIPE_CATEGORIES)
     .in('title', titles);
   const seen = new Set((existing ?? []).map(r => r.title));
 
@@ -85,7 +93,9 @@ async function cacheExploreResults(results) {
           category: r.category,
           estimatedGrams: r.estimatedGrams,
         },
-        saved_category: r.category ?? null,
+        // Mark as AI cache so it is not surfaced in the curated swipe deck.
+        // Real category lives in nutrition.category for cache hit re-rendering.
+        saved_category: 'ai_cache',
       };
     });
 
@@ -184,36 +194,73 @@ function dbRowToFoodItem(r) {
   };
 }
 
+// Caches food items and returns a Map(titleLower → DB id) so the route can
+// hand the client real recipe ids. With a DB id the client hits
+// /api/recipes/:id/image (CDN) instead of the name-keyed fallback.
 async function cacheFoodItems(items) {
+  const idByTitle = new Map();
   const titles = items.map(i => i.name).filter(Boolean);
-  if (!titles.length) return;
+  if (!titles.length) return idByTitle;
+
   const { data: existing } = await adminClient
     .from('recipes')
-    .select('title')
+    .select('id, title, calories')
     .is('user_id', null)
     .eq('saved_category', 'food_search')
     .in('title', titles);
-  const seen = new Set((existing ?? []).map(r => r.title));
+  const existingByTitle = new Map((existing ?? []).map(r => [r.title, r]));
 
-  const rows = items
-    .filter(i => !seen.has(i.name))
-    .map(i => ({
-      user_id: null,
-      title: i.name,
-      calories: i.calories,
-      protein: i.macros?.protein ?? 0,
-      carbs: i.macros?.carbs ?? 0,
-      fat: i.macros?.fat ?? 0,
-      nutrition: {
-        verified: i.verified,
-        servingSize: i.servingSize,
-        servingSizeGrams: i.servingSizeGrams,
-      },
-      saved_category: 'food_search',
-    }));
-  if (!rows.length) return;
-  const { error } = await adminClient.from('recipes').insert(rows);
-  if (error) console.warn('[food-search] cache insert failed:', error.message);
+  const fullPayload = (i) => ({
+    calories: i.calories,
+    protein: i.macros?.protein ?? 0,
+    carbs: i.macros?.carbs ?? 0,
+    fat: i.macros?.fat ?? 0,
+    nutrition: {
+      verified: i.verified,
+      servingSize: i.servingSize,
+      servingSizeGrams: i.servingSizeGrams,
+    },
+  });
+
+  const toInsert = [];
+  const stubBackfills = []; // suggestion stubs (null calories) to upgrade to full items
+  const queued = new Set(); // dedupe items that repeat (bestMatch often == results[0])
+
+  for (const i of items) {
+    const key = i.name.toLowerCase();
+    const row = existingByTitle.get(i.name);
+    if (row) {
+      idByTitle.set(key, row.id);
+      if (row.calories == null && !queued.has(key)) {
+        queued.add(key);
+        stubBackfills.push({ id: row.id, payload: fullPayload(i) });
+      }
+      continue;
+    }
+    if (queued.has(key)) continue;
+    queued.add(key);
+    toInsert.push({ user_id: null, title: i.name, saved_category: 'food_search', ...fullPayload(i) });
+  }
+
+  // Backfill title-only suggestion stubs so they surface as full results next time.
+  if (stubBackfills.length) {
+    await Promise.all(
+      stubBackfills.map(s =>
+        adminClient.from('recipes').update(s.payload).eq('id', s.id),
+      ),
+    );
+  }
+
+  if (toInsert.length) {
+    const { data: inserted, error } = await adminClient
+      .from('recipes')
+      .insert(toInsert)
+      .select('id, title');
+    if (error) console.warn('[food-search] cache insert failed:', error.message);
+    for (const r of inserted ?? []) idByTitle.set(r.title.toLowerCase(), r.id);
+  }
+
+  return idByTitle;
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -401,10 +448,17 @@ router.post('/food-search', requireAuth, checkFoodSearchUsage, async (req, res) 
     const results = Array.isArray(parsed.results) ? parsed.results.map(normalize) : [];
 
     const toCache = [...(bestMatch ? [bestMatch] : []), ...results];
-    cacheFoodItems(toCache).catch(err => console.warn('[food-search] cache write:', err.message));
+    // Await the cache write so we can swap AI ids for real DB ids — that lets
+    // the client load images via /api/recipes/:id/image (CDN) on first click.
+    const idByTitle = await cacheFoodItems(toCache).catch(err => {
+      console.warn('[food-search] cache write:', err.message);
+      return new Map();
+    });
+    const withDbId = (it) =>
+      it ? { ...it, id: idByTitle.get(it.name.toLowerCase()) ?? it.id } : it;
 
     console.log(`[food-search] ✔ query: "${query}" | ${results.length} results`);
-    res.json({ bestMatch, results });
+    res.json({ bestMatch: withDbId(bestMatch), results: results.map(withDbId) });
   } catch (err) {
     console.error('[food-search] ✖', err.message);
     res.status(500).json({ error: err.message });

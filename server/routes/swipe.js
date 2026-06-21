@@ -4,6 +4,10 @@ import { adminClient } from '../db/client.js';
 
 const router = Router();
 
+// Only curated/seeded categories qualify for the explore swipe deck.
+// Excludes AI search cache ('ai_cache') and food-search autocomplete ('food_search').
+const CURATED_CATEGORIES = ['breakfast', 'lunch', 'dinner', 'snack'];
+
 function rowToCard(r) {
   let ingredients = [];
   try { ingredients = Array.isArray(r.ingredients) ? r.ingredients : JSON.parse(r.ingredients ?? '[]'); } catch {}
@@ -30,12 +34,13 @@ router.get('/explore/swipe', requireAuth, async (req, res) => {
   const { category, q, limit = 20 } = req.query ?? {};
   const max = Math.min(Number(limit) || 20, 50);
 
-  // Skip the food-search cache rows (those are autocomplete entries, not recipes).
+  // Whitelist curated categories so AI search cache / food-search autocomplete
+  // rows can never leak into the deck.
   let query = adminClient
     .from('recipes')
     .select('id, title, emoji, calories, protein, carbs, fat, ingredients, steps, nutrition, saved_category')
     .is('user_id', null)
-    .or('saved_category.is.null,saved_category.neq.food_search')
+    .in('saved_category', CURATED_CATEGORIES)
     .limit(max);
 
   if (category && category !== 'all') query = query.eq('saved_category', category);
@@ -57,7 +62,7 @@ router.get('/explore/trending', requireAuth, async (req, res) => {
     .from('recipes')
     .select('id, title, emoji, calories, protein, carbs, fat, saved_category, nutrition')
     .is('user_id', null)
-    .or('saved_category.is.null,saved_category.neq.food_search')
+    .in('saved_category', CURATED_CATEGORIES)
     .order('created_at', { ascending: false })
     .limit(10);
 
