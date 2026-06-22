@@ -10,12 +10,17 @@ import {
   Modal,
   Keyboard,
   ScrollView,
+  Image,
+  ImageStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { useTheme } from "../context/ThemeContext";
-import { FONTS, RADIUS } from "../constants/theme";
+import { FONTS, RADIUS, SHADOWS } from "../constants/theme";
+
+const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
+const ginghamImg = require("../../assets/webp/UserInfoBottom.webp");
 import {
   searchFoodSuggestions,
   searchFood,
@@ -25,6 +30,7 @@ import { fetchAllRecipes } from "../services/recipeService";
 import { isUsageLimitError } from "../services/subscription.service";
 import { useSubscription } from "../hooks/useSubscription";
 import PaywallModal from "../components/PaywallModal";
+import SafeAreaViewCustom from "@/components/atoms/SafeAreaViewCustom";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealType = (typeof MEAL_TYPES)[number];
@@ -258,14 +264,15 @@ export default function SearchFoodScreen({ navigation, route }: any) {
     : savedRecipes;
 
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaViewCustom style={[styles.safe, { backgroundColor: "#FCF7F3" }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.closeBtn}
+          style={[
+            styles.closeBtn,
+            { backgroundColor: colors.surface },
+            SHADOWS.sm,
+          ]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -277,16 +284,10 @@ export default function SearchFoodScreen({ navigation, route }: any) {
           onPress={() => setShowMealPicker(true)}
           activeOpacity={0.75}
         >
-          <Text
-            style={[styles.mealPickerText, { color: colors.info ?? "#3B82F6" }]}
-          >
+          <Text style={[styles.mealPickerText, { color: colors.text }]}>
             {MEAL_LABELS[mealType]}
           </Text>
-          <Ionicons
-            name="chevron-down"
-            size={14}
-            color={colors.info ?? "#3B82F6"}
-          />
+          <Ionicons name="chevron-down" size={16} color={colors.text} />
         </TouchableOpacity>
 
         <View style={{ width: 36 }} />
@@ -303,7 +304,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
           <Ionicons
             name="search"
             size={18}
-            color={colors.info ?? "#3B82F6"}
+            color={colors.textMuted}
             style={{ marginRight: 8 }}
           />
           <TextInput
@@ -348,14 +349,18 @@ export default function SearchFoodScreen({ navigation, route }: any) {
             <Text
               style={[
                 styles.tabText,
-                { color: activeTab === i ? colors.text : colors.textMuted },
+                { color: activeTab === i ? colors.primary : colors.textMuted },
+                activeTab === i && { fontWeight: FONTS.semibold },
               ]}
             >
               {tab}
             </Text>
             {activeTab === i && (
               <View
-                style={[styles.tabIndicator, { backgroundColor: colors.text }]}
+                style={[
+                  styles.tabIndicator,
+                  { backgroundColor: colors.primary },
+                ]}
               />
             )}
           </TouchableOpacity>
@@ -367,34 +372,42 @@ export default function SearchFoodScreen({ navigation, route }: any) {
         <>
           {mode === "idle" && (
             <View style={styles.emptyState}>
-              <Ionicons
-                name="search-outline"
-                size={48}
-                color={colors.textMuted}
+              {/* Decorative leaves + gingham corner */}
+              <Image
+                source={leafImg}
+                style={styles.leafTopRight as ImageStyle}
+                resizeMode="contain"
               />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                Search for a food item
+              <Image
+                source={leafImg}
+                style={styles.leafCenterLeft as ImageStyle}
+                resizeMode="contain"
+              />
+              <Image
+                source={leafImg}
+                style={styles.leafBottomLeft as ImageStyle}
+                resizeMode="contain"
+              />
+              <Image
+                source={ginghamImg}
+                style={styles.ginghamBottomRight as ImageStyle}
+                resizeMode="cover"
+              />
+
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                Your meal log is empty
+              </Text>
+              <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
+                Track your nutrition by logging your first meal.
               </Text>
               <TouchableOpacity
-                style={[styles.manualLogBtn, { borderColor: colors.border }]}
+                style={[styles.addMealBtn, { backgroundColor: colors.primary }]}
                 onPress={() =>
                   navigation.navigate("LogMeal", { defaultMealType: mealType })
                 }
-                activeOpacity={0.7}
+                activeOpacity={0.85}
               >
-                <Ionicons
-                  name="pencil-outline"
-                  size={14}
-                  color={colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.manualLogText,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Log manually
-                </Text>
+                <Text style={styles.addMealText}>Add A Meal</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -683,7 +696,6 @@ export default function SearchFoodScreen({ navigation, route }: any) {
         </TouchableOpacity>
       </Modal>
 
-      {/* Premium paywall — shown when a non-subscriber tries to AI-search food */}
       <PaywallModal
         visible={paywallVisible}
         feature="search"
@@ -693,7 +705,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
           navigation.navigate("Subscription");
         }}
       />
-    </SafeAreaView>
+    </SafeAreaViewCustom>
   );
 }
 
@@ -705,7 +717,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   closeBtn: {
     width: 36,
@@ -730,7 +741,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: RADIUS.full,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -744,6 +755,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
+    marginTop: 12,
   },
   tab: {
     marginRight: 20,
@@ -857,21 +869,66 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
+    paddingHorizontal: 40,
   },
   emptyText: { fontSize: 15 },
-  manualLogBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: FONTS.bold,
+    letterSpacing: -0.4,
+    textAlign: "center",
   },
-  manualLogText: {
-    fontSize: 13,
-    fontWeight: FONTS.medium,
+  emptySub: {
+    fontSize: 15,
+    textAlign: "center",
+    marginTop: -2,
+    marginBottom: 12,
+  },
+  addMealBtn: {
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: RADIUS.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addMealText: {
+    fontSize: 16,
+    fontWeight: FONTS.bold,
+    color: "#FFFFFF",
+  },
+  leafTopRight: {
+    position: "absolute",
+    right: -10,
+    top: 40,
+    width: 120,
+    height: 120,
+    opacity: 0.7,
+  },
+  leafCenterLeft: {
+    position: "absolute",
+    left: -55,
+    top: "32%",
+    width: 120,
+    height: 120,
+    opacity: 0.7,
+    transform: [{ scaleX: -1 }, { rotate: "25deg" }],
+  },
+  leafBottomLeft: {
+    position: "absolute",
+    left: -16,
+    bottom: 30,
+    width: 120,
+    height: 120,
+    opacity: 0.7,
+    transform: [{ scaleX: -1 }],
+  },
+  ginghamBottomRight: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 130,
+    height: 130,
+    opacity: 0.85,
   },
   modalOverlay: {
     flex: 1,

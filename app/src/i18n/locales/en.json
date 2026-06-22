@@ -209,12 +209,18 @@
     "heightLabel": "Height",
     "weightLabel": "Weight",
     "goals": {
-      "lose": { "label": "Lose weight", "sub": "Burn fat and feel lighter" },
+      "lose": {
+        "label": "Lose weight",
+        "sub": "Burn fat and feel lighter"
+      },
       "maintain": {
         "label": "Maintain weight",
         "sub": "Stay at your current weight"
       },
-      "muscle": { "label": "Gain muscle", "sub": "Build strength and size" },
+      "muscle": {
+        "label": "Gain muscle",
+        "sub": "Build strength and size"
+      },
       "healthy": {
         "label": "Eat healthier",
         "sub": "Better habits, better nutrition"
@@ -233,7 +239,10 @@
         "label": "Moderately active",
         "sub": "Exercise 3–5 days/week"
       },
-      "very": { "label": "Very active", "sub": "Hard exercise 6–7 days/week" }
+      "very": {
+        "label": "Very active",
+        "sub": "Hard exercise 6–7 days/week"
+      }
     },
     "macroNote": "These are estimates based on your profile. You can adjust them later in settings.",
     "continue": "Continue"
@@ -312,7 +321,9 @@
     "title": "Analyzing your video",
     "subtitle": "This takes just a moment…",
     "errorTitle": "Analysis failed",
-    "errorMsg": "Couldn't analyze this video. Please try another one."
+    "errorMsg": "Couldn't analyze this video. Please try another one.",
+    "done": "Done",
+    "inProgress": "In progress"
   },
   "recipeSummary": {
     "headerTitle": "Recipe",
@@ -412,7 +423,11 @@
     "portionEaten": "Portion eaten",
     "editGrams": "Edit grams",
     "waterGlasses": "{{count}} glasses",
-    "weeklyTitle": "This week"
+    "weeklyTitle": "This week",
+    "goal": "Goal",
+    "eaten": "Eaten",
+    "kcalRemaining": "kcal remaining",
+    "stayConsistent": "Stay consistent, you've got this! 🌿"
   },
   "explore": {
     "title": "Explore",
@@ -430,7 +445,12 @@
       "dinner": "Dinner",
       "snack": "Snacks",
       "dessert": "Desserts"
-    }
+    },
+    "subtitle": "Swipe right for recipes you love, left to skip",
+    "seeAll": "See All",
+    "startCooking": "Start Cooking",
+    "planTitle": "Plan My Meals",
+    "planSub": "Build a full day based on your goals"
   },
   "savedMeals": {
     "title": "Saved",

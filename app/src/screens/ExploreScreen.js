@@ -18,6 +18,9 @@ import {
   PanResponder,
   Image,
   Dimensions,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,6 +40,39 @@ import PaywallModal from "../components/PaywallModal";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 220;
+
+// ── Assets ────────────────────────────────────────────────────────────────────
+const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
+const sunVector = require("../../assets/pngs/sunVector.png");
+const sunCloudVector = require("../../assets/pngs/sunWithCloudVector.png");
+const moonVector = require("../../assets/pngs/moonVector.png");
+const glassVector = require("../../assets/pngs/glassVector.png");
+const calendarPlanImg = require("../../assets/pngs/calenderPlan.png");
+
+const CAT_ICON = {
+  breakfast: sunVector,
+  lunch: sunCloudVector,
+  dinner: moonVector,
+  snack: glassVector,
+};
+
+const MACRO_COLORS = { protein: "#EF4444", carbs: "#22C55E", fat: "#EAB308" };
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Bucket recipes into figma-style sections by their macro profile.
+const SECTION_ORDER = [
+  ["HIGH PROTEIN", "High Protein"],
+  ["HEALTHY CARBS", "High Carbs"],
+  ["HEALTHY FATS", "Healthy Fats"],
+  ["BALANCED", "Balanced"],
+  ["LOW CALORIE", "Low Calorie"],
+];
 
 const CATEGORIES = [
   { id: "all", labelKey: "explore.categories.all" },
@@ -449,26 +485,6 @@ function SwipeDeck({ cards, session, images, colors, onLike, onSkip, onInfo }) {
       >
         <Text style={styles.stampText}>NOPE</Text>
       </Animated.View>
-
-      {/* Bottom controls */}
-      <View style={styles.controls}>
-        <ControlBtn
-          icon="close"
-          color="#FF6B35"
-          onPress={() => forceSwipe("left")}
-        />
-        <ControlBtn
-          icon="information"
-          size={46}
-          color="#6B7280"
-          onPress={() => onInfo?.(cards[index])}
-        />
-        <ControlBtn
-          icon="heart"
-          color="#4CAF50"
-          onPress={() => forceSwipe("right")}
-        />
-      </View>
     </View>
   );
 }
@@ -646,6 +662,154 @@ function ResultsCard({
   );
 }
 
+// ── Horizontal recipe card (category carousels) ───────────────────────────────
+const HRecipeCard = React.memo(function HRecipeCard({
+  item,
+  session,
+  colors,
+  t,
+  onStartCooking,
+}) {
+  const [img, setImg] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const { rating } = useMemo(() => getRating(item.name), [item.name]);
+
+  useEffect(() => {
+    let cancelled = false;
+    exploreService
+      .fetchRecipeImage(session, item.id, item.name)
+      .then((url) => {
+        if (cancelled || !url) return;
+        Image.prefetch(url).catch(() => {});
+        setImg(url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id, session]);
+
+  const p = item.macros?.protein ?? 0;
+  const cb = item.macros?.carbs ?? 0;
+  const f = item.macros?.fat ?? 0;
+  const pCal = p * 4;
+  const cCal = cb * 4;
+  const fCal = f * 9;
+  const macroTotal = pCal + cCal + fCal;
+
+  const macros = [
+    { l: "Protein", v: p, c: MACRO_COLORS.protein },
+    { l: "Carbs", v: cb, c: MACRO_COLORS.carbs },
+    { l: "Fat", v: f, c: MACRO_COLORS.fat },
+  ];
+
+  function toggle() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((e) => !e);
+  }
+
+  return (
+    <View style={[styles.hCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      {img ? (
+        <Image source={{ uri: img }} style={styles.hCardImg} resizeMode="cover" />
+      ) : (
+        <View style={[styles.hCardImg, styles.cardImageFallback, { backgroundColor: colors.surfaceAlt }]}>
+          <Text style={{ fontSize: 34 }}>{item.emoji ?? "🍽️"}</Text>
+        </View>
+      )}
+      <View style={styles.hBookmark}>
+        <Ionicons name="bookmark-outline" size={15} color={colors.textSecondary} />
+      </View>
+
+      <View style={styles.hCardBody}>
+        <TouchableOpacity
+          style={styles.hCardTitleRow}
+          activeOpacity={0.7}
+          onPress={toggle}
+        >
+          <Text style={[styles.hCardName, { color: colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={colors.textMuted}
+          />
+        </TouchableOpacity>
+
+        <Text style={[styles.hCardMeta, { color: colors.textMuted }]} numberOfLines={1}>
+          {item.calories} kcal · {item.time || "45 min"} · ★ {rating}
+        </Text>
+
+        {expanded && (
+          <>
+            <View style={[styles.hDivider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.hCardKcal, { color: colors.text }]}>{item.calories} kcal</Text>
+
+            <View style={[styles.hBar, { backgroundColor: colors.surfaceAlt }]}>
+              {macroTotal > 0 && (
+                <View style={styles.hBarFill}>
+                  <View style={{ flex: pCal, backgroundColor: MACRO_COLORS.protein }} />
+                  <View style={{ flex: cCal, backgroundColor: MACRO_COLORS.carbs }} />
+                  <View style={{ flex: fCal, backgroundColor: MACRO_COLORS.fat }} />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.hMacroList}>
+              {macros.map((m) => (
+                <View key={m.l} style={styles.hMacroRow}>
+                  <View style={[styles.hDot, { backgroundColor: m.c }]} />
+                  <Text style={[styles.hMacroLabel, { color: colors.textSecondary }]}>{m.l}</Text>
+                  <Text style={[styles.hMacroVal, { color: colors.text }]}>{m.v}g</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.startBtn, { backgroundColor: colors.primary }]}
+              activeOpacity={0.85}
+              onPress={() => onStartCooking(item)}
+            >
+              <Text style={styles.startBtnText}>{t("explore.startCooking")}</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    </View>
+  );
+});
+
+function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSeeAll }) {
+  if (!items.length) return null;
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <View style={styles.carouselHeader}>
+        <Text style={[styles.carouselTitle, { color: colors.text }]}>{title}</Text>
+        <TouchableOpacity onPress={onSeeAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={[styles.seeAll, { color: colors.textMuted }]}>{t("explore.seeAll")}</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 24, gap: 14, alignItems: "flex-start" }}
+      >
+        {items.map((it) => (
+          <HRecipeCard
+            key={it.id}
+            item={it}
+            session={session}
+            colors={colors}
+            t={t}
+            onStartCooking={onStartCooking}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function ExploreScreen({ navigation }) {
   const { t } = useTranslation();
@@ -683,6 +847,19 @@ export default function ExploreScreen({ navigation }) {
   }, [preloadedCards, selectedCategory]);
 
   const trending = preloadedTrending;
+
+  // Group the user's library into figma-style horizontal sections by macro tag.
+  const recipeSections = useMemo(() => {
+    const groups = {};
+    dbRecipes.forEach((r) => {
+      const tag = getRecipeTag(r);
+      (groups[tag] = groups[tag] || []).push(r);
+    });
+    return SECTION_ORDER.filter(([key]) => groups[key]?.length).map(
+      ([key, label]) => ({ title: label, items: groups[key] }),
+    );
+  }, [dbRecipes]);
+
   // Spinner only on true cold start — once cards arrive (DB query, fast) we render
   // the deck immediately. Signed image URLs stream in afterwards without blocking.
   const swipeLoading = exploreLoading && !exploreCardsLoaded;
@@ -837,13 +1014,20 @@ export default function ExploreScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
+          <Image source={leafImg} style={styles.headerLeaf} resizeMode="contain" />
           <Text style={[styles.title, { color: colors.text }]}>
             {t("explore.title")}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
+            {t("explore.subtitle")}
           </Text>
         </View>
 
         <View
-          style={[styles.searchBar, { backgroundColor: colors.surfaceAlt }]}
+          style={[
+            styles.searchBar,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
         >
           <Ionicons name="search-outline" size={18} color={colors.textMuted} />
           <TextInput
@@ -868,9 +1052,7 @@ export default function ExploreScreen({ navigation }) {
                 color={colors.textMuted}
               />
             </TouchableOpacity>
-          ) : (
-            <Ionicons name="sparkles" size={16} color={colors.primary} />
-          )}
+          ) : null}
         </View>
 
         {/* Category pills shown in both browse + search modes (drive the deck too). */}
@@ -881,26 +1063,28 @@ export default function ExploreScreen({ navigation }) {
         >
           {CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat.id;
+            const icon = CAT_ICON[cat.id];
             return (
               <TouchableOpacity
                 key={cat.id}
                 style={[
                   styles.pill,
                   {
-                    backgroundColor: isActive ? colors.text : colors.surfaceAlt,
+                    backgroundColor: isActive ? colors.tintOrange : colors.surface,
+                    borderColor: isActive ? colors.primary : colors.border,
                   },
                 ]}
                 onPress={() => handleCategoryChange(cat.id)}
                 activeOpacity={0.7}
               >
+                {icon && (
+                  <Image source={icon} style={styles.pillIcon} resizeMode="contain" />
+                )}
                 <Text
                   style={[
                     styles.pillText,
-                    {
-                      color: isActive
-                        ? colors.background
-                        : colors.textSecondary,
-                    },
+                    { color: isActive ? colors.primary : colors.textSecondary },
+                    isActive && { fontWeight: FONTS.semibold },
                   ]}
                 >
                   {t(cat.labelKey)}
@@ -913,6 +1097,25 @@ export default function ExploreScreen({ navigation }) {
         {/* ── Default browse mode: swipe deck → trending → library ────── */}
         {!isSearching ? (
           <>
+            <TouchableOpacity
+              style={[styles.planCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => navigation.navigate("Plan")}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.planIconWrap, { backgroundColor: colors.tintGreen }]}>
+                <Image source={calendarPlanImg} style={styles.planIcon} resizeMode="contain" />
+              </View>
+              <View style={styles.planText}>
+                <Text style={[styles.planTitle, { color: colors.text }]}>
+                  {t("explore.planTitle")}
+                </Text>
+                <Text style={[styles.planSub, { color: colors.textMuted }]}>
+                  {t("explore.planSub")}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+
             <View style={styles.deckContainer}>
               {swipeLoading ? (
                 <View
@@ -1018,66 +1221,29 @@ export default function ExploreScreen({ navigation }) {
               )}
             </View>
 
-            {/* <TrendingRow
-              items={trending}
-              session={session}
-              colors={colors}
-              onPress={handleStartCooking}
-            /> */}
-
-            <TouchableOpacity
-              style={[styles.planCard, { backgroundColor: colors.surface }]}
-              onPress={() => navigation.navigate("Plan")}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.planIconWrap,
-                  { backgroundColor: colors.surfaceAlt },
-                ]}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color={colors.text}
-                />
-              </View>
-              <View style={styles.planText}>
-                <Text style={[styles.planTitle, { color: colors.text }]}>
-                  {t("plan.title")}
-                </Text>
-                <Text style={[styles.planSub, { color: colors.textMuted }]}>
-                  {t("plan.emptySubtitle").split(",")[0]}
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={colors.textMuted}
-              />
-            </TouchableOpacity>
-
             {dbLoading ? (
               <View style={styles.loadingState}>
                 <ActivityIndicator size="large" color={colors.text} />
               </View>
-            ) : dbRecipes.length > 0 ? (
-              <>
-                <Text
-                  style={[styles.sectionLabel, { color: colors.textMuted }]}
-                >
-                  {"Your Recipes"} · {dbRecipes.length}
-                </Text>
-                <ResultsCard
-                  recipes={dbRecipes}
-                  expandedId={expandedId}
-                  onToggle={handleToggle}
-                  onStartCooking={handleStartCooking}
+            ) : (
+              recipeSections.map((section) => (
+                <RecipeCarousel
+                  key={section.title}
+                  title={section.title}
+                  items={section.items}
+                  session={session}
                   colors={colors}
                   t={t}
+                  onStartCooking={handleStartCooking}
+                  onSeeAll={() =>
+                    navigation.navigate("RecipeList", {
+                      title: section.title,
+                      items: section.items,
+                    })
+                  }
                 />
-              </>
-            ) : null}
+              ))
+            )}
           </>
         ) : searchError ? (
           <View style={styles.emptyState}>
@@ -1153,34 +1319,42 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: SPACING.xxl },
 
-  header: { paddingHorizontal: 24, paddingTop: SPACING.lg, marginBottom: 20 },
-  title: { fontSize: 28, fontWeight: FONTS.bold, letterSpacing: -0.5 },
+  header: { paddingHorizontal: 24, paddingTop: SPACING.lg, marginBottom: 18 },
+  headerLeaf: { position: "absolute", right: 8, top: 4, width: 90, height: 90, opacity: 0.6 },
+  title: { fontSize: 30, fontWeight: FONTS.bold, letterSpacing: -0.5, marginBottom: 4 },
+  headerSubtitle: { fontSize: 13, fontWeight: FONTS.regular },
 
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 24,
-    borderRadius: 14,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
     paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: SPACING.sm,
-    marginBottom: 8,
+    marginBottom: 16,
   },
   searchInput: { flex: 1, fontSize: 15, fontWeight: FONTS.regular, padding: 0 },
 
-  pillsRow: { paddingHorizontal: 24, gap: SPACING.sm, marginBottom: 18 },
+  pillsRow: { paddingHorizontal: 24, gap: SPACING.sm, marginBottom: 20 },
   pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: RADIUS.full,
+    borderWidth: 1,
   },
+  pillIcon: { width: 15, height: 15 },
   pillText: { fontSize: 13, fontWeight: FONTS.medium },
 
   // Swipe deck
   deckContainer: {
     marginHorizontal: 24,
-    height: CARD_HEIGHT + 90,
-    marginBottom: 16,
+    height: CARD_HEIGHT + 12,
+    marginBottom: 28,
     overflow: "visible",
   },
   deckWrap: { flex: 1, position: "relative", overflow: "visible" },
@@ -1385,10 +1559,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 24,
     borderRadius: RADIUS.lg,
+    borderWidth: 1,
     paddingHorizontal: SPACING.md,
     paddingVertical: 13,
     gap: 12,
-    marginBottom: 28,
+    marginBottom: 18,
   },
   planIconWrap: {
     width: 40,
@@ -1397,6 +1572,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  planIcon: { width: 22, height: 22 },
   planText: { flex: 1 },
   planTitle: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 2 },
   planSub: { fontSize: 12, fontWeight: FONTS.regular },
@@ -1446,4 +1622,59 @@ const styles = StyleSheet.create({
 
   loadingState: { alignItems: "center", paddingTop: SPACING.xxl * 2, gap: 16 },
   loadingText: { fontSize: 14, fontWeight: FONTS.regular },
+
+  // Category carousels
+  carouselHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    marginBottom: 14,
+  },
+  carouselTitle: { fontSize: 18, fontWeight: FONTS.bold, letterSpacing: -0.3 },
+  seeAll: { fontSize: 13, fontWeight: FONTS.medium },
+
+  hCard: {
+    width: 240,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  hCardImg: { width: "100%", height: 130 },
+  hBookmark: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hCardBody: { padding: 14 },
+  hDivider: { height: StyleSheet.hairlineWidth, marginTop: 12 },
+  hBar: { height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 14 },
+  hBarFill: { flex: 1, flexDirection: "row" },
+  hCardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  hCardName: { flex: 1, fontSize: 15, fontWeight: FONTS.semibold },
+  hCardMeta: { fontSize: 12, marginTop: 3 },
+  hCardKcal: { fontSize: 15, fontWeight: FONTS.bold, marginTop: 10, marginBottom: 8 },
+  hMacroList: { gap: 6, marginBottom: 14 },
+  hMacroRow: { flexDirection: "row", alignItems: "center" },
+  hDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  hMacroLabel: { flex: 1, fontSize: 13 },
+  hMacroVal: { fontSize: 13, fontWeight: FONTS.semibold },
+  startBtn: {
+    borderRadius: RADIUS.full,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  startBtnText: { fontSize: 14, fontWeight: FONTS.bold, color: "#FFFFFF" },
 });

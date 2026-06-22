@@ -21,7 +21,15 @@ if (RC_KEY && !RC_KEY.startsWith('TODO')) {
 }
 
 import React, { useState, useCallback } from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+
+const TAB_ICONS = {
+  Dashboard: require("./assets/pngs/home.png"),
+  Explore: require("./assets/pngs/compass.png"),
+  Profile: require("./assets/pngs/profile.png"),
+};
+const TAB_ACTIVE = "#FF8A45";
+const TAB_INACTIVE = "#7C6F64";
 import { supabase } from "./src/lib/supabase";
 import {
   SafeAreaProvider,
@@ -74,6 +82,7 @@ import ResetPasswordScreen from "./src/screens/ResetPasswordScreen";
 import OtpVerificationScreen from "./src/screens/OtpVerificationScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import ExploreScreen from "./src/screens/ExploreScreen";
+import RecipeListScreen from "./src/screens/RecipeListScreen";
 import SavedMealsScreen from "./src/screens/SavedMealsScreen";
 import FriendsScreen from "./src/screens/FriendsScreen";
 import FriendDetailScreen from "./src/screens/FriendDetailScreen";
@@ -269,44 +278,104 @@ const ftt = StyleSheet.create({
   },
 });
 
+// ── Custom floating tab bar ─────────────────────────────────────────────────────
+function CustomTabBar({ state, descriptors, navigation }) {
+  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      style={[
+        tb.wrap,
+        {
+          backgroundColor: colors.background,
+          paddingTop: 16,
+          paddingBottom: Math.max(insets.bottom, 12) + 10,
+        },
+      ]}
+    >
+      <View
+        style={[
+          tb.bar,
+          {
+            backgroundColor: colors.surface,
+            borderColor: isDark ? colors.border : "#FEEBDD",
+          },
+        ]}
+      >
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const focused = state.index === index;
+          const label = options.tabBarLabel ?? route.name;
+          const color = focused ? TAB_ACTIVE : TAB_INACTIVE;
+          const pngIcon = TAB_ICONS[route.name];
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              style={tb.tab}
+              onPress={onPress}
+              activeOpacity={0.75}
+            >
+              {pngIcon ? (
+                <Image source={pngIcon} style={[tb.icon, { tintColor: color }]} resizeMode="contain" />
+              ) : (
+                <Ionicons
+                  name={focused ? "diamond" : "diamond-outline"}
+                  size={22}
+                  color={color}
+                />
+              )}
+              <Text style={[tb.label, { color }]} numberOfLines={1}>
+                {label}
+              </Text>
+              <View style={[tb.dot, focused && { backgroundColor: TAB_ACTIVE }]} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const tb = StyleSheet.create({
+  wrap: { paddingHorizontal: 16, paddingTop: 16 },
+  bar: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 60,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
+  icon: { width: 24, height: 24 },
+  label: { fontSize: 12, fontWeight: "600" },
+  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "transparent" },
+});
+
 // ── Tab navigator ──────────────────────────────────────────────────────────────
 function MainTabs() {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   // Premium tab is only shown to users without an active subscription/trial.
   // Gated on hasResolved so it never flashes before the first real status sync
   // (avoids show-then-hide on relaunch). When a purchase lands, isSubscribed
   // flips and the tab unmounts automatically.
   const { isSubscribed, hasResolved } = useSubscription();
-  const bottomPad = Math.max(insets.bottom, 16);
-  const tabBarHeight = 56 + bottomPad;
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.tabBarBg,
-          borderTopColor: colors.tabBarBorder,
-          paddingTop: 8,
-          paddingBottom: bottomPad,
-          height: tabBarHeight,
-        },
-        tabBarActiveTintColor: colors.tabActive,
-        tabBarInactiveTintColor: colors.tabInactive,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-        tabBarIcon: ({ focused, color }) => {
-          const icons = {
-            Dashboard: focused ? "home" : "home-outline",
-            Explore: focused ? "compass" : "compass-outline",
-            Friends: focused ? "people" : "people-outline",
-            Calories: focused ? "flame" : "flame-outline",
-            Premium: focused ? "diamond" : "diamond-outline",
-            Profile: focused ? "person" : "person-outline",
-          };
-          return <Ionicons name={icons[route.name]} size={22} color={color} />;
-        },
-      })}
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
@@ -360,6 +429,7 @@ function AppContent({ onRouteChange }) {
             <Stack.Screen name="MainTabs" component={MainTabs} />
             <Stack.Screen name="FriendDetail" component={FriendDetailScreen} />
             <Stack.Screen name="Plan" component={PlanScreen} />
+            <Stack.Screen name="RecipeList" component={RecipeListScreen} />
             <Stack.Screen name="Analyzing" component={AnalyzingScreen} />
             <Stack.Screen
               name="RecipeSummary"
@@ -423,7 +493,7 @@ export default function App() {
                 <ExploreProvider>
                   <AuthStateWrapper>
                     <AppContent onRouteChange={onRouteChange} />
-                    <FloatingThemeToggle routeName={routeName} />
+                    {/* <FloatingThemeToggle routeName={routeName} /> */}
                   </AuthStateWrapper>
                 </ExploreProvider>
               </MealLogsProvider>

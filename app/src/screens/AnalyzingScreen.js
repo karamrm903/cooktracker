@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { fetchFramesFromServer } from "../services/frameServer";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { FONTS } from '../constants/theme';
+import { FONTS, RADIUS, SHADOWS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { analyzeVideo, PIPELINE_STAGES } from '../services/videoAnalyzer';
 import { saveRecipe } from '../services/recipeService';
 import { useSelector } from 'react-redux';
-const FOOD_EMOJIS = ['🍳', '🍰', '🥩', '🍗', '🍣', '🍔', '🍕', '🍜', '🥗', '🍪'];
+
+// ── New UI assets ───────────────────────────────────────────────────────────
+const analyseImg = require('../../assets/webp/Analyse.webp');
+const leafImg = require('../../assets/webp/UserInfoLeaf.webp');
+const bottomImg = require('../../assets/webp/UserInfoBottom.webp');
 
 // Module-level counter — survives re-renders and component reuse.
 // Each new submission bumps this; the closure captures its snapshot
@@ -25,33 +29,37 @@ export default function AnalyzingScreen({ navigation, route }) {
   const session = useSelector(state => state.auth.session);
   const [phase,     setPhase]     = useState(-1); // index of currently processing step
   const [errorMsg,  setErrorMsg]  = useState(null);
-  const [emojiIndex, setEmojiIndex] = useState(0);
 
   const pulseLoop  = useRef(null);
   const pulseAnim  = useRef(new Animated.Value(1)).current;
+  const spinAnim   = useRef(new Animated.Value(0)).current;
   const rowFades   = useRef(PIPELINE_STAGES.map(() => new Animated.Value(0))).current;
   const dotFlashes = useRef(PIPELINE_STAGES.map(() => new Animated.Value(0))).current;
   const checkFades = useRef(PIPELINE_STAGES.map(() => new Animated.Value(0))).current;
   const dotLoops   = useRef([]);
 
-  // ── Pulse the emoji ──────────────────────────────────────────────────────────
+  // ── Pulse the hero image ──────────────────────────────────────────────────────
   useEffect(() => {
     pulseLoop.current = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.1, duration: 850, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 850, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1.0, duration: 850, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ])
     );
     pulseLoop.current.start();
     return () => pulseLoop.current?.stop();
   }, []);
-useEffect(() => {
-  const interval = setInterval(() => {
-    setEmojiIndex(prev => (prev + 1) % FOOD_EMOJIS.length);
-  }, 900);
 
-  return () => clearInterval(interval);
-}, []);
+  // ── Continuous spinner for the in-progress row ────────────────────────────────
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spinAnim, { toValue: 1, duration: 900, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const spin = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   // ── Pipeline-driven animation ─────────────────────────────────────────────────
   useEffect(() => {
     // Claim this request slot. Any older in-flight response will see its
@@ -127,12 +135,21 @@ useEffect(() => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <View style={s.center}>
+      {/* Bottom-right gingham corner */}
+      <Image source={bottomImg} style={s.bottomCorner} resizeMode="cover" />
+      {/* Bottom-left leaf branch */}
+      <Image source={leafImg} style={s.bottomLeaf} resizeMode="contain" />
 
-        {/* Pulsing emoji */}
-        <Animated.Text style={[s.emoji, { transform: [{ scale: pulseAnim }] }]}>
-          {FOOD_EMOJIS[emojiIndex]}
-        </Animated.Text>
+      <View style={s.center}>
+        {/* Hero — pan image with leaf accent */}
+        <View style={s.hero}>
+          <Animated.Image
+            source={analyseImg}
+            style={[s.heroImg, { transform: [{ scale: pulseAnim }] }]}
+            resizeMode="contain"
+          />
+          <Image source={leafImg} style={s.heroLeaf} resizeMode="contain" />
+        </View>
 
         <Text style={[s.title, { color: colors.text }]}>
           {errorMsg ? t('analyzing.errorTitle') : t('analyzing.title')}
@@ -141,64 +158,113 @@ useEffect(() => {
           {errorMsg ?? t('analyzing.subtitle')}
         </Text>
 
-        {/* Step rows — hidden on error */}
-        {!errorMsg && <View style={s.rows}>
-          {PIPELINE_STAGES.map((step, i) => {
-            const isDone    = i < phase;
-            const isCurrent = i === phase && !isDone;
-            return (
-              <Animated.View key={step.label} style={[s.row, { opacity: rowFades[i] }]}>
-                {/* Indicator circle */}
-                <View style={[
-                  s.circle,
-                  {
-                    borderColor: isDone
-                      ? colors.success
-                      : isCurrent ? colors.text : colors.border,
-                  },
-                ]}>
-                  {/* Pulsing fill dot (current) */}
-                  <Animated.View
-                    style={[s.fillDot, { backgroundColor: colors.text, opacity: dotFlashes[i] }]}
-                  />
-                  {/* Checkmark (done) */}
-                  <Animated.View
-                    style={[StyleSheet.absoluteFill, s.checkLayer, { opacity: checkFades[i] }]}
-                  >
-                    <Ionicons name="checkmark" size={12} color={colors.success} />
-                  </Animated.View>
-                </View>
+        {/* Step rows card — hidden on error */}
+        {!errorMsg && (
+          <View style={[s.card, { backgroundColor: colors.surface }, SHADOWS.md]}>
+            {PIPELINE_STAGES.map((step, i) => {
+              const isDone    = i < phase;
+              const isCurrent = i === phase && !isDone;
+              const isPending = i > phase;
 
-                <Text style={[
-                  s.rowLabel,
-                  { color: isDone || isCurrent ? colors.text : colors.textMuted },
-                  isDone && { fontWeight: FONTS.semibold },
-                ]}>
-                  {step.label}
-                </Text>
-              </Animated.View>
-            );
-          })}
-        </View>}
+              return (
+                <Animated.View
+                  key={step.label}
+                  style={[
+                    s.row,
+                    { opacity: isPending ? 0.4 : rowFades[i] },
+                    i > 0 && s.rowGap,
+                  ]}
+                >
+                  {/* Indicator */}
+                  {isCurrent ? (
+                    <Animated.View
+                      style={[
+                        s.circle,
+                        { borderColor: colors.warning, transform: [{ rotate: spin }] },
+                      ]}
+                    >
+                      <View style={[s.spinnerGap, { backgroundColor: colors.surface }]} />
+                    </Animated.View>
+                  ) : (
+                    <View
+                      style={[
+                        s.circle,
+                        { borderColor: isDone ? colors.success : colors.border },
+                      ]}
+                    >
+                      {isDone && <Ionicons name="checkmark" size={13} color={colors.success} />}
+                    </View>
+                  )}
+
+                  <Text
+                    style={[
+                      s.rowLabel,
+                      { color: isDone || isCurrent ? colors.text : colors.textMuted },
+                      isDone && { fontWeight: FONTS.semibold },
+                    ]}
+                  >
+                    {step.label}
+                  </Text>
+
+                  {/* Status pill */}
+                  {isDone && (
+                    <View style={[s.pill, { backgroundColor: colors.tintGreen }]}>
+                      <Text style={[s.pillText, { color: colors.success }]}>
+                        {t('analyzing.done')}
+                      </Text>
+                    </View>
+                  )}
+                  {isCurrent && (
+                    <View style={[s.pill, { backgroundColor: colors.tintYellow }]}>
+                      <Text style={[s.pillText, { color: colors.warning }]}>
+                        {t('analyzing.inProgress')}
+                      </Text>
+                    </View>
+                  )}
+                </Animated.View>
+              );
+            })}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe:       { flex: 1 },
-  center:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  emoji:      { fontSize: 60, marginBottom: 28 },
-  title:      { fontSize: 22, fontWeight: FONTS.bold, letterSpacing: -0.4, marginBottom: 6, textAlign: 'center' },
-  sub:        { fontSize: 14, fontWeight: FONTS.regular, marginBottom: 52, textAlign: 'center' },
-  rows:       { width: '100%', gap: 22 },
-  row:        { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  circle: {
-    width: 28, height: 28, borderRadius: 14,
-    borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
+  safe:   { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+
+  hero:      { width: '100%', alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  heroImg:   { width: 150, height: 110 },
+  heroLeaf:  { position: 'absolute', right: 36, top: -6, width: 90, height: 90 },
+
+  title: { fontSize: 28, fontWeight: FONTS.bold, letterSpacing: -0.5, marginBottom: 8, textAlign: 'center' },
+  sub:   { fontSize: 15, fontWeight: FONTS.regular, marginBottom: 36, textAlign: 'center' },
+
+  card: {
+    width: '100%',
+    borderRadius: RADIUS.xl,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
   },
-  fillDot:    { width: 9, height: 9, borderRadius: 4.5 },
-  checkLayer: { alignItems: 'center', justifyContent: 'center' },
-  rowLabel:   { fontSize: 15, fontWeight: FONTS.medium, flex: 1 },
+  row:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowGap:  { marginTop: 22 },
+  circle: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  spinnerGap: { position: 'absolute', top: -2, right: -2, width: 12, height: 12 },
+  rowLabel: { fontSize: 15, fontWeight: FONTS.medium, flex: 1 },
+  pill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+  },
+  pillText: { fontSize: 12, fontWeight: FONTS.semibold },
+
+  bottomCorner: { position: 'absolute', right: 0, bottom: 0, width: 140, height: 140 },
+  bottomLeaf:   { position: 'absolute', left: 8, bottom: 24, width: 110, height: 110 },
 });

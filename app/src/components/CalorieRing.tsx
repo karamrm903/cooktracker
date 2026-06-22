@@ -5,10 +5,21 @@ import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 interface CalorieRingProps {
   calories: number;
   goal: number;
+  // Optional theme colors so the ring fits a light card (new dashboard UI).
+  textColor?: string;
+  subColor?: string;
+  trackColor?: string;
+  size?: number;
 }
 
-export function CalorieRing({ calories, goal }: CalorieRingProps) {
-  const size = 190;
+export function CalorieRing({
+  calories,
+  goal,
+  textColor = '#111111',
+  subColor = '#9CA3AF',
+  trackColor = '#EFEDE6',
+  size = 170,
+}: CalorieRingProps) {
   const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -25,12 +36,12 @@ export function CalorieRing({ calories, goal }: CalorieRingProps) {
       <Svg width={size} height={size}>
         <Defs>
           <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#FF7A18" />
-            <Stop offset="100%" stopColor="#FF3B30" />
+            <Stop offset="0%" stopColor="#FF8A3D" />
+            <Stop offset="100%" stopColor="#FF6B35" />
           </LinearGradient>
         </Defs>
         <Circle
-          stroke="#2A2A2A"
+          stroke={trackColor}
           fill="none"
           cx={size / 2}
           cy={size / 2}
@@ -58,11 +69,11 @@ export function CalorieRing({ calories, goal }: CalorieRingProps) {
           alignItems: 'center',
         }}
       >
-        <Text style={{ fontSize: 32, fontWeight: '700', color: 'white' }}>
+        <Text style={{ fontSize: 40, fontWeight: '700', color: textColor, letterSpacing: -1 }}>
           {calories}
         </Text>
 
-        <Text style={{ color: '#999', marginTop: 2 }}>
+        <Text style={{ color: subColor, marginTop: 2, fontSize: 13 }}>
           {diff >= 0
             ? `+${diff} over goal`
             : `${Math.abs(diff)} left`}
