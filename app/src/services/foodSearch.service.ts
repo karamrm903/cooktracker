@@ -13,16 +13,16 @@ export interface FoodItem {
 }
 
 /**
- * Fetch a 1-hour signed Pexels image URL for a saved recipe row.
+ * Fetch a 1-hour signed Pexels image URL for a persisted food_items row.
  * Returns null when the server has no image / no Pexels key.
  */
-export async function fetchRecipeImage(
-  recipeId: string,
+export async function fetchFoodItemImage(
+  foodItemId: string,
   session: any,
   q?: string,
 ): Promise<string | null> {
   const headers = await getAuthHeaders(session);
-  const res = await fetch(`${getBaseUrl()}/api/recipes/${recipeId}/image`, {
+  const res = await fetch(`${getBaseUrl()}/api/food-items/${foodItemId}/image`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ q: q ?? '' }),

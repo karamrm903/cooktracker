@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { adminClient } from '../db/client.js';
-import { ensureRecipeImage, getSignedImageUrl } from '../utils/images.js';
+import { ensureRecipeImage, ensureFoodItemImage, getSignedImageUrl } from '../utils/images.js';
 
 const router = Router();
 
@@ -57,21 +57,39 @@ router.post('/recipes/images', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/food/image — for ad-hoc food items (not yet persisted as a recipe).
-// Searches Pexels by query and returns a signed URL, persisting under a
-// "food_search" cache row so future hits are free.
+// POST /api/food-items/:id/image
+// Lazy-load entry point for a persisted food_items row (mirrors the recipe
+// route). Fetches a Pexels photo if the row has none, uploads as WebP, and
+// returns a 1-hour signed URL.
+router.post('/food-items/:id/image', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const q = (req.body?.q ?? '').toString().trim();
+
+  try {
+    const signedUrl = await ensureFoodItemImage(id, q);
+    if (!signedUrl) {
+      return res.json({ signedUrl: null, expiresIn: 3600, placeholder: true });
+    }
+    res.json({ signedUrl, expiresIn: 3600, placeholder: false });
+  } catch (err) {
+    console.error('[images/food-item] ✖', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/food/image — name-keyed fallback for food items not anchored to a
+// food_items id yet. Searches Pexels by query and returns a signed URL,
+// persisting under a food_items cache row so future hits are free.
 router.post('/food/image', requireAuth, async (req, res) => {
   const q = (req.body?.q ?? '').toString().trim();
   if (!q) return res.status(400).json({ error: 'q required' });
 
   try {
-    // Reuse an existing food_search cache row if present.
+    // Reuse an existing food_items cache row if present.
     const { data: existing } = await adminClient
-      .from('recipes')
+      .from('food_items')
       .select('id, image_url')
-      .is('user_id', null)
-      .eq('saved_category', 'food_search')
-      .ilike('title', q)
+      .eq('name_lower', q.toLowerCase())
       .limit(1)
       .maybeSingle();
 
@@ -80,19 +98,19 @@ router.post('/food/image', requireAuth, async (req, res) => {
       return res.json({ signedUrl: url, expiresIn: 3600, placeholder: !url });
     }
 
-    let recipeId = existing?.id;
-    if (!recipeId) {
+    let foodItemId = existing?.id;
+    if (!foodItemId) {
       // Insert a stub row so we have a stable id to anchor the storage path.
       const { data: ins, error } = await adminClient
-        .from('recipes')
-        .insert({ user_id: null, title: q, saved_category: 'food_search' })
+        .from('food_items')
+        .insert({ name: q, name_lower: q.toLowerCase() })
         .select('id')
         .single();
       if (error) throw error;
-      recipeId = ins.id;
+      foodItemId = ins.id;
     }
 
-    const signedUrl = await ensureRecipeImage(recipeId, q);
+    const signedUrl = await ensureFoodItemImage(foodItemId, q);
     res.json({ signedUrl, expiresIn: 3600, placeholder: !signedUrl });
   } catch (err) {
     console.error('[images/food] ✖', err.message);

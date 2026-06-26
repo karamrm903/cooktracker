@@ -11,9 +11,9 @@ const router = Router();
 // Cache hits skip the Claude call. Global rows (user_id IS NULL) act as the
 // shared cache; per-user rows are this user's saved library, not cache.
 
-// Categories whose rows are full recipes (carry steps + ingredients). Excludes
-// 'food_search' (nutrition-only items / suggestion stubs) so those never leak
-// into Explore search results or block recipe caching.
+// Categories whose rows are full recipes (carry steps + ingredients). Food
+// nutrition items now live in their own `food_items` table, so the recipes
+// cache only ever deals with these recipe categories.
 const RECIPE_CATEGORIES = ['ai_cache', 'breakfast', 'lunch', 'dinner', 'snack'];
 
 async function findCachedRecipes(query, limit) {
@@ -106,12 +106,10 @@ async function cacheExploreResults(results) {
 
 async function findCachedFoodItems(query, limit) {
   const { data, error } = await adminClient
-    .from('recipes')
+    .from('food_items')
     .select('*')
-    .is('user_id', null)
-    .eq('saved_category', 'food_search')
-    .not('calories', 'is', null) // Only fetch fully populated food items!
-    .ilike('title', `%${query}%`)
+    .not('calories', 'is', null) // Only fetch fully populated food items (skip stubs)!
+    .ilike('name', `%${query}%`)
     .limit(limit);
   if (error) {
     console.warn('[food-search] cache lookup failed:', error.message);
@@ -122,10 +120,9 @@ async function findCachedFoodItems(query, limit) {
 
 async function findCachedSuggestions(query, limit = 5) {
   const { data, error } = await adminClient
-    .from('recipes')
-    .select('title')
-    .is('user_id', null)
-    .ilike('title', `%${query}%`)
+    .from('food_items')
+    .select('name')
+    .ilike('name', `%${query}%`)
     .limit(limit * 2); // fetch extra for deduplication
 
   if (error) {
@@ -136,10 +133,10 @@ async function findCachedSuggestions(query, limit = 5) {
   const seen = new Set();
   const list = [];
   for (const r of data ?? []) {
-    const titleLower = r.title.toLowerCase();
-    if (!seen.has(titleLower)) {
-      seen.add(titleLower);
-      list.push(r.title);
+    const nameLower = r.name.toLowerCase();
+    if (!seen.has(nameLower)) {
+      seen.add(nameLower);
+      list.push(r.name);
     }
     if (list.length >= limit) break;
   }
@@ -148,44 +145,39 @@ async function findCachedSuggestions(query, limit = 5) {
 
 async function cacheSuggestions(suggestions) {
   if (!suggestions || !suggestions.length) return;
+  const lowers = suggestions.map(s => s.toLowerCase());
   const { data: existing, error } = await adminClient
-    .from('recipes')
-    .select('title')
-    .is('user_id', null)
-    .in('title', suggestions);
+    .from('food_items')
+    .select('name_lower')
+    .in('name_lower', lowers);
 
   if (error) {
     console.warn('[suggestions] existing check failed:', error.message);
     return;
   }
 
-  const seen = new Set((existing ?? []).map(r => r.title.toLowerCase()));
+  const seen = new Set((existing ?? []).map(r => r.name_lower));
   const rows = suggestions
     .filter(s => !seen.has(s.toLowerCase()))
     .map(s => ({
-      user_id:        null,
-      title:          s,
-      saved_category: 'food_search',
-      calories:       null,
-      protein:        null,
-      carbs:          null,
-      fat:            null,
+      name:       s,
+      name_lower: s.toLowerCase(),
+      calories:   null, // stub — backfilled to a full item on results-mode search
     }));
 
   if (!rows.length) return;
-  const { error: insertError } = await adminClient.from('recipes').insert(rows);
+  const { error: insertError } = await adminClient.from('food_items').insert(rows);
   if (insertError) console.warn('[suggestions] cache insert failed:', insertError.message);
 }
 
 function dbRowToFoodItem(r) {
-  const meta = r.nutrition ?? {};
   return {
     id: String(r.id),
-    name: r.title,
-    verified: meta.verified ?? true,
+    name: r.name,
+    verified: r.verified ?? true,
     calories: r.calories ?? 0,
-    servingSize: meta.servingSize ?? '1 serving',
-    servingSizeGrams: meta.servingSizeGrams ?? 100,
+    servingSize: r.serving_size ?? '1 serving',
+    servingSizeGrams: r.serving_grams ?? 100,
     macros: {
       protein: r.protein ?? 0,
       carbs: r.carbs ?? 0,
@@ -199,27 +191,23 @@ function dbRowToFoodItem(r) {
 // /api/recipes/:id/image (CDN) instead of the name-keyed fallback.
 async function cacheFoodItems(items) {
   const idByTitle = new Map();
-  const titles = items.map(i => i.name).filter(Boolean);
-  if (!titles.length) return idByTitle;
+  const lowers = items.map(i => i.name?.toLowerCase()).filter(Boolean);
+  if (!lowers.length) return idByTitle;
 
   const { data: existing } = await adminClient
-    .from('recipes')
-    .select('id, title, calories')
-    .is('user_id', null)
-    .eq('saved_category', 'food_search')
-    .in('title', titles);
-  const existingByTitle = new Map((existing ?? []).map(r => [r.title, r]));
+    .from('food_items')
+    .select('id, name_lower, calories')
+    .in('name_lower', lowers);
+  const existingByLower = new Map((existing ?? []).map(r => [r.name_lower, r]));
 
   const fullPayload = (i) => ({
     calories: i.calories,
     protein: i.macros?.protein ?? 0,
     carbs: i.macros?.carbs ?? 0,
     fat: i.macros?.fat ?? 0,
-    nutrition: {
-      verified: i.verified,
-      servingSize: i.servingSize,
-      servingSizeGrams: i.servingSizeGrams,
-    },
+    serving_size: i.servingSize,
+    serving_grams: i.servingSizeGrams,
+    verified: i.verified,
   });
 
   const toInsert = [];
@@ -228,7 +216,7 @@ async function cacheFoodItems(items) {
 
   for (const i of items) {
     const key = i.name.toLowerCase();
-    const row = existingByTitle.get(i.name);
+    const row = existingByLower.get(key);
     if (row) {
       idByTitle.set(key, row.id);
       if (row.calories == null && !queued.has(key)) {
@@ -239,25 +227,25 @@ async function cacheFoodItems(items) {
     }
     if (queued.has(key)) continue;
     queued.add(key);
-    toInsert.push({ user_id: null, title: i.name, saved_category: 'food_search', ...fullPayload(i) });
+    toInsert.push({ name: i.name, name_lower: key, ...fullPayload(i) });
   }
 
-  // Backfill title-only suggestion stubs so they surface as full results next time.
+  // Backfill name-only suggestion stubs so they surface as full results next time.
   if (stubBackfills.length) {
     await Promise.all(
       stubBackfills.map(s =>
-        adminClient.from('recipes').update(s.payload).eq('id', s.id),
+        adminClient.from('food_items').update(s.payload).eq('id', s.id),
       ),
     );
   }
 
   if (toInsert.length) {
     const { data: inserted, error } = await adminClient
-      .from('recipes')
+      .from('food_items')
       .insert(toInsert)
-      .select('id, title');
+      .select('id, name_lower');
     if (error) console.warn('[food-search] cache insert failed:', error.message);
-    for (const r of inserted ?? []) idByTitle.set(r.title.toLowerCase(), r.id);
+    for (const r of inserted ?? []) idByTitle.set(r.name_lower, r.id);
   }
 
   return idByTitle;

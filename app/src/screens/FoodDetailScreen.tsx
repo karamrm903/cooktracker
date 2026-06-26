@@ -18,7 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useMealLogs } from '../context/MealLogsContext';
 import { FONTS, RADIUS } from '../constants/theme';
 import CommonAlertModal from '../components/CommonModal';
-import { fetchRecipeImage, fetchFoodImage } from '../services/foodSearch.service';
+import { fetchFoodItemImage, fetchFoodImage } from '../services/foodSearch.service';
 import type { FoodItem } from '../services/foodSearch.service';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -121,8 +121,8 @@ export default function FoodDetailScreen({ navigation, route }: any) {
   });
 
   // Lazy-fetch a signed Pexels image on mount. UUID-looking ids refer to a
-  // persisted recipe row → /api/recipes/:id/image; everything else (AI search
-  // results without a DB row) falls back to /api/food/image keyed by name.
+  // persisted food_items row → /api/food-items/:id/image; everything else (AI
+  // search results without a DB row) falls back to /api/food/image keyed by name.
   const [imageUrl, setImageUrl] = useState<string | null>(food?.imageUrl ?? null);
   const [imageLoading, setImageLoading] = useState(false);
   const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -132,7 +132,7 @@ export default function FoodDetailScreen({ navigation, route }: any) {
     let cancelled = false;
     setImageLoading(true);
     const load = isUuid(food.id)
-      ? fetchRecipeImage(food.id, session, food.name)
+      ? fetchFoodItemImage(food.id, session, food.name)
       : fetchFoodImage(food.name, session);
     load
       .then((url) => { if (!cancelled) setImageUrl(url); })
