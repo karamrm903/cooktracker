@@ -1,3 +1,5 @@
+import { moderateScale } from '../utils/responsive';
+
 export const COLORS = {
   primary: '#FF6B35',
   primaryLight: '#FF8C5A',
@@ -23,21 +25,33 @@ export const COLORS = {
   black: '#000000',
 } as const;
 
+export const FONT_SIZES = {
+  caption: moderateScale(11),
+  small: moderateScale(13),
+  label: moderateScale(14),
+  body: moderateScale(15),
+  button: moderateScale(17),
+  h3: moderateScale(20),
+  h2: moderateScale(28),
+  h1: moderateScale(34),
+  display: moderateScale(56),
+} as const;
+
 export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: moderateScale(4),
+  sm: moderateScale(8),
+  md: moderateScale(16),
+  lg: moderateScale(24),
+  xl: moderateScale(32),
+  xxl: moderateScale(48),
 } as const;
 
 export const RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  full: 9999,
+  sm: moderateScale(8),
+  md: moderateScale(12),
+  lg: moderateScale(16),
+  xl: moderateScale(24),
+  full: 9999, // pill — never scale
 } as const;
 
 export const FONTS = {

@@ -27,7 +27,12 @@ import {
   NutrientRow,
 } from "../components/NutritionExpansion";
 import SaveModal from "../components/SaveModal";
-import { FONTS, RADIUS, SPACING } from "../constants/theme";
+import { FONTS, FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
+import {
+  moderateScale as ms,
+  horizontalScale as hs,
+  verticalScale as vs,
+} from "../utils/responsive";
 import { useMealLogs } from "../context/MealLogsContext";
 import { useSavedMeals } from "../context/SavedMealsContext";
 import { useTheme } from "../context/ThemeContext";
@@ -50,7 +55,7 @@ const arrowRightImg = require("../../assets/webp/ArrowRight.webp");
 const forkImg = require("../../assets/webp/Fork.webp");
 const knifeImg = require("../../assets/webp/Knife.webp");
 const doubleStarImg = require("../../assets/webp/DoubleStar.webp");
-const singleLeafImg = require("../../assets/webp/SingleLeaf.webp");
+const singleLeafImg = require("../../assets/webp/Plant.webp");
 const chevronRightImg = require("../../assets/webp/ChevronRight.webp");
 const saveImg = require("../../assets/webp/Save.webp");
 const deleteImg = require("../../assets/webp/Delete.webp");
@@ -428,7 +433,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
           ]}
         >
           <View style={[styles.importIconBox, { backgroundColor: "#FCF7F3" }]}>
-            <Ionicons name="link-outline" size={20} color={"#7F6C64"} />
+            <Ionicons name="link-outline" size={ms(20)} color={"#7F6C64"} />
           </View>
           <TextInput
             style={[styles.importInput, { color: colors.text }]}
@@ -482,7 +487,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                 <View style={styles.heroSideRow}>
                   <Image
                     source={forkImg}
-                    style={styles.heroUtensil}
+                    style={styles.heroUtensilFolk}
                     resizeMode="cover"
                   />
                   <View style={styles.heroSideTextCol}>
@@ -529,15 +534,15 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                     textColor={colors.text}
                     subColor={colors.textMuted}
                     trackColor={colors.surfaceAlt}
-                    size={160}
+                    size={ms(160)}
                   />
                   <Image
                     source={plantImg}
                     style={{
                       position: "absolute",
-                      top: 30,
-                      width: 48,
-                      height: 24,
+                      top: ms(30),
+                      width: ms(48),
+                      height: ms(24),
                     }}
                     resizeMode="cover"
                   />
@@ -546,9 +551,9 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                     style={{
                       position: "absolute",
                       bottom: 0,
-                      right: -20,
-                      width: 40,
-                      height: 20,
+                      right: -ms(20),
+                      width: ms(40),
+                      height: ms(20),
                     }}
                     resizeMode="contain"
                   />
@@ -619,42 +624,6 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
               </View>
             )}
           </View>
-
-          {hasNoMealsLogged && !isLoadingProfile && !showMealSkeleton && (
-            <TouchableOpacity
-              style={[
-                styles.emptyStateCard,
-                { backgroundColor: colors.surfaceAlt },
-              ]}
-              onPress={() =>
-                navigation.navigate("SearchFood", {
-                  defaultMealType: "breakfast",
-                })
-              }
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="rocket-outline"
-                size={28}
-                color={colors.textMuted}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  {t("dashboard.noMealsTitle")}
-                </Text>
-                <Text
-                  style={[styles.emptyStateSub, { color: colors.textMuted }]}
-                >
-                  {t("dashboard.noMealsSubtitle", { goal: calorieGoal })}
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={colors.textMuted}
-              />
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* ── TODAY'S MEALS ─────────────────────────────────────────────── */}
@@ -666,7 +635,11 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
             <View
               style={[
                 styles.mealsCard,
-                { backgroundColor: colors.surface, padding: 16, gap: 12 },
+                {
+                  backgroundColor: colors.surface,
+                  padding: SPACING.md,
+                  gap: ms(12),
+                },
               ]}
             >
               {[0, 1, 2].map((i) => (
@@ -799,7 +772,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                             >
                               <Ionicons
                                 name="add"
-                                size={20}
+                                size={ms(20)}
                                 color={colors.primary}
                               />
                             </View>
@@ -809,7 +782,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                                 name={
                                   isExpanded ? "chevron-up" : "chevron-down"
                                 }
-                                size={14}
+                                size={ms(14)}
                                 color={colors.textMuted}
                               />
                               <View style={styles.mealActions}>
@@ -911,7 +884,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                                     >
                                       <Ionicons
                                         name="create-outline"
-                                        size={15}
+                                        size={ms(15)}
                                         color={colors.textSecondary}
                                         style={{ marginRight: 4 }}
                                       />
@@ -1067,92 +1040,96 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
     paddingBottom: SPACING.sm,
   },
   headerPlant: {
     position: "absolute",
-    right: -30,
-    top: 100,
-    width: 240,
-    height: 240,
+    right: -ms(30),
+    top: vs(100),
+    width: hs(240),
+    height: hs(240),
     zIndex: 0,
   },
-  greeting: { fontSize: 14, fontWeight: FONTS.regular, marginBottom: 2 },
+  greeting: {
+    fontSize: FONT_SIZES.label,
+    fontWeight: FONTS.regular,
+    marginBottom: ms(2),
+  },
   name: {
-    fontSize: 30,
+    fontSize: ms(30),
     fontWeight: FONTS.bold,
     letterSpacing: -0.5,
-    marginBottom: 12,
+    marginBottom: ms(12),
   },
   headerMeta: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  dateText: { fontSize: 13, fontWeight: FONTS.regular },
+  dateText: { fontSize: FONT_SIZES.small, fontWeight: FONTS.regular },
   streakChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: ms(4),
+    paddingHorizontal: ms(10),
+    paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
   },
-  streakFire: { width: 14, height: 14 },
-  streakText: { fontSize: 12, fontWeight: FONTS.semibold },
+  streakFire: { width: ms(14), height: ms(14) },
+  streakText: { fontSize: ms(12), fontWeight: FONTS.semibold },
 
   // Import card
   importCard: {
-    marginHorizontal: 24,
-    marginTop: 12,
-    marginBottom: 18,
+    marginHorizontal: SPACING.lg,
+    marginTop: ms(12),
+    marginBottom: ms(18),
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    gap: 10,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(11),
+    gap: ms(10),
   },
   importIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: RADIUS.sm,
     alignItems: "center",
     justifyContent: "center",
   },
   importInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
     fontWeight: FONTS.regular,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
   },
   importGoBtn: {
-    width: 36,
-    height: 36,
+    width: ms(36),
+    height: ms(36),
     borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
   },
-  arrowIcon: { width: 18, height: 18 },
+  arrowIcon: { width: ms(18), height: ms(18) },
 
   // Sections
   section: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   sectionLabel: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.bold,
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
 
   // Hero card
   heroCard: {
     borderRadius: RADIUS.xl,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: ms(20),
   },
   heroRow: {
     flexDirection: "row",
@@ -1162,98 +1139,117 @@ const styles = StyleSheet.create({
   heroSideRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
     position: "relative",
   },
   heroSideTextCol: {
     alignItems: "center",
-    gap: 12,
+    gap: ms(12),
   },
-  heroStar: { width: 20, height: 20 },
-  heroUtensil: { width: 46, height: 150 },
-  heroSideLabel: { fontSize: 11, fontWeight: FONTS.regular },
-  heroSideValue: { fontSize: 16, fontWeight: FONTS.bold, marginTop: 1 },
-  heroSideUnit: { fontSize: 11, fontWeight: FONTS.regular },
+  heroStar: { width: ms(20), height: ms(20) },
+  heroUtensilFolk: { width: ms(46), height: vs(150) },
+  heroUtensil: { width: ms(52), height: vs(150) },
+  heroSideLabel: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.regular },
+  heroSideValue: { fontSize: ms(16), fontWeight: FONTS.bold, marginTop: 1 },
+  heroSideUnit: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.regular },
 
   // Macro grid
   macroGrid: {
     flexDirection: "row",
     borderTopWidth: 1,
-    marginTop: 18,
-    paddingTop: 16,
+    marginTop: ms(18),
+    paddingTop: SPACING.md,
   },
-  macroCol: { flex: 1, alignItems: "center" },
-  macroColLabel: { fontSize: 12, fontWeight: FONTS.regular, marginBottom: 4 },
-  macroColValue: { fontSize: 15, fontWeight: FONTS.bold },
+  macroCol: {
+    flex: 1,
+    alignItems: "center",
+  },
+  macroColLabel: {
+    fontSize: ms(12),
+    fontWeight: FONTS.regular,
+    marginBottom: SPACING.xs,
+  },
+  macroColValue: { fontSize: FONT_SIZES.body, fontWeight: FONTS.bold },
 
   // Meals list — one card per section
   mealsCard: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: ms(12),
   },
   mealRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: ms(14),
     paddingHorizontal: SPACING.md,
-    gap: 12,
+    gap: ms(12),
   },
   mealIconBox: {
-    width: 48,
-    height: 48,
+    width: ms(48),
+    height: ms(48),
     borderRadius: RADIUS.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  mealIcon: { width: 28, height: 28 },
+  mealIcon: { width: ms(28), height: ms(28) },
   mealInfo: { flex: 1 },
-  mealRemaining: { fontSize: 11, fontWeight: FONTS.medium, marginBottom: 2 },
-  mealName: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 4 },
+  mealRemaining: {
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONTS.medium,
+    marginBottom: ms(2),
+  },
+  mealName: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONTS.semibold,
+    marginBottom: SPACING.xs,
+  },
   mealChipRow: { flexDirection: "row" },
   mealChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    gap: ms(4),
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: ms(3),
     borderRadius: RADIUS.full,
   },
-  mealChipEmoji: { fontSize: 11 },
-  mealChipText: { fontSize: 11, fontWeight: FONTS.medium },
-  mealMeta: { fontSize: 11, fontWeight: FONTS.regular, marginTop: 4 },
+  mealChipEmoji: { fontSize: FONT_SIZES.caption },
+  mealChipText: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.medium },
+  mealMeta: {
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONTS.regular,
+    marginTop: SPACING.xs,
+  },
   mealRightCol: {
     alignItems: "flex-end",
     justifyContent: "space-between",
     alignSelf: "stretch",
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
   },
-  mealActions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  actionIcon: { width: 18, height: 18 },
+  mealActions: { flexDirection: "row", alignItems: "center", gap: ms(12) },
+  actionIcon: { width: ms(18), height: ms(18) },
   expandedWrapper: {
     paddingHorizontal: SPACING.md,
-    paddingTop: 4,
-    paddingBottom: 16,
-    gap: 8,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.md,
+    gap: SPACING.sm,
   },
   portionEatenLabel: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
     fontWeight: FONTS.medium,
   },
   expandedCard: {
     borderWidth: 1,
     borderRadius: RADIUS.md,
-    padding: 16,
+    padding: SPACING.md,
   },
   expandedHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: ms(12),
   },
   expandedCalValue: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: FONTS.bold,
     letterSpacing: -0.5,
   },
@@ -1262,71 +1258,79 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   editGramsBtnText: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
     fontWeight: FONTS.semibold,
   },
   expandedNutrientsGrid: {
-    gap: 8,
+    gap: SPACING.sm,
   },
   plusBtn: {
-    width: 32,
-    height: 32,
+    width: ms(32),
+    height: ms(32),
     borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
   },
-  hairline: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
+  hairline: { height: StyleSheet.hairlineWidth, marginLeft: ms(76) },
 
   // Motivation footer
   motivationCard: {
-    marginHorizontal: 24,
+    marginHorizontal: SPACING.lg,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: ms(10),
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(14),
     borderRadius: RADIUS.lg,
     borderWidth: 1,
   },
-  motivationLeaf: { width: 22, height: 22 },
-  motivationText: { flex: 1, fontSize: 14, fontWeight: FONTS.medium },
-  motivationChevron: { width: 16, height: 16, opacity: 0.5 },
+  motivationLeaf: { width: ms(22), height: ms(22) },
+  motivationText: {
+    flex: 1,
+    fontSize: FONT_SIZES.label,
+    fontWeight: FONTS.medium,
+  },
+  motivationChevron: { width: ms(16), height: ms(16), opacity: 0.5 },
 
   // Toast
   toast: {
     position: "absolute",
-    bottom: 28,
+    bottom: ms(28),
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: ms(20),
+    paddingVertical: ms(10),
     borderRadius: RADIUS.full,
   },
-  toastText: { fontSize: 14, fontWeight: FONTS.medium },
+  toastText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.medium },
 
   // Skeleton
   skeletonRingContainer: {
     width: "100%",
-    height: 180,
+    height: vs(180),
     alignItems: "center",
     justifyContent: "center",
   },
   skeletonRing: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 12,
+    width: ms(160),
+    height: ms(160),
+    borderRadius: ms(80),
+    borderWidth: ms(12),
     borderColor: "#E1E1E1",
     borderStyle: "dashed",
   },
   emptyStateCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: SPACING.md,
     borderRadius: RADIUS.lg,
-    gap: 14,
-    marginTop: 12,
+    gap: ms(14),
+    marginTop: ms(12),
   },
-  emptyStateTitle: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
-  emptyStateSub: { fontSize: 13 },
-  mealSkeletonRow: { height: 52, borderRadius: RADIUS.md },
+  emptyStateTitle: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: "700",
+    marginBottom: ms(2),
+  },
+  emptyStateSub: { fontSize: FONT_SIZES.small },
+  mealSkeletonRow: { height: ms(52), borderRadius: RADIUS.md },
 });

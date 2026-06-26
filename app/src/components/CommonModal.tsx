@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { FONT_SIZES, RADIUS } from '../constants/theme';
+import { moderateScale as ms } from '../utils/responsive';
 
 export type CommonModalVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -85,7 +87,7 @@ const CommonAlertModal: React.FC<CommonModalProps> = ({
           ]}
         >
           <View style={[styles.iconWrap, { backgroundColor: color + '18' }]}>
-            <Ionicons name={icon as any} size={34} color={color} />
+            <Ionicons name={icon as any} size={ms(34)} color={color} />
           </View>
 
           <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
@@ -132,10 +134,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '85%',
-    maxWidth: 340,
-    borderRadius: 24,
+    maxWidth: ms(340),
+    borderRadius: RADIUS.xl,
     alignItems: 'center',
-    padding: 28,
+    padding: ms(28),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
@@ -143,34 +145,34 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   iconWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: ms(68),
+    height: ms(68),
+    borderRadius: ms(34),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: ms(18),
   },
   title: {
-    fontSize: 20,
+    fontSize: FONT_SIZES.h3,
     fontWeight: '800',
-    marginBottom: 10,
+    marginBottom: ms(10),
     textAlign: 'center',
     letterSpacing: -0.4,
   },
   message: {
-    fontSize: 14,
-    marginBottom: 28,
+    fontSize: FONT_SIZES.label,
+    marginBottom: ms(28),
     textAlign: 'center',
-    lineHeight: 21,
+    lineHeight: ms(21),
   },
   buttons: {
     width: '100%',
     flexDirection: 'row',
-    gap: 10,
+    gap: ms(10),
   },
   btn: {
-    paddingVertical: 14,
-    borderRadius: 100,
+    paddingVertical: ms(14),
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -182,12 +184,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   btnText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: '600',
   },
   btnPrimaryText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: '700',
     letterSpacing: 0.1,
   },

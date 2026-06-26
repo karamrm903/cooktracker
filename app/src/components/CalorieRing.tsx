@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { FONT_SIZES } from '../constants/theme';
+import { moderateScale as ms } from '../utils/responsive';
 
 interface CalorieRingProps {
   calories: number;
@@ -18,9 +20,9 @@ export function CalorieRing({
   textColor = '#111111',
   subColor = '#9CA3AF',
   trackColor = '#EFEDE6',
-  size = 170,
+  size = ms(170),
 }: CalorieRingProps) {
-  const strokeWidth = 14;
+  const strokeWidth = ms(14);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
 
@@ -69,11 +71,11 @@ export function CalorieRing({
           alignItems: 'center',
         }}
       >
-        <Text style={{ fontSize: 40, fontWeight: '700', color: textColor, letterSpacing: -1 }}>
+        <Text style={{ fontSize: ms(40), fontWeight: '700', color: textColor, letterSpacing: -1 }}>
           {calories}
         </Text>
 
-        <Text style={{ color: subColor, marginTop: 2, fontSize: 13 }}>
+        <Text style={{ color: subColor, marginTop: ms(2), fontSize: FONT_SIZES.small }}>
           {diff >= 0
             ? `+${diff} over goal`
             : `${Math.abs(diff)} left`}

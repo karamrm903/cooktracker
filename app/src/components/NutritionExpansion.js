@@ -5,7 +5,8 @@
 
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
-import { RADIUS, FONTS } from '../constants/theme';
+import { RADIUS, FONTS, FONT_SIZES, SPACING } from '../constants/theme';
+import { moderateScale as ms } from '../utils/responsive';
 
 // ── Macro color palette ───────────────────────────────────────────────────────
 export const C_PROTEIN = '#EF4444';
@@ -90,11 +91,11 @@ export function ExpandedNutrition({ item, colors, buttonLabel = 'Start Cooking',
 // ── Styles ────────────────────────────────────────────────────────────────────
 const bar = StyleSheet.create({
   track: {
-    height: 6,
+    height: ms(6),
     borderRadius: RADIUS.full,
     overflow: 'hidden',
     backgroundColor: 'transparent',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   fill: {
     flexDirection: 'row',
@@ -106,48 +107,48 @@ const bar = StyleSheet.create({
 
 const exp = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 16,
+    paddingHorizontal: SPACING.md,
+    paddingTop: ms(14),
+    paddingBottom: SPACING.md,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   calories: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: FONTS.bold,
     letterSpacing: -0.5,
-    marginBottom: 12,
+    marginBottom: ms(12),
   },
   nutrientList: {
-    gap: 8,
-    marginBottom: 16,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   nutrientRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: ms(10),
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: ms(8),
+    height: ms(8),
+    borderRadius: ms(4),
   },
   nutrientLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.medium,
   },
   nutrientValue: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.semibold,
   },
   button: {
     borderRadius: RADIUS.full,
-    paddingVertical: 13,
+    paddingVertical: ms(13),
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: FONTS.semibold,
     letterSpacing: 0.1,
   },

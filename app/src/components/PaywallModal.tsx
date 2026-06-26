@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { RADIUS, FONTS } from '../constants/theme';
+import { RADIUS, FONTS, FONT_SIZES, SPACING } from '../constants/theme';
+import { moderateScale as ms } from '../utils/responsive';
 
 export type PaywallFeature = 'recipe_import' | 'search' | 'cooking_mode' | 'saved_recipes';
 
@@ -85,7 +86,7 @@ export default function PaywallModal({
 
           {/* Close */}
           <TouchableOpacity style={s.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="close" size={20} color={colors.textMuted} />
+            <Ionicons name="close" size={ms(20)} color={colors.textMuted} />
           </TouchableOpacity>
 
           {/* Feature header */}
@@ -103,7 +104,7 @@ export default function PaywallModal({
             <Text style={[s.benefitsLabel, { color: colors.textMuted }]}>PREMIUM INCLUDES</Text>
             {BENEFITS.map((b) => (
               <View key={b.icon} style={s.benefitRow}>
-                <Ionicons name={b.icon as any} size={18} color={colors.primary} />
+                <Ionicons name={b.icon as any} size={ms(18)} color={colors.primary} />
                 <Text style={[s.benefitText, { color: colors.text }]}>{b.text}</Text>
               </View>
             ))}
@@ -125,7 +126,7 @@ export default function PaywallModal({
           </TouchableOpacity>
 
           {/* iOS safe area padding */}
-          {Platform.OS === 'ios' && <View style={{ height: 20 }} />}
+          {Platform.OS === 'ios' && <View style={{ height: ms(20) }} />}
         </View>
       </View>
     </Modal>
@@ -142,64 +143,64 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 16,
+    borderTopLeftRadius: ms(28),
+    borderTopRightRadius: ms(28),
+    paddingHorizontal: SPACING.lg,
+    paddingTop: ms(12),
+    paddingBottom: SPACING.md,
     alignItems: 'center',
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 20,
+    width: ms(40),
+    height: ms(4),
+    borderRadius: ms(2),
+    marginBottom: ms(20),
   },
   closeBtn: {
     position: 'absolute',
-    top: 20,
-    right: 20,
+    top: ms(20),
+    right: ms(20),
   },
 
-  emoji: { fontSize: 52, marginBottom: 14 },
-  title: { fontSize: 20, fontWeight: FONTS.bold, textAlign: 'center', marginBottom: 8 },
+  emoji: { fontSize: ms(52), marginBottom: ms(14) },
+  title: { fontSize: FONT_SIZES.h3, fontWeight: FONTS.bold, textAlign: 'center', marginBottom: SPACING.sm },
   description: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.regular,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: ms(20),
+    marginBottom: ms(24),
   },
 
   benefitsCard: {
     width: '100%',
     borderRadius: RADIUS.lg,
-    padding: 16,
-    gap: 12,
-    marginBottom: 24,
+    padding: SPACING.md,
+    gap: ms(12),
+    marginBottom: ms(24),
   },
   benefitsLabel: {
-    fontSize: 10,
+    fontSize: ms(10),
     fontWeight: FONTS.semibold,
     letterSpacing: 1,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: ms(12),
   },
   benefitText: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.medium,
   },
 
   ctaBtn: {
     width: '100%',
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
     borderRadius: RADIUS.full,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: ms(12),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -207,13 +208,13 @@ const s = StyleSheet.create({
     elevation: 5,
   },
   ctaBtnText: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.bold,
     letterSpacing: 0.2,
   },
   dismissText: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.regular,
-    paddingVertical: 8,
+    paddingVertical: SPACING.sm,
   },
 });

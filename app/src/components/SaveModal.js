@@ -14,7 +14,8 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { RADIUS, FONTS } from '../constants/theme';
+import { RADIUS, FONTS, FONT_SIZES, SPACING } from '../constants/theme';
+import { moderateScale as ms } from '../utils/responsive';
 
 const SAVE_CATEGORIES = [
   { id: 'Breakfast', label: 'Breakfast', icon: 'sunny-outline'        },
@@ -78,10 +79,10 @@ export default function SaveModal({ meal, visible, onClose, onSave, onRemove, sa
             activeOpacity={0.7}
             onPress={() => onSave(cat.id)}
           >
-            <Ionicons name={cat.icon} size={20} color={colors.textSecondary} />
+            <Ionicons name={cat.icon} size={ms(20)} color={colors.textSecondary} />
             <Text style={[sav.categoryLabel, { color: colors.text }]}>{cat.label}</Text>
             {displayCategory === cat.id && (
-              <Ionicons name="checkmark" size={17} color={colors.text} />
+              <Ionicons name="checkmark" size={ms(17)} color={colors.text} />
             )}
           </TouchableOpacity>
         ))}
@@ -90,7 +91,7 @@ export default function SaveModal({ meal, visible, onClose, onSave, onRemove, sa
           <>
             <View style={[sav.divider, { backgroundColor: colors.border }]} />
             <TouchableOpacity style={sav.categoryRow} activeOpacity={0.7} onPress={onRemove}>
-              <Ionicons name="trash-outline" size={20} color={colors.error} />
+              <Ionicons name="trash-outline" size={ms(20)} color={colors.error} />
               <Text style={[sav.categoryLabel, { color: colors.error }]}>Remove from Saved</Text>
             </TouchableOpacity>
           </>
@@ -110,43 +111,43 @@ const sav = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 12,
-    paddingBottom: 44,
-    paddingHorizontal: 16,
+    borderTopLeftRadius: ms(20),
+    borderTopRightRadius: ms(20),
+    paddingTop: ms(12),
+    paddingBottom: ms(44),
+    paddingHorizontal: SPACING.md,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: ms(36),
+    height: ms(4),
+    borderRadius: ms(2),
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: ms(20),
   },
   sheetTitle: {
-    fontSize: 11,
+    fontSize: FONT_SIZES.caption,
     fontWeight: FONTS.semibold,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: 8,
-    paddingHorizontal: 12,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: ms(12),
   },
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingVertical: 13,
-    paddingHorizontal: 12,
+    gap: ms(14),
+    paddingVertical: ms(13),
+    paddingHorizontal: ms(12),
     borderRadius: RADIUS.md,
   },
   categoryLabel: {
     flex: 1,
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.medium,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginVertical: 6,
-    marginHorizontal: 12,
+    marginVertical: ms(6),
+    marginHorizontal: ms(12),
   },
 });
