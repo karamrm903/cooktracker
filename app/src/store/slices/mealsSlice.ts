@@ -47,14 +47,18 @@ export const fetchDashboard = createAsyncThunk(
 // No optimistic — caller awaits this and navigates only on success
 export const addMealThunk = createAsyncThunk(
   "meals/add",
-  async ({ session, meal }: { session: any; meal: Omit<Meal, "id"> }) =>
-    mealService.addMeal(session, meal)
+  async ({ session, meal }: { session: any; meal: Omit<Meal, "id"> }) => {
+    const result = await mealService.addMeal(session, meal);
+    dashboardService.invalidate(session?.access_token); // next refresh re-fetches
+    return result;
+  }
 );
 
 export const removeMealThunk = createAsyncThunk(
   "meals/remove",
   async ({ session, id }: { session: any; id: string }) => {
     await mealService.deleteMeal(session, id);
+    dashboardService.invalidate(session?.access_token);
     return id;
   }
 );
@@ -75,7 +79,11 @@ export const patchMealThunk = createAsyncThunk(
       fat?: number;
       gramsEaten?: number;
     };
-  }) => mealService.updateMeal(session, id, updates)
+  }) => {
+    const result = await mealService.updateMeal(session, id, updates);
+    dashboardService.invalidate(session?.access_token);
+    return result;
+  }
 );
 
 // ── Slice ─────────────────────────────────────────────────────────────────────

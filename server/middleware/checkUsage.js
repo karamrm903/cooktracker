@@ -8,7 +8,7 @@ export async function checkRecipeImportUsage(req, res, next) {
       .from("users")
       .select("subscription_status, subscription_expires_at")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
 
@@ -44,7 +44,7 @@ export async function checkSearchUsage(req, res, next) {
       .from("users")
       .select("subscription_status, subscription_expires_at")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
 
@@ -83,6 +83,7 @@ export async function checkFoodSearchUsage(req, res, next) {
  * Cancelled users retain access until subscription_expires_at.
  */
 function isAccessGranted(user) {
+  if (!user) return false;
   const { subscription_status: status, subscription_expires_at: expiresAt } =
     user;
   if (status === "active" || status === "trial") return true;

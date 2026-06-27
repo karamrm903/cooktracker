@@ -5,6 +5,22 @@ import { ensureRecipeImage, ensureFoodItemImage, getPublicImageUrl, getPublicIma
 
 const router = Router();
 
+// Per-recipe public image URL cache. image_url rarely changes once set, so we
+// can skip the Supabase round-trip on repeat bulk-sign requests (each carousel
+// section on the Explore screen fires one). Keyed by recipe id → url|null.
+const IMG_CACHE_TTL_MS = 5 * 60 * 1000;
+const _imgUrlCache = new Map(); // id → { at, url }
+
+function imgCacheGet(id) {
+  const e = _imgUrlCache.get(id);
+  if (!e) return undefined;
+  if (Date.now() - e.at > IMG_CACHE_TTL_MS) {
+    _imgUrlCache.delete(id);
+    return undefined;
+  }
+  return e.url;
+}
+
 // POST /api/recipes/:id/image
 // Lazy-load entry point. Looks up the recipe, fetches a Pexels photo if the
 // row has none, uploads it to the private `images` bucket, and returns a
@@ -37,20 +53,41 @@ router.post('/recipes/images', requireAuth, async (req, res) => {
   if (!ids.length) return res.json({ images: {}, expiresIn: 3600 });
 
   try {
-    const { data, error } = await adminClient
-      .from('recipes')
-      .select('id, image_url')
-      .in('id', ids);
-    if (error) throw error;
+    const images = {};
+    // Serve cached ids without touching the DB; only query the misses.
+    const misses = [];
+    for (const id of ids) {
+      const cached = imgCacheGet(id);
+      if (cached !== undefined) images[id] = cached;
+      else misses.push(id);
+    }
 
-    const rows = data ?? [];
-    // Public URLs — pure string building, no signing round-trip.
-    const urls = getPublicImageUrls(rows.map((r) => r.image_url));
-    const entries = rows.map((row) => [
-      String(row.id),
-      row.image_url ? (urls[row.image_url] ?? null) : null,
-    ]);
-    res.json({ images: Object.fromEntries(entries), expiresIn: 3600 });
+    if (misses.length) {
+      const { data, error } = await adminClient
+        .from('recipes')
+        .select('id, image_url')
+        .in('id', misses);
+      if (error) throw error;
+
+      const rows = data ?? [];
+      // Public URLs — pure string building, no signing round-trip.
+      const urls = getPublicImageUrls(rows.map((r) => r.image_url));
+      const found = new Set();
+      rows.forEach((row) => {
+        const id = String(row.id);
+        const url = row.image_url ? (urls[row.image_url] ?? null) : null;
+        images[id] = url;
+        _imgUrlCache.set(id, { at: Date.now(), url });
+        found.add(id);
+      });
+      // Cache "no such row" misses too so a bad id can't re-query every time.
+      misses.filter((id) => !found.has(id)).forEach((id) => {
+        images[id] = null;
+        _imgUrlCache.set(id, { at: Date.now(), url: null });
+      });
+    }
+
+    res.json({ images, expiresIn: 3600 });
   } catch (err) {
     console.error('[images/bulk] ✖', err.message);
     res.status(500).json({ error: err.message });

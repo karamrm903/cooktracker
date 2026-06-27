@@ -9,6 +9,27 @@ const router = Router();
 // Excludes AI search cache ('ai_cache') and food-search autocomplete ('food_search').
 const CURATED_CATEGORIES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+// Curated deck/trending are GLOBAL (user_id IS NULL) — identical for every user
+// and rarely change. On Render's single free-tier worker each uncached Supabase
+// query costs ~2.5s and blocks every other request. Cache the built payloads in
+// memory so repeat focuses (the common case) return in ~1ms instead of re-querying.
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const _cache = new Map(); // key → { at, data }
+
+function cacheGet(key) {
+  const e = _cache.get(key);
+  if (!e) return null;
+  if (Date.now() - e.at > CACHE_TTL_MS) {
+    _cache.delete(key);
+    return null;
+  }
+  return e.data;
+}
+
+function cacheSet(key, data) {
+  _cache.set(key, { at: Date.now(), data });
+}
+
 function rowToCard(r) {
   let ingredients = [];
   try { ingredients = Array.isArray(r.ingredients) ? r.ingredients : JSON.parse(r.ingredients ?? '[]'); } catch { }
@@ -47,6 +68,10 @@ router.get('/explore/swipe', requireAuth, async (req, res) => {
   const { category, q, limit = 20 } = req.query ?? {};
   const max = Math.min(Number(limit) || 20, 50);
 
+  const cacheKey = `swipe:${category || 'all'}:${(q || '').trim().toLowerCase()}:${max}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return res.json({ cards: cached });
+
   // Whitelist curated categories so AI search cache / food-search autocomplete
   // rows can never leak into the deck.
   let query = adminClient
@@ -66,11 +91,15 @@ router.get('/explore/swipe', requireAuth, async (req, res) => {
   }
 
   const cards = await signCards(data);
+  cacheSet(cacheKey, cards);
   res.json({ cards });
 });
 
 // GET /api/explore/trending — small horizontal "Trending Now" set.
 router.get('/explore/trending', requireAuth, async (req, res) => {
+  const cached = cacheGet('trending');
+  if (cached) return res.json({ items: cached });
+
   const { data, error } = await adminClient
     .from('recipes')
     .select('id, title, emoji, calories, protein, carbs, fat, saved_category, nutrition, image_url')
@@ -83,7 +112,9 @@ router.get('/explore/trending', requireAuth, async (req, res) => {
     console.error('[trending] ✖', error.message);
     return res.status(500).json({ error: error.message });
   }
-  res.json({ items: await signCards(data) });
+  const items = await signCards(data);
+  cacheSet('trending', items);
+  res.json({ items });
 });
 
 export default router;

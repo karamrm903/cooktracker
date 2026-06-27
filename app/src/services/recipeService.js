@@ -1,42 +1,32 @@
 import { supabase } from '../lib/supabase';
+import { getBaseUrl, getAuthHeaders, handleResponse } from './api.config';
+
+// Recipes are a single shared global pool (user_id = NULL) visible to every
+// user. Reads go client-direct (allowed by the recipes_select_global RLS
+// policy); writes route through the server (RLS blocks client writes to global
+// rows). Cache rows (ai_cache / food_search) are excluded so they never surface
+// in Explore / Saved.
+const NON_RECIPE = 'saved_category.is.null,saved_category.not.in.(ai_cache,food_search)';
 
 export async function saveRecipe(session, recipe, sourceUrl) {
-  const ingredients = Array.isArray(recipe.ingredients)
-    ? JSON.stringify(recipe.ingredients)
-    : (recipe.ingredients ?? null);
-
-  const instructions = Array.isArray(recipe.steps)
-    ? recipe.steps.map((s, i) => `${i + 1}. ${s.text ?? s}`).join('\n')
-    : null;
-
-  const { data, error } = await supabase
-    .from('recipes')
-    .upsert({
-      user_id:      session?.user?.id ?? null,
-      title:        recipe.title,
-      ingredients,
-      instructions,
-      steps:        recipe.steps ?? null,
-      nutrition:    recipe.nutrition ?? null,
-      calories:     recipe.nutrition?.total?.calories ?? recipe.nutrition?.calories ?? null,
-      protein:      recipe.nutrition?.total?.protein  ?? recipe.nutrition?.protein  ?? null,
-      carbs:        recipe.nutrition?.total?.carbs    ?? recipe.nutrition?.carbs    ?? null,
-      fat:          recipe.nutrition?.total?.fat      ?? recipe.nutrition?.fat      ?? null,
-      emoji:        recipe.emoji ?? null,
-      source_url:   sourceUrl ?? null,
-    }, { onConflict: 'user_id,title' })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  const headers = await getAuthHeaders(session);
+  const res = await fetch(`${getBaseUrl()}/api/recipes`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ recipe, sourceUrl: sourceUrl ?? null }),
+  });
+  const data = await handleResponse(res);
+  return data.recipe;
 }
 
 export async function fetchSavedRecipes(session) {
+  // Saved library = global recipes that have been categorised into a slot.
   const { data, error } = await supabase
     .from('recipes')
     .select('*')
-    .eq('user_id', session?.user?.id)
+    .is('user_id', null)
+    .not('saved_category', 'is', null)
+    .not('saved_category', 'in', '(ai_cache,food_search)')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -44,20 +34,22 @@ export async function fetchSavedRecipes(session) {
 }
 
 export async function setSavedCategory(session, id, category) {
-  const { error } = await supabase
-    .from('recipes')
-    .update({ saved_category: category })
-    .eq('id', id)
-    .eq('user_id', session?.user?.id);
-
-  if (error) throw error;
+  const headers = await getAuthHeaders(session);
+  const res = await fetch(`${getBaseUrl()}/api/recipes/${id}/category`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ category }),
+  });
+  await handleResponse(res);
 }
 
 export async function fetchAllRecipes(session) {
+  // The whole shared recipe pool (minus cache rows) — same for every user.
   const { data, error } = await supabase
     .from('recipes')
     .select('id, title, calories, protein, carbs, fat, emoji, steps, nutrition, ingredients')
-    .eq('user_id', session?.user?.id)
+    .is('user_id', null)
+    .or(NON_RECIPE)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -65,11 +57,11 @@ export async function fetchAllRecipes(session) {
 }
 
 export async function unsaveRecipeById(session, id) {
-  const { error } = await supabase
-    .from('recipes')
-    .update({ saved_category: null })
-    .eq('id', id)
-    .eq('user_id', session?.user?.id);
-
-  if (error) throw error;
+  const headers = await getAuthHeaders(session);
+  const res = await fetch(`${getBaseUrl()}/api/recipes/${id}/category`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ category: null }),
+  });
+  await handleResponse(res);
 }

@@ -9,6 +9,7 @@ import accountRoutes  from './account.js';
 import authRoutes     from './auth.js';
 import swipeRoutes    from './swipe.js';
 import imageRoutes    from './images.js';
+import recipeRoutes   from './recipes.js';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use('/api', searchRoutes);
 router.use('/api', accountRoutes);
 router.use('/api', swipeRoutes);
 router.use('/api', imageRoutes);
+router.use('/api', recipeRoutes);
 
 // Webhook (signature-verified, not JWT-authenticated)
 router.use('/webhooks', webhookRoutes);

@@ -173,8 +173,9 @@ const PostCard = React.memo(function PostCard({
 }) {
   const ratingData = useMemo(() => getRating(card.name), [card.name]);
   const tagText = useMemo(() => getRecipeTag(card), [card]);
-  // Image is supplied by the carousel's single bulk fetch — no per-card request.
-  const imageUrl = preloadedImage ?? null;
+  // Prefer the URL the carousel resolved; fall back to the inline imageUrl the
+  // swipe payload already shipped so the card paints without waiting on any fetch.
+  const imageUrl = preloadedImage ?? card.imageUrl ?? null;
 
   return (
     <TouchableOpacity
@@ -329,7 +330,9 @@ function PostCarousel({ cards, session, images, colors, savedNames, onSave, onOp
   const [bulkImages, setBulkImages] = useState({});
   useEffect(() => {
     let cancelled = false;
-    const ids = cards.map((c) => c.id);
+    // Only fetch ids the swipe payload didn't already ship a URL for. When the
+    // deck is fully inline (the normal case) this skips the bulk request entirely.
+    const ids = cards.filter((c) => !c.imageUrl).map((c) => c.id);
     if (!ids.length) return;
     exploreService
       .loadRecipeImages(session, ids)
@@ -439,14 +442,25 @@ function TrendingRow({ items, session, onPress, colors }) {
   const [imageUrls, setImageUrls] = useState({});
 
   useEffect(() => {
+    // Trending payload already carries imageUrl inline — render it directly and
+    // only lazy-fetch the rare item that arrived without one. Avoids a per-card
+    // POST against the single Render worker for images the server already gave us.
+    const seeded = {};
     items.forEach((it) => {
-      if (imageUrls[it.id] !== undefined) return;
-      setImageUrls((prev) => ({ ...prev, [it.id]: null }));
-      exploreService
-        .fetchRecipeImageCached(session, it.id, it.name)
-        .then((url) => setImageUrls((prev) => ({ ...prev, [it.id]: url })))
-        .catch(() => setImageUrls((prev) => ({ ...prev, [it.id]: null })));
+      if (it.imageUrl && imageUrls[it.id] === undefined) seeded[it.id] = it.imageUrl;
     });
+    if (Object.keys(seeded).length) {
+      setImageUrls((prev) => ({ ...prev, ...seeded }));
+    }
+    items
+      .filter((it) => !it.imageUrl && imageUrls[it.id] === undefined)
+      .forEach((it) => {
+        setImageUrls((prev) => ({ ...prev, [it.id]: null }));
+        exploreService
+          .fetchRecipeImageCached(session, it.id, it.name)
+          .then((url) => setImageUrls((prev) => ({ ...prev, [it.id]: url })))
+          .catch(() => setImageUrls((prev) => ({ ...prev, [it.id]: null })));
+      });
   }, [items, session]);
 
   if (!items.length) return null;
@@ -936,6 +950,16 @@ export default function ExploreScreen({ navigation }) {
             const mapped = (rows ?? []).map(dbToItem);
             _exploreLibraryCache = mapped;
             setDbRecipes(mapped);
+            // Warm the shared image cache for the WHOLE library in one (chunked)
+            // bulk request, before the per-macro section carousels mount. Each
+            // section's own loadRecipeImages then hits the cache instead of
+            // firing its own POST — collapses ~5 concurrent requests into 1.
+            const ids = mapped.map((m) => m.id);
+            for (let i = 0; i < ids.length; i += 100) {
+              exploreService
+                .loadRecipeImages(session, ids.slice(i, i + 100))
+                .catch(() => {});
+            }
           })
           .catch(() => { })
           .finally(() => {
