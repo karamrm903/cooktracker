@@ -14,12 +14,16 @@ export interface ExploreRecipe {
   steps: Array<{ text: string; timerMinutes: number | null; timerLabel: string | null }>;
   nutrition: { total: { calories: number; protein: number; carbs: number; fat: number } };
   estimatedGrams: number;
+  imageUrl?: string | null; // signed image URL, included inline by the swipe/trending routes
 }
 
 // In-memory signed-URL cache. Module scope → lives for the whole app session
 // and resets on relaunch, so revisiting Explore / See-All within one launch
 // never re-signs the same recipe image.
 const _recipeImageUrlCache = new Map<string, string | null>();
+// Tracks requests currently in flight (single or bulk) so concurrent callers for
+// the same id share one network round-trip instead of each firing their own.
+const _recipeImageInFlight = new Map<string, Promise<string | null>>();
 
 export const exploreService = {
   getConfig: async (): Promise<{ searchResultsCount: number }> => {
@@ -71,18 +75,89 @@ export const exploreService = {
   },
 
   // Session-cached variant of fetchRecipeImage — resolves once per recipe per
-  // app launch. Used by lists that remount on focus/navigation.
-  fetchRecipeImageCached: async (
+  // app launch, and dedupes concurrent requests for the same id.
+  fetchRecipeImageCached: (
     session: any,
     recipeId: string,
     q?: string,
   ): Promise<string | null> => {
     if (_recipeImageUrlCache.has(recipeId)) {
-      return _recipeImageUrlCache.get(recipeId) ?? null;
+      return Promise.resolve(_recipeImageUrlCache.get(recipeId) ?? null);
     }
-    const url = await exploreService.fetchRecipeImage(session, recipeId, q);
-    _recipeImageUrlCache.set(recipeId, url);
-    return url;
+    const existing = _recipeImageInFlight.get(recipeId);
+    if (existing) return existing;
+
+    const p = exploreService
+      .fetchRecipeImage(session, recipeId, q)
+      .then((url) => {
+        _recipeImageUrlCache.set(recipeId, url);
+        _recipeImageInFlight.delete(recipeId);
+        return url;
+      })
+      .catch((err) => {
+        _recipeImageInFlight.delete(recipeId);
+        throw err;
+      });
+    _recipeImageInFlight.set(recipeId, p);
+    return p;
+  },
+
+  // Seed the shared cache with URLs already known (e.g. inline imageUrl from the
+  // swipe deck) so later per-card / bulk lookups are instant and skip the network.
+  seedImageCache: (entries: Record<string, string | null>) => {
+    for (const [id, url] of Object.entries(entries)) {
+      _recipeImageUrlCache.set(String(id), url ?? null);
+    }
+  },
+
+  // Batch-load signed image URLs for many recipes in ONE request. Already-cached
+  // and in-flight ids are skipped; the rest are fetched via the bulk endpoint and
+  // seeded into the shared cache (so per-card lookups become instant, no network).
+  // Returns the combined { id → url } map for the requested ids.
+  loadRecipeImages: async (
+    session: any,
+    ids: string[],
+  ): Promise<Record<string, string | null>> => {
+    const unique = Array.from(new Set(ids.map(String)));
+    const missing = unique.filter(
+      (id) => !_recipeImageUrlCache.has(id) && !_recipeImageInFlight.has(id),
+    );
+
+    if (missing.length) {
+      const bulk = exploreService.fetchRecipeImagesBulk(session, missing);
+      // Register each missing id as in-flight against the single bulk request so
+      // any card that asks meanwhile waits on this instead of firing its own.
+      missing.forEach((id) => {
+        const p = bulk
+          .then((map) => {
+            const url = map[id] ?? null;
+            _recipeImageUrlCache.set(id, url);
+            _recipeImageInFlight.delete(id);
+            return url;
+          })
+          .catch((err) => {
+            _recipeImageInFlight.delete(id);
+            throw err;
+          });
+        _recipeImageInFlight.set(id, p);
+      });
+      await bulk.catch(() => {});
+    }
+
+    // Wait for any still-pending ids (covers ids already in-flight from elsewhere).
+    await Promise.all(
+      unique.map((id) =>
+        _recipeImageUrlCache.has(id)
+          ? null
+          : (_recipeImageInFlight.get(id) ?? Promise.resolve()),
+      ),
+    ).catch(() => {});
+
+    const result: Record<string, string | null> = {};
+    unique.forEach((id) => {
+      result[id] = _recipeImageUrlCache.get(id) ?? null;
+    });
+    return result;
   },
 
   // POST /api/recipes/images — bulk sign for preload (dashboard → explore handoff).

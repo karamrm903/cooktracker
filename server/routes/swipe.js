@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { adminClient } from '../db/client.js';
+import { getPublicImageUrls } from '../utils/images.js';
 
 const router = Router();
 
@@ -25,8 +26,20 @@ function rowToCard(r) {
     steps: r.steps ?? [],
     nutrition: r.nutrition ?? { total: { calories: r.calories ?? 0, protein: r.protein ?? 0, carbs: r.carbs ?? 0, fat: r.fat ?? 0 } },
     estimatedGrams: meta.estimatedGrams ?? 400,
-    // image_url intentionally omitted — clients lazy-fetch via /api/recipes/:id/image
+    imageUrl: null, // filled in by signCards() below
   };
+}
+
+// Attach each row's public image URL (no network — pure string building), so the
+// deck arrives image-ready in a single request (no separate /recipes/images call).
+function signCards(rows) {
+  const list = rows ?? [];
+  const urls = getPublicImageUrls(list.map((r) => r.image_url));
+  return list.map((r) => {
+    const card = rowToCard(r);
+    card.imageUrl = r.image_url ? (urls[r.image_url] ?? null) : null;
+    return card;
+  });
 }
 
 // GET /api/explore/swipe — curated swipe deck (global recipes, no images).
@@ -38,7 +51,7 @@ router.get('/explore/swipe', requireAuth, async (req, res) => {
   // rows can never leak into the deck.
   let query = adminClient
     .from('recipes')
-    .select('id, title, emoji, calories, protein, carbs, fat, ingredients, steps, nutrition, saved_category')
+    .select('id, title, emoji, calories, protein, carbs, fat, ingredients, steps, nutrition, saved_category, image_url')
     .is('user_id', null)
     .in('saved_category', CURATED_CATEGORIES)
     .limit(max);
@@ -52,7 +65,7 @@ router.get('/explore/swipe', requireAuth, async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 
-  const cards = (data ?? []).map(rowToCard);
+  const cards = await signCards(data);
   res.json({ cards });
 });
 
@@ -60,7 +73,7 @@ router.get('/explore/swipe', requireAuth, async (req, res) => {
 router.get('/explore/trending', requireAuth, async (req, res) => {
   const { data, error } = await adminClient
     .from('recipes')
-    .select('id, title, emoji, calories, protein, carbs, fat, saved_category, nutrition')
+    .select('id, title, emoji, calories, protein, carbs, fat, saved_category, nutrition, image_url')
     .is('user_id', null)
     .in('saved_category', CURATED_CATEGORIES)
     .order('created_at', { ascending: false })
@@ -70,7 +83,7 @@ router.get('/explore/trending', requireAuth, async (req, res) => {
     console.error('[trending] ✖', error.message);
     return res.status(500).json({ error: error.message });
   }
-  res.json({ items: (data ?? []).map(rowToCard) });
+  res.json({ items: await signCards(data) });
 });
 
 export default router;

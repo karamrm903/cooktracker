@@ -165,7 +165,6 @@ function getRating(name) {
 // image fetch so a load resolution only re-renders this card.
 const PostCard = React.memo(function PostCard({
   card,
-  session,
   preloadedImage,
   colors,
   saved,
@@ -174,29 +173,8 @@ const PostCard = React.memo(function PostCard({
 }) {
   const ratingData = useMemo(() => getRating(card.name), [card.name]);
   const tagText = useMemo(() => getRecipeTag(card), [card]);
-  const [imageUrl, setImageUrl] = useState(preloadedImage ?? null);
-
-  // Hydrate from preload when it arrives later (parent passed null initially).
-  useEffect(() => {
-    if (preloadedImage && preloadedImage !== imageUrl) {
-      setImageUrl(preloadedImage);
-    }
-  }, [preloadedImage]);
-
-  // Fallback: only self-fetch when nothing was preloaded for this card.
-  useEffect(() => {
-    if (preloadedImage) return;
-    let cancelled = false;
-    exploreService
-      .fetchRecipeImageCached(session, card.id, card.name)
-      .then((url) => {
-        if (cancelled || !url) return;
-        ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => { });
-        setImageUrl(url);
-      })
-      .catch(() => { });
-    return () => { cancelled = true; };
-  }, [card.id, session, preloadedImage]);
+  // Image is supplied by the carousel's single bulk fetch — no per-card request.
+  const imageUrl = preloadedImage ?? null;
 
   return (
     <TouchableOpacity
@@ -347,6 +325,25 @@ function PostCarousel({ cards, session, images, colors, savedNames, onSave, onOp
   const listRef = useRef(null);
   const [index, setIndex] = useState(0);
 
+  // One bulk request for any deck images not already preloaded by the context.
+  const [bulkImages, setBulkImages] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    const ids = cards.map((c) => c.id);
+    if (!ids.length) return;
+    exploreService
+      .loadRecipeImages(session, ids)
+      .then((map) => {
+        if (cancelled) return;
+        Object.values(map).forEach((url) => {
+          if (url) ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => {});
+        });
+        setBulkImages(map);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [cards, session]);
+
   const n = cards.length;
   const loop = n > 1;
   // [...cards, ...cards, ...cards] — middle block is the "home" the scroll
@@ -415,7 +412,7 @@ function PostCarousel({ cards, session, images, colors, savedNames, onSave, onOp
             <PostCard
               card={item}
               session={session}
-              preloadedImage={images?.[item.id] ?? null}
+              preloadedImage={images?.[item.id] ?? bulkImages[item.id] ?? null}
               colors={colors}
               saved={savedNames.has(item.name)}
               onSave={onSave}
@@ -601,31 +598,15 @@ function ResultsCard({
 // ── Horizontal recipe card (category carousels) ───────────────────────────────
 const HRecipeCard = React.memo(function HRecipeCard({
   item,
-  session,
+  img,
   colors,
   t,
   onStartCooking,
   saved,
   onSave,
 }) {
-  const [img, setImg] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const { rating } = useMemo(() => getRating(item.name), [item.name]);
-
-  useEffect(() => {
-    let cancelled = false;
-    exploreService
-      .fetchRecipeImageCached(session, item.id, item.name)
-      .then((url) => {
-        if (cancelled || !url) return;
-        ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => { });
-        setImg(url);
-      })
-      .catch(() => { });
-    return () => {
-      cancelled = true;
-    };
-  }, [item.id, session]);
 
   const p = item.macros?.protein ?? 0;
   const cb = item.macros?.carbs ?? 0;
@@ -737,12 +718,31 @@ const HRecipeCard = React.memo(function HRecipeCard({
 const CAROUSEL_LIMIT = 10;
 
 function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSeeAll, savedNames, onSave }) {
-  // Show at most 10 randomly-picked items so the horizontal list stays light
-  // (each card lazy-fetches its own image). The rest live behind "See All".
+  // Show at most 10 randomly-picked items so the horizontal list stays light.
+  // The rest live behind "See All".
   const displayItems = useMemo(() => {
     if (items.length <= CAROUSEL_LIMIT) return items;
     return [...items].sort(() => Math.random() - 0.5).slice(0, CAROUSEL_LIMIT);
   }, [items]);
+
+  // One bulk request for this carousel's images instead of one POST per card.
+  const [images, setImages] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    const ids = displayItems.map((it) => it.id);
+    if (!ids.length) return;
+    exploreService
+      .loadRecipeImages(session, ids)
+      .then((map) => {
+        if (cancelled) return;
+        Object.values(map).forEach((url) => {
+          if (url) ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => {});
+        });
+        setImages(map);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [displayItems, session]);
 
   const showSeeAllTile = items.length > CAROUSEL_LIMIT;
 
@@ -764,7 +764,7 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
           <HRecipeCard
             key={it.id}
             item={it}
-            session={session}
+            img={images[it.id] ?? null}
             colors={colors}
             t={t}
             onStartCooking={onStartCooking}

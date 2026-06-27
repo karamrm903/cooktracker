@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { adminClient } from '../db/client.js';
-import { ensureRecipeImage, ensureFoodItemImage, getSignedImageUrl } from '../utils/images.js';
+import { ensureRecipeImage, ensureFoodItemImage, getPublicImageUrl, getPublicImageUrls } from '../utils/images.js';
 
 const router = Router();
 
@@ -43,13 +43,13 @@ router.post('/recipes/images', requireAuth, async (req, res) => {
       .in('id', ids);
     if (error) throw error;
 
-    const entries = await Promise.all(
-      (data ?? []).map(async (row) => {
-        if (!row.image_url) return [String(row.id), null];
-        const url = await getSignedImageUrl(row.image_url).catch(() => null);
-        return [String(row.id), url];
-      }),
-    );
+    const rows = data ?? [];
+    // Public URLs — pure string building, no signing round-trip.
+    const urls = getPublicImageUrls(rows.map((r) => r.image_url));
+    const entries = rows.map((row) => [
+      String(row.id),
+      row.image_url ? (urls[row.image_url] ?? null) : null,
+    ]);
     res.json({ images: Object.fromEntries(entries), expiresIn: 3600 });
   } catch (err) {
     console.error('[images/bulk] ✖', err.message);
@@ -94,7 +94,7 @@ router.post('/food/image', requireAuth, async (req, res) => {
       .maybeSingle();
 
     if (existing?.image_url) {
-      const url = await getSignedImageUrl(existing.image_url);
+      const url = getPublicImageUrl(existing.image_url);
       return res.json({ signedUrl: url, expiresIn: 3600, placeholder: !url });
     }
 

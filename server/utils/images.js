@@ -83,6 +83,46 @@ export async function getSignedImageUrl(storagePath, ttl = SIGNED_URL_TTL) {
 }
 
 /**
+ * Batch-sign many storage paths in ONE Supabase call (vs one round-trip each).
+ * Returns a { path → signedUrl|null } map. Dedupes paths internally.
+ */
+export async function getSignedImageUrls(paths, ttl = SIGNED_URL_TTL) {
+  const unique = [...new Set((paths ?? []).filter(Boolean))];
+  if (!unique.length) return {};
+  const { data, error } = await adminClient.storage
+    .from(BUCKET)
+    .createSignedUrls(unique, ttl);
+  if (error) {
+    console.warn(`[images] batch sign failed: ${error.message}`);
+    return {};
+  }
+  const map = {};
+  (data ?? []).forEach((d) => {
+    if (d?.path) map[d.path] = d.error ? null : (d.signedUrl ?? null);
+  });
+  return map;
+}
+
+/**
+ * Public URL for a path in the (public) `images` bucket. Pure string building —
+ * NO network call, and the URL never expires, so the client can cache it forever.
+ * Requires the bucket to be public (see migration make_images_bucket_public).
+ */
+export function getPublicImageUrl(storagePath) {
+  if (!storagePath) return null;
+  const { data } = adminClient.storage.from(BUCKET).getPublicUrl(storagePath);
+  return data?.publicUrl ?? null;
+}
+
+export function getPublicImageUrls(paths) {
+  const map = {};
+  [...new Set((paths ?? []).filter(Boolean))].forEach((p) => {
+    map[p] = getPublicImageUrl(p);
+  });
+  return map;
+}
+
+/**
  * End-to-end helper: fetch a Pexels photo for `query`, upload it, persist the
  * resulting storage path onto the recipe row, and return a 1h signed URL.
  *
@@ -99,7 +139,7 @@ export async function ensureRecipeImage(recipeId, query) {
   if (!existing) throw new Error(`recipe ${recipeId} not found`);
 
   if (existing.image_url) {
-    return getSignedImageUrl(existing.image_url);
+    return getPublicImageUrl(existing.image_url);
   }
 
   const photo = await fetchPexelsPhoto(query || existing.title);
@@ -107,7 +147,7 @@ export async function ensureRecipeImage(recipeId, query) {
 
   const storagePath = await uploadRecipeImage(recipeId, photo.buffer, photo.contentType);
   await adminClient.from('recipes').update({ image_url: storagePath }).eq('id', recipeId);
-  return getSignedImageUrl(storagePath);
+  return getPublicImageUrl(storagePath);
 }
 
 /**
@@ -128,7 +168,7 @@ export async function ensureFoodItemImage(foodItemId, query) {
   if (!existing) throw new Error(`food item ${foodItemId} not found`);
 
   if (existing.image_url) {
-    return getSignedImageUrl(existing.image_url);
+    return getPublicImageUrl(existing.image_url);
   }
 
   const photo = await fetchPexelsPhoto(query || existing.name);
@@ -136,5 +176,5 @@ export async function ensureFoodItemImage(foodItemId, query) {
 
   const storagePath = await uploadRecipeImage(foodItemId, photo.buffer, photo.contentType);
   await adminClient.from('food_items').update({ image_url: storagePath }).eq('id', foodItemId);
-  return getSignedImageUrl(storagePath);
+  return getPublicImageUrl(storagePath);
 }

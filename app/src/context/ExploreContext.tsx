@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Image } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { exploreService, ExploreRecipe } from '../services/exploreService';
 
 // Preload cache shared by Dashboard (warmer) and Explore (consumer).
@@ -43,7 +43,7 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
       // Phase 1 — deck/trending arrive first. UI can render cards now; the
       // signed image URLs stream in afterwards without blocking the swiper.
       const [deck, trend] = await Promise.all([
-        exploreService.fetchSwipeDeck(session, { limit: 20 }),
+        exploreService.fetchSwipeDeck(session, { limit: 30 }),
         exploreService.fetchTrending(session),
       ]);
       setCards(deck.cards);
@@ -51,16 +51,17 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
       setCardsLoaded(true);
       setLoading(false);
 
-      // Phase 2 — bulk-sign known image_urls. Sign-only, no Pexels round trip.
-      const ids = [
-        ...deck.cards.map((c) => c.id),
-        ...trend.items.map((t) => t.id),
-      ];
-      const map = await exploreService.fetchRecipeImagesBulk(session, ids);
+      // Images now arrive signed inline with the deck/trending payload — no extra
+      // round-trip. Seed the shared cache (so Explore reuses, never re-fetches)
+      // and warm the expo-image disk cache so the carousel paints instantly.
+      const map: Record<string, string | null> = {};
+      [...deck.cards, ...trend.items].forEach((c) => {
+        map[c.id] = c.imageUrl ?? null;
+      });
+      exploreService.seedImageCache(map);
       setImages(map);
-      // Warm native image cache so first paint in the swiper is instant.
       Object.values(map).forEach((url) => {
-        if (url) Image.prefetch(url).catch(() => { });
+        if (url) ExpoImage.prefetch(url, { cachePolicy: 'memory-disk' }).catch(() => {});
       });
       setImagesLoaded(true);
     } catch (err) {
