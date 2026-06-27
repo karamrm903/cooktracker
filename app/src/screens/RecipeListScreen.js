@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useRef, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,13 +11,13 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
-const IMG_BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
-const IMG_CACHE_POLICY = "memory-disk";
+
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { FONTS, FONT_SIZES, RADIUS, SHADOWS, SPACING } from "../constants/theme";
@@ -54,25 +54,9 @@ function getRating(name = "") {
   return (4.5 + Math.abs(hash % 5) / 10).toFixed(1);
 }
 
-function ListRecipeCard({ item, session, colors, t, saved, onSave }) {
-  const [img, setImg] = useState(null);
+function ListRecipeCard({ item, img, colors, t, saved, onSave }) {
   const [expanded, setExpanded] = useState(false);
   const rating = useMemo(() => getRating(item.name), [item.name]);
-
-  useEffect(() => {
-    let cancelled = false;
-    exploreService
-      .fetchRecipeImageCached(session, item.id, item.name)
-      .then((url) => {
-        if (cancelled || !url) return;
-        ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => {});
-        setImg(url);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [item.id, session]);
 
   const p = item.macros?.protein ?? 0;
   const cb = item.macros?.carbs ?? 0;
@@ -185,6 +169,53 @@ export default function RecipeListScreen({ navigation, route }) {
     message: "",
   });
 
+  const [visibleCount, setVisibleCount] = useState(20);
+  const displayItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
+
+  const handleEndReached = () => {
+    if (visibleCount < items.length) {
+      setVisibleCount(prev => prev + 20);
+    }
+  };
+
+  const [images, setImages] = useState({});
+  const [bulkImages, setBulkImages] = useState({});
+
+  const onViewableItemsChanged = useCallback(({ viewableItems: vItems }) => {
+    const ids = vItems.map((v) => v.item?.id).filter(id => id && images[id] === undefined && bulkImages[id] === undefined);
+    if (ids.length > 0) {
+      setBulkImages(prev => {
+        const next = { ...prev };
+        ids.forEach(id => next[id] = null);
+        return next;
+      });
+      exploreService.loadRecipeImages(session, ids).then((map) => {
+        setBulkImages(prev => ({ ...prev, ...map }));
+        setImages(prev => ({ ...prev, ...map }));
+        Object.entries(map).forEach(([id, url]) => {
+          if (url) {
+            ExpoImage.prefetch(url).catch(() => { });
+          } else {
+            const item = displayItems.find(c => c.id === id);
+            if (item) {
+              exploreService.fetchRecipeImage(session, id, item.name).then(fallbackUrl => {
+                exploreService.seedImageCache({ [id]: fallbackUrl });
+                setBulkImages(prev => ({ ...prev, [id]: fallbackUrl }));
+                setImages(prev => ({ ...prev, [id]: fallbackUrl }));
+                if (fallbackUrl) ExpoImage.prefetch(fallbackUrl).catch(() => { });
+              }).catch(() => { });
+            }
+          }
+        });
+      }).catch(() => { });
+    }
+  }, [images, bulkImages, session]);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 20,
+    minimumViewTime: 100,
+  }).current;
+
   function handleSaveRequest(recipe) {
     setSavePickerRecipe(recipe);
   }
@@ -253,22 +284,35 @@ export default function RecipeListScreen({ navigation, route }) {
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView
+      <FlatList
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-      >
-        {items.map((item) => (
+        data={displayItems}
+        keyExtractor={(item) => item.id}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        renderItem={({ item }) => (
           <ListRecipeCard
-            key={item.id}
             item={item}
-            session={session}
+            img={images[item.id] ?? null}
             colors={colors}
             t={t}
             saved={savedNames.has(item.name)}
             onSave={handleSaveRequest}
           />
-        ))}
-      </ScrollView>
+        )}
+        ListFooterComponent={
+          visibleCount < items.length ? (
+            <View style={{ paddingVertical: ms(24), alignItems: "center" }}>
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            </View>
+          ) : (
+            <View style={{ height: ms(40) }} />
+          )
+        }
+      />
 
       {/* Save → choose meal slot (same picker as Explore / SearchFood) */}
       <Modal
