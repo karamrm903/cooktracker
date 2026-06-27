@@ -31,7 +31,16 @@ import {
   moderateScale as ms,
   horizontalScale as hs,
   verticalScale as vs,
+  SCREEN_WIDTH,
 } from "../utils/responsive";
+
+// Hero "Today" card sizing — derived from screen WIDTH (not height) and clamped,
+// so the ring + side columns always fit: floor keeps it usable on small phones,
+// ceiling stops it ballooning on tablets. Utensils track the ring height.
+const HERO_RING_SIZE = Math.round(
+  Math.min(ms(168), Math.max(122, SCREEN_WIDTH * 0.42)),
+);
+const HERO_UTENSIL_HEIGHT = Math.round(Math.min(vs(140), HERO_RING_SIZE * 0.9));
 import { useMealLogs } from "../context/MealLogsContext";
 import { useTheme } from "../context/ThemeContext";
 import { profileService } from "../services/profile.service";
@@ -453,6 +462,8 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                         styles.heroSideValue,
                         { color: colors.secondary },
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                     >
                       {calorieGoal.toLocaleString()}
                     </Text>
@@ -478,7 +489,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                     textColor={colors.text}
                     subColor={colors.textMuted}
                     trackColor={colors.surfaceAlt}
-                    size={ms(160)}
+                    size={HERO_RING_SIZE}
                   />
                   <Image
                     source={plantImg}
@@ -521,6 +532,8 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                     </Text>
                     <Text
                       style={[styles.heroSideValue, { color: colors.primary }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                     >
                       {totalCalories.toLocaleString()}
                     </Text>
@@ -556,6 +569,8 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                     </Text>
                     <Text
                       style={[styles.macroColValue, { color: colors.text }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                     >
                       {m.value}
                       <Text style={{ color: colors.textMuted }}>
@@ -1021,24 +1036,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: SPACING.xs,
     paddingVertical: ms(20),
+    overflow: "hidden",
   },
   heroRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
+  // Each side takes an equal share of the space left around the centred ring,
+  // so the columns stay symmetric and never collide with it on narrow screens.
   heroSideRow: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     position: "relative",
   },
   heroSideTextCol: {
+    flex: 1,
+    minWidth: 0,
     alignItems: "center",
-    gap: ms(12),
+    gap: ms(10),
   },
   heroStar: { width: ms(20), height: ms(20) },
-  heroUtensilFolk: { width: ms(46), height: vs(150) },
-  heroUtensil: { width: ms(52), height: vs(150) },
+  heroUtensilFolk: { width: ms(42), height: HERO_UTENSIL_HEIGHT },
+  heroUtensil: { width: ms(48), height: HERO_UTENSIL_HEIGHT },
   heroSideLabel: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.regular },
   heroSideValue: { fontSize: ms(16), fontWeight: FONTS.bold, marginTop: 1 },
   heroSideUnit: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.regular },
