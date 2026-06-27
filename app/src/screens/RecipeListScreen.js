@@ -82,8 +82,6 @@ function ListRecipeCard({ item, img, colors, t, saved, onSave }) {
             source={{ uri: img }}
             style={styles.thumb}
             contentFit="cover"
-            cachePolicy={IMG_CACHE_POLICY}
-            placeholder={{ blurhash: IMG_BLURHASH }}
             transition={150}
           />
         ) : (
@@ -225,6 +223,20 @@ export default function RecipeListScreen({ navigation, route }) {
     if (!recipe || savingMeal || !addMeal) return;
     setSavingMeal(true);
     setSavingType(mealType);
+
+    let dbId = recipe._dbId ?? null;
+    if (!dbId && recipe.id && recipe.id.toString().length < 20) {
+      dbId = recipe.id;
+    }
+    if (!dbId) {
+      try {
+        const saved = await exploreService.saveRecipe(session, recipe, null);
+        dbId = saved.id;
+      } catch (err) {
+        console.warn("[RecipeListScreen] saveRecipe failed:", err?.message ?? err);
+      }
+    }
+
     const now = new Date();
     const p = recipe.macros?.protein ?? 0;
     const c = recipe.macros?.carbs ?? 0;
@@ -243,7 +255,7 @@ export default function RecipeListScreen({ navigation, route }) {
       dateKey: now.toISOString().slice(0, 10),
       source: "recipe",
       emoji: recipe.emoji ?? null,
-      recipeId: recipe._dbId ?? recipe.id,
+      recipeId: dbId ?? recipe.id,
     };
     try {
       await addMeal(meal);
