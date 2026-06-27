@@ -1,26 +1,30 @@
-import { useCallback, useEffect } from 'react';
-import { AppState } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect } from "react";
+import { AppState } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   setSubscription,
   setSubscriptionLoading,
   setSubscriptionSynced,
   SubscriptionStatus,
   SubscriptionPlan,
-} from '../store/slices/subscriptionSlice';
-import { RootState } from '../store';
-import { profileService } from '../services/profile.service';
-import { supabase } from '../lib/supabase';
-import Purchases from 'react-native-purchases';
-import { RC_ENTITLEMENT_ID } from '../config/revenuecat';
+} from "../store/slices/subscriptionSlice";
+import { RootState } from "../store";
+import { profileService } from "../services/profile.service";
+import { supabase } from "../lib/supabase";
+import Purchases from "react-native-purchases";
+import { RC_ENTITLEMENT_ID } from "../config/revenuecat";
 
-const CACHE_KEY = '@nutrily_sub_cache';
+const CACHE_KEY = "@nutrily_sub_cache";
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
 
-function resolveIsSubscribed(status: SubscriptionStatus, expiresAt: string | null): boolean {
-  if (status === 'active' || status === 'trial') return true;
-  if (status === 'cancelled' && expiresAt && new Date(expiresAt) > new Date()) return true;
+function resolveIsSubscribed(
+  status: SubscriptionStatus,
+  expiresAt: string | null,
+): boolean {
+  if (status === "active" || status === "trial") return true;
+  if (status === "cancelled" && expiresAt && new Date(expiresAt) > new Date())
+    return true;
   return false;
 }
 
@@ -29,9 +33,15 @@ function resolveIsSubscribed(status: SubscriptionStatus, expiresAt: string | nul
  * that passes (or it's missing) it's effectively 'expired'. Without this the UI
  * would show "Premium (Cancels Soon)" for a lapsed sub while access is denied.
  */
-function resolveEffectiveStatus(status: SubscriptionStatus, expiresAt: string | null): SubscriptionStatus {
-  if (status === 'cancelled' && !(expiresAt && new Date(expiresAt) > new Date())) {
-    return 'expired';
+function resolveEffectiveStatus(
+  status: SubscriptionStatus,
+  expiresAt: string | null,
+): SubscriptionStatus {
+  if (
+    status === "cancelled" &&
+    !(expiresAt && new Date(expiresAt) > new Date())
+  ) {
+    return "expired";
   }
   return status;
 }
@@ -57,7 +67,7 @@ function useSyncFn() {
     try {
       const profile: any = await profileService.getProfile(session);
 
-      let status: SubscriptionStatus = profile?.subscription_status ?? 'free';
+      let status: SubscriptionStatus = profile?.subscription_status ?? "free";
       let expiresAt: string | null = profile?.subscription_expires_at ?? null;
       const trialEndsAt: string | null = profile?.trial_ends_at ?? null;
       let plan: SubscriptionPlan = null;
@@ -73,29 +83,40 @@ function useSyncFn() {
           // A cancelled-but-not-yet-expired sub is still an *active* RC
           // entitlement with willRenew=false. Map that to 'cancelled' so it
           // doesn't overwrite the BE 'cancelled' status back to 'active'.
-          status = ent.periodType === 'TRIAL'
-            ? 'trial'
-            : ent.willRenew
-            ? 'active'
-            : 'cancelled';
-          const activeSub = (ci.activeSubscriptions[0] ?? '').toLowerCase();
-          plan = activeSub.includes('weekly')
-            ? 'weekly'
-            : activeSub.includes('monthly')
-            ? 'monthly'
-            : 'yearly';
+          status =
+            ent.periodType === "TRIAL"
+              ? "trial"
+              : ent.willRenew
+                ? "active"
+                : "cancelled";
+          const activeSub = (ci.activeSubscriptions[0] ?? "").toLowerCase();
+          plan = activeSub.includes("weekly")
+            ? "weekly"
+            : activeSub.includes("monthly")
+              ? "monthly"
+              : "yearly";
           if (ent.expirationDate) expiresAt = ent.expirationDate;
         }
       } catch (rcErr: any) {
-        console.warn('[useSubscription] RC sync failed:', rcErr.message);
+        console.warn("[useSubscription] RC sync failed:", rcErr.message);
       }
 
-      const payload = { status, expiresAt, trialEndsAt, plan, recipeImportCount, searchCountToday };
+      const payload = {
+        status,
+        expiresAt,
+        trialEndsAt,
+        plan,
+        recipeImportCount,
+        searchCountToday,
+      };
       dispatch(setSubscription(payload));
       dispatch(setSubscriptionSynced(true));
-      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ ...payload, cachedAt: Date.now() }));
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ ...payload, cachedAt: Date.now() }),
+      );
     } catch (err: any) {
-      console.warn('[useSubscription] profile sync failed:', err.message);
+      console.warn("[useSubscription] profile sync failed:", err.message);
       // Network failure — restore the last good cached value rather than
       // downgrading the user to 'free'.
       try {
@@ -125,7 +146,7 @@ export function useSubscription() {
 
   return {
     isSubscribed: resolveIsSubscribed(sub.status, sub.expiresAt),
-    isTrial: sub.status === 'trial',
+    isTrial: sub.status === "trial",
     // Display status — downgrades a lapsed 'cancelled' to 'expired' so labels
     // match access (isSubscribed already accounts for expiry).
     status: resolveEffectiveStatus(sub.status, sub.expiresAt),
@@ -171,8 +192,8 @@ export function useSubscriptionSync() {
     sync();
 
     // Re-sync when the app returns to the foreground (backstop + reconnect).
-    const appStateListener = AppState.addEventListener('change', (state) => {
-      if (state === 'active') sync();
+    const appStateListener = AppState.addEventListener("change", (state) => {
+      if (state === "active") sync();
     });
 
     // Supabase Realtime: push the user's `users` row changes (written by the
@@ -183,17 +204,26 @@ export function useSubscriptionSync() {
     if (userId && accessToken) {
       // Authorize Realtime with the user's JWT so RLS-filtered changes are
       // delivered for this user's row.
-      try { supabase.realtime.setAuth(accessToken); } catch {}
+      try {
+        supabase.realtime.setAuth(accessToken);
+      } catch {}
 
       channel = supabase
         .channel(`user-sub-${userId}`)
         .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
-          () => { sync(); },
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "users",
+            filter: `id=eq.${userId}`,
+          },
+          () => {
+            sync();
+          },
         )
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') sync();
+          if (status === "SUBSCRIBED") sync();
         });
     }
 

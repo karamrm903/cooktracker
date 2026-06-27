@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
-import { SPACING, RADIUS, FONTS, SHADOWS } from "../constants/theme";
+import { SPACING, RADIUS, FONTS, FONT_SIZES, SHADOWS } from "../constants/theme";
+import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
 
 const SCREEN_BG = "#FCF7F3";
 const calendarImg = require("../../assets/pngs/calenderPlan.png");
@@ -100,7 +101,7 @@ function OptionRow({ option, isSelected, onSelect, colors }) {
       <View style={[styles.optionRow, { borderBottomColor: colors.border }]}>
         <Ionicons
           name="add-circle-outline"
-          size={18}
+          size={ms(18)}
           color={colors.textMuted}
         />
         <Text
@@ -187,7 +188,7 @@ function MacroRow({ img, tint, label, value, goal, color, colors }) {
             /{goal != null ? `${goal}g` : "N/A"}
           </Text>
         </Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={ms(16)} color={colors.textMuted} />
       </View>
       <View style={[styles.macroTrack, { backgroundColor: colors.surfaceAlt }]}>
         <View
@@ -234,7 +235,7 @@ function TargetStat({
             resizeMode="contain"
           />
         ) : (
-          <Ionicons name={ionIcon} size={18} color={ionColor} />
+          <Ionicons name={ionIcon} size={ms(18)} color={ionColor} />
         )}
       </View>
       <Text style={[styles.targetStatValue, { color: colors.text }]}>
@@ -460,7 +461,7 @@ export default function PlanScreen({ navigation }) {
           ]}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
+          <Ionicons name="chevron-back" size={ms(20)} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: colors.text }]}>
           {t("plan.title")}
@@ -475,7 +476,7 @@ export default function PlanScreen({ navigation }) {
             ]}
             activeOpacity={0.7}
           >
-            <Ionicons name="reload" size={18} color={colors.text} />
+            <Ionicons name="reload" size={ms(18)} color={colors.text} />
           </TouchableOpacity>
         ) : (
           <View style={styles.backBtn} />
@@ -728,81 +729,81 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
+    paddingVertical: ms(12),
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
     alignItems: "center",
     justifyContent: "center",
   },
-  resetBtn: { width: 36, alignItems: "flex-end" },
-  resetText: { fontSize: 13, fontWeight: FONTS.medium },
-  topTitle: { fontSize: 16, fontWeight: FONTS.bold, letterSpacing: -0.3 },
+  resetBtn: { width: ms(36), alignItems: "flex-end" },
+  resetText: { fontSize: FONT_SIZES.small, fontWeight: FONTS.medium },
+  topTitle: { fontSize: ms(16), fontWeight: FONTS.bold, letterSpacing: -0.3 },
 
   decorLeafTop: {
     position: "absolute",
-    right: -10,
-    top: 70,
-    width: 150,
-    height: 150,
+    right: -ms(10),
+    top: vs(70),
+    width: ms(150),
+    height: ms(150),
     opacity: 0.7,
   },
   decorLeafBottom: {
     position: "absolute",
-    left: -30,
-    bottom: 120,
-    width: 130,
-    height: 130,
+    left: -ms(30),
+    bottom: vs(120),
+    width: ms(130),
+    height: ms(130),
     opacity: 0.6,
     transform: [{ scaleX: -1 }],
   },
   decorGingham: {
     position: "absolute",
     right: 0,
-    bottom: 90,
-    width: 130,
-    height: 130,
+    bottom: vs(90),
+    width: ms(130),
+    height: ms(130),
     opacity: 0.8,
   },
 
   datePillsBar: {
     flexDirection: "row",
-    gap: 8,
+    gap: SPACING.sm,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 10,
+    paddingVertical: ms(10),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   datePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(7),
     borderRadius: RADIUS.full,
   },
-  datePillText: { fontSize: 13, fontWeight: FONTS.medium },
+  datePillText: { fontSize: FONT_SIZES.small, fontWeight: FONTS.medium },
 
   content: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-    paddingBottom: 100,
+    paddingBottom: vs(100),
   },
 
-  emptyState: { alignItems: "center", gap: 16, paddingTop: 24 },
+  emptyState: { alignItems: "center", gap: SPACING.md, paddingTop: SPACING.lg },
   iconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: ms(96),
+    height: ms(96),
+    borderRadius: ms(48),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
-  heroIcon: { width: 40, height: 40 },
-  emptyTitle: { fontSize: 28, fontWeight: FONTS.bold, letterSpacing: -0.4 },
+  heroIcon: { width: ms(40), height: ms(40) },
+  emptyTitle: { fontSize: FONT_SIZES.h2, fontWeight: FONTS.bold, letterSpacing: -0.4 },
   emptySubtitle: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     textAlign: "center",
-    lineHeight: 22,
-    maxWidth: 320,
+    lineHeight: ms(22),
+    maxWidth: ms(320),
   },
 
   targetsCard: {
@@ -810,52 +811,52 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     padding: SPACING.md,
-    gap: 16,
-    marginTop: 8,
+    gap: SPACING.md,
+    marginTop: SPACING.sm,
   },
   targetsTitle: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: FONTS.semibold,
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
   targetsRow: { flexDirection: "row", justifyContent: "space-between" },
-  targetStat: { alignItems: "center", flex: 1, gap: 6 },
+  targetStat: { alignItems: "center", flex: 1, gap: ms(6) },
   targetIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom: ms(2),
   },
-  targetIconImg: { width: 22, height: 22 },
-  targetStatValue: { fontSize: 16, fontWeight: FONTS.bold },
-  targetStatUnit: { fontSize: 11, fontWeight: FONTS.regular },
-  targetStatLabel: { fontSize: 11 },
+  targetIconImg: { width: ms(22), height: ms(22) },
+  targetStatValue: { fontSize: ms(16), fontWeight: FONTS.bold },
+  targetStatUnit: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.regular },
+  targetStatLabel: { fontSize: FONT_SIZES.caption },
 
   sourceBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: ms(7),
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(9),
     borderRadius: RADIUS.md,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   sourceText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: FONTS.medium,
-    lineHeight: 17,
+    lineHeight: ms(17),
   },
 
   summaryCard: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     padding: SPACING.md,
-    marginBottom: 28,
-    gap: 18,
+    marginBottom: ms(28),
+    gap: ms(18),
   },
   summaryHeader: {
     flexDirection: "row",
@@ -863,50 +864,50 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: FONTS.semibold,
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
-  caloriesValue: { fontSize: 26, fontWeight: FONTS.bold },
-  caloriesTarget: { fontSize: 14, fontWeight: FONTS.regular },
-  macrosGrid: { gap: 18 },
+  caloriesValue: { fontSize: ms(26), fontWeight: FONTS.bold },
+  caloriesTarget: { fontSize: FONT_SIZES.label, fontWeight: FONTS.regular },
+  macrosGrid: { gap: ms(18) },
 
-  macroItem: { gap: 8 },
+  macroItem: { gap: SPACING.sm },
   macroTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: ms(10),
   },
   macroIconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: ms(30),
+    height: ms(30),
+    borderRadius: ms(15),
     alignItems: "center",
     justifyContent: "center",
   },
-  macroIconImg: { width: 16, height: 16 },
-  macroLabel: { flex: 1, fontSize: 14, fontWeight: FONTS.medium },
-  macroValue: { fontSize: 14, fontWeight: FONTS.bold },
-  macroGoal: { fontWeight: FONTS.regular, fontSize: 13 },
+  macroIconImg: { width: ms(16), height: ms(16) },
+  macroLabel: { flex: 1, fontSize: FONT_SIZES.label, fontWeight: FONTS.medium },
+  macroValue: { fontSize: FONT_SIZES.label, fontWeight: FONTS.bold },
+  macroGoal: { fontWeight: FONTS.regular, fontSize: FONT_SIZES.small },
   macroTrack: {
-    height: 5,
-    borderRadius: 3,
+    height: ms(5),
+    borderRadius: ms(3),
     overflow: "hidden",
-    marginLeft: 40,
+    marginLeft: ms(40),
   },
-  macroFill: { height: "100%", borderRadius: 3 },
+  macroFill: { height: "100%", borderRadius: ms(3) },
 
-  slotSection: { marginBottom: 22 },
+  slotSection: { marginBottom: ms(22) },
   slotHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
-    paddingHorizontal: 2,
+    marginBottom: ms(10),
+    paddingHorizontal: ms(2),
   },
-  slotLabel: { fontSize: 18, fontWeight: FONTS.bold, letterSpacing: -0.3 },
-  slotTarget: { fontSize: 13 },
+  slotLabel: { fontSize: ms(18), fontWeight: FONTS.bold, letterSpacing: -0.3 },
+  slotTarget: { fontSize: FONT_SIZES.small },
 
   optionsCard: {
     borderRadius: RADIUS.lg,
@@ -917,35 +918,35 @@ const styles = StyleSheet.create({
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingVertical: ms(14),
+    paddingHorizontal: SPACING.md,
+    gap: ms(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: ms(20),
+    height: ms(20),
+    borderRadius: ms(10),
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
   },
-  radioDot: { width: 9, height: 9, borderRadius: 5 },
+  radioDot: { width: ms(9), height: ms(9), borderRadius: ms(5) },
   optionInfo: { flex: 1 },
-  optionName: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 4 },
-  optionMacros: { fontSize: 12 },
+  optionName: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: SPACING.xs },
+  optionMacros: { fontSize: ms(12) },
   optionRight: { alignItems: "flex-end" },
-  optionCal: { fontSize: 18, fontWeight: FONTS.bold },
-  optionCalLabel: { fontSize: 11, fontWeight: FONTS.regular },
+  optionCal: { fontSize: ms(18), fontWeight: FONTS.bold },
+  optionCalLabel: { fontSize: FONT_SIZES.caption, fontWeight: FONTS.regular },
 
   bottomBar: {
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
+    paddingVertical: ms(14),
   },
   saveBtn: {
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
     borderRadius: RADIUS.full,
     alignItems: "center",
   },
-  saveBtnText: { fontSize: 16, fontWeight: FONTS.bold },
+  saveBtnText: { fontSize: ms(16), fontWeight: FONTS.bold },
 });

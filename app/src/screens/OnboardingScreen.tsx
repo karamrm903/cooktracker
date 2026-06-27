@@ -14,6 +14,8 @@ import { useTranslation } from "react-i18next";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import SafeAreaViewCustom from "../components/atoms/SafeAreaViewCustom";
 import { BRAND_COLOR, DEFAULT_BG } from "../styles/colors";
+import { FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
+import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
 
 type RootStackParamList = {
   Welcome: undefined;
@@ -104,7 +106,7 @@ export default function OnboardingScreen({ navigation }: Props) {
               </View>
               <View
                 style={{
-                  paddingHorizontal: 28,
+                  paddingHorizontal: ms(28),
                   width: "100%",
                 }}
               >
@@ -155,17 +157,17 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingHorizontal: ms(20),
+    paddingTop: SPACING.xs,
   },
   skipBtn: {
-    paddingHorizontal: 22,
-    paddingVertical: 10,
+    paddingHorizontal: ms(22),
+    paddingVertical: ms(10),
     backgroundColor: SKIP_BG,
-    borderRadius: 999,
+    borderRadius: RADIUS.full,
   },
   skipText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: "600",
     color: TITLE_COLOR,
   },
@@ -194,50 +196,50 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
-    gap: 24,
+    padding: SPACING.md,
+    gap: SPACING.lg,
   },
   stepBadge: {
     backgroundColor: STEP_BADGE_BG,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 999,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(6),
+    borderRadius: RADIUS.full,
   },
   stepText: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: "600",
     color: STEP_TEXT,
   },
 
   title: {
-    fontSize: 24,
+    fontSize: ms(24),
     fontWeight: "800",
     color: TITLE_COLOR,
     textAlign: "center",
     letterSpacing: -0.4,
-    lineHeight: 36,
-    marginBottom: 16,
+    lineHeight: ms(36),
+    marginBottom: SPACING.md,
   },
   description: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     color: STEP_TEXT,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: ms(24),
     fontWeight: "400",
   },
 
   dots: {
     flexDirection: "row",
-    gap: 8,
+    gap: SPACING.sm,
     width: "100%",
     justifyContent: "center",
-    marginBottom: 100,
-    marginTop: 8,
+    marginBottom: vs(100),
+    marginTop: SPACING.sm,
   },
   dot: {
-    height: 8,
-    width: 8,
-    borderRadius: 4,
+    height: ms(8),
+    width: ms(8),
+    borderRadius: ms(4),
   },
   dotActive: {
     backgroundColor: BRAND_COLOR,
@@ -249,17 +251,17 @@ const styles = StyleSheet.create({
   btn: {
     width: "90%",
     backgroundColor: BRAND_COLOR,
-    paddingVertical: 18,
-    borderRadius: 999,
+    paddingVertical: ms(18),
+    borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
     alignSelf: "center",
     position: "absolute",
-    bottom: 32,
+    bottom: vs(32),
   },
   btnText: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.2,

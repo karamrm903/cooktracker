@@ -16,6 +16,11 @@ export interface ExploreRecipe {
   estimatedGrams: number;
 }
 
+// In-memory signed-URL cache. Module scope → lives for the whole app session
+// and resets on relaunch, so revisiting Explore / See-All within one launch
+// never re-signs the same recipe image.
+const _recipeImageUrlCache = new Map<string, string | null>();
+
 export const exploreService = {
   getConfig: async (): Promise<{ searchResultsCount: number }> => {
     const response = await fetch(`${getBaseUrl()}/api/config`);
@@ -63,6 +68,21 @@ export const exploreService = {
     if (!res.ok) return null;
     const data = await res.json().catch(() => ({}));
     return data?.signedUrl ?? null;
+  },
+
+  // Session-cached variant of fetchRecipeImage — resolves once per recipe per
+  // app launch. Used by lists that remount on focus/navigation.
+  fetchRecipeImageCached: async (
+    session: any,
+    recipeId: string,
+    q?: string,
+  ): Promise<string | null> => {
+    if (_recipeImageUrlCache.has(recipeId)) {
+      return _recipeImageUrlCache.get(recipeId) ?? null;
+    }
+    const url = await exploreService.fetchRecipeImage(session, recipeId, q);
+    _recipeImageUrlCache.set(recipeId, url);
+    return url;
   },
 
   // POST /api/recipes/images — bulk sign for preload (dashboard → explore handoff).

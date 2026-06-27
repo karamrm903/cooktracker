@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import { useMealLogs } from "../context/MealLogsContext";
 import CommonAlertModal from "../components/CommonModal";
-import { FONTS, RADIUS, SPACING, SHADOWS } from "../constants/theme";
+import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from "../constants/theme";
+import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
 
 const SCREEN_BG = "#FCF7F3";
 
@@ -151,7 +152,7 @@ export default function LogMealScreen({ navigation, route }) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="close" size={20} color={colors.text} />
+          <Ionicons name="close" size={ms(20)} color={colors.text} />
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -379,113 +380,113 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
 
   // Decor
-  leafTopLeft: { position: "absolute", left: -45, top: 70, width: 130, height: 130, opacity: 0.7 },
+  leafTopLeft: { position: "absolute", left: -ms(45), top: vs(70), width: ms(130), height: ms(130), opacity: 0.7 },
   leafMidRight: {
     position: "absolute",
-    right: -45,
+    right: -ms(45),
     top: "42%",
-    width: 120,
-    height: 120,
+    width: ms(120),
+    height: ms(120),
     opacity: 0.65,
     transform: [{ scaleX: -1 }],
   },
-  ginghamCorner: { position: "absolute", right: 0, bottom: 0, width: 140, height: 140, opacity: 0.85 },
+  ginghamCorner: { position: "absolute", right: 0, bottom: 0, width: ms(140), height: ms(140), opacity: 0.85 },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(12),
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: { fontSize: 16, fontWeight: FONTS.semibold },
+  headerTitle: { fontSize: ms(16), fontWeight: FONTS.semibold },
 
-  content: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 180 },
+  content: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: ms(180) },
 
-  hero: { alignItems: "center", marginBottom: 28 },
+  hero: { alignItems: "center", marginBottom: ms(28) },
   heroIconBox: {
-    width: 64,
-    height: 64,
+    width: ms(64),
+    height: ms(64),
     borderRadius: RADIUS.lg,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: ms(14),
   },
-  heroIcon: { width: 40, height: 40 },
-  heroTitle: { fontSize: 28, fontWeight: FONTS.bold, letterSpacing: -0.4, marginBottom: 6 },
-  heroSubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  heroIcon: { width: ms(40), height: ms(40) },
+  heroTitle: { fontSize: FONT_SIZES.h2, fontWeight: FONTS.bold, letterSpacing: -0.4, marginBottom: ms(6) },
+  heroSubtitle: { fontSize: FONT_SIZES.label, textAlign: "center", lineHeight: ms(20) },
 
-  section: { marginBottom: 20 },
-  row: { flexDirection: "row", gap: 12, marginBottom: 20 },
+  section: { marginBottom: ms(20) },
+  row: { flexDirection: "row", gap: ms(12), marginBottom: ms(20) },
   half: { flex: 1 },
 
-  label: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 10 },
+  label: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: ms(10) },
 
   input: {
     borderWidth: 1,
     borderRadius: RADIUS.lg,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(14),
+    fontSize: FONT_SIZES.body,
   },
 
-  helperText: { marginTop: 8, fontSize: 12 },
+  helperText: { marginTop: SPACING.sm, fontSize: ms(12) },
 
-  typeRow: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  typeRow: { flexDirection: "row", flexWrap: "wrap", gap: ms(12) },
   typeChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: SPACING.sm,
     width: "47%",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(12),
     borderRadius: RADIUS.full,
     borderWidth: 1.5,
   },
-  typeIcon: { width: 18, height: 18 },
-  typeText: { fontSize: 14, fontWeight: FONTS.medium },
+  typeIcon: { width: ms(18), height: ms(18) },
+  typeText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.medium },
 
-  previewLabel: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 10 },
-  previewCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: 16 },
+  previewLabel: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: ms(10) },
+  previewCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md },
   previewRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: ms(14),
   },
-  previewMain: { fontSize: 22, fontWeight: FONTS.bold },
-  previewSub: { fontSize: 14, fontWeight: FONTS.medium },
+  previewMain: { fontSize: ms(22), fontWeight: FONTS.bold },
+  previewSub: { fontSize: FONT_SIZES.label, fontWeight: FONTS.medium },
 
-  previewBar: { height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 16 },
+  previewBar: { height: ms(6), borderRadius: ms(3), overflow: "hidden", marginBottom: SPACING.md },
   previewBarFill: { flex: 1, flexDirection: "row" },
 
-  previewMacroItem: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
-  previewDot: { width: 9, height: 9, borderRadius: 4.5, marginRight: 10 },
-  previewMacroLabel: { fontSize: 14, flex: 1 },
-  previewMacroValue: { fontSize: 14, fontWeight: FONTS.bold },
+  previewMacroItem: { flexDirection: "row", alignItems: "center", paddingVertical: ms(6) },
+  previewDot: { width: ms(9), height: ms(9), borderRadius: ms(4.5), marginRight: ms(10) },
+  previewMacroLabel: { fontSize: FONT_SIZES.label, flex: 1 },
+  previewMacroValue: { fontSize: FONT_SIZES.label, fontWeight: FONTS.bold },
 
   bottomBar: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: ms(12),
+    paddingBottom: SPACING.lg,
     backgroundColor: SCREEN_BG,
   },
   saveBtn: {
     borderRadius: RADIUS.full,
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  saveBtnText: { fontSize: 16, fontWeight: FONTS.bold, color: "#FFFFFF" },
+  saveBtnText: { fontSize: ms(16), fontWeight: FONTS.bold, color: "#FFFFFF" },
 });

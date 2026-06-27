@@ -12,7 +12,8 @@ import { useSelector } from 'react-redux';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from '../context/LanguageContext';
 import { LANGUAGE_META } from '../i18n';
-import { FONTS, RADIUS } from '../constants/theme';
+import { FONTS, FONT_SIZES, RADIUS, SPACING } from '../constants/theme';
+import { moderateScale as ms } from '../utils/responsive';
 import { profileService } from '../services/profile.service';
 
 interface Props {
@@ -107,10 +108,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -118,60 +119,60 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: ms(36),
+    height: ms(4),
+    borderRadius: ms(2),
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 20,
+    marginTop: ms(12),
+    marginBottom: ms(20),
   },
   title: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: FONTS.bold as any,
     letterSpacing: -0.4,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.regular as any,
-    marginBottom: 20,
+    marginBottom: ms(20),
   },
   options: {
-    gap: 10,
+    gap: ms(10),
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 16,
+    gap: ms(14),
+    padding: SPACING.md,
     borderRadius: RADIUS.lg,
   },
   langCode: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   langCodeText: {
-    fontSize: 11,
+    fontSize: FONT_SIZES.caption,
     fontWeight: '700' as any,
     letterSpacing: 0.5,
   },
   optionText: {
     flex: 1,
-    gap: 2,
+    gap: ms(2),
   },
   nativeLabel: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.semibold as any,
   },
   englishLabel: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: FONTS.regular as any,
   },
   checkmark: {
-    fontSize: 18,
+    fontSize: ms(18),
     fontWeight: FONTS.bold as any,
   },
 });

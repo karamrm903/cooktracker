@@ -17,7 +17,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { useTheme } from "../context/ThemeContext";
-import { FONTS, RADIUS, SHADOWS } from "../constants/theme";
+import { FONTS, FONT_SIZES, RADIUS, SHADOWS, SPACING } from "../constants/theme";
+import {
+  moderateScale as ms,
+  verticalScale as vs,
+} from "../utils/responsive";
 
 const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
 const ginghamImg = require("../../assets/webp/UserInfoBottom.webp");
@@ -64,9 +68,9 @@ function VerifiedBadge() {
   return (
     <Ionicons
       name="shield-checkmark"
-      size={15}
+      size={ms(15)}
       color="#22C55E"
-      style={{ marginLeft: 4 }}
+      style={{ marginLeft: ms(4) }}
     />
   );
 }
@@ -106,7 +110,7 @@ function FoodRow({ item, onPress, colors }: FoodRowProps) {
         onPress={() => onPress(item)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons name="add" size={20} color={colors.text} />
+        <Ionicons name="add" size={ms(20)} color={colors.text} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -276,7 +280,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="close" size={22} color={colors.text} />
+          <Ionicons name="close" size={ms(22)} color={colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -287,10 +291,10 @@ export default function SearchFoodScreen({ navigation, route }: any) {
           <Text style={[styles.mealPickerText, { color: colors.text }]}>
             {MEAL_LABELS[mealType]}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={colors.text} />
+          <Ionicons name="chevron-down" size={ms(16)} color={colors.text} />
         </TouchableOpacity>
 
-        <View style={{ width: 36 }} />
+        <View style={{ width: ms(36) }} />
       </View>
 
       {/* Search bar */}
@@ -303,9 +307,9 @@ export default function SearchFoodScreen({ navigation, route }: any) {
         >
           <Ionicons
             name="search"
-            size={18}
+            size={ms(18)}
             color={colors.textMuted}
-            style={{ marginRight: 8 }}
+            style={{ marginRight: ms(8) }}
           />
           <TextInput
             ref={inputRef}
@@ -329,7 +333,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
             >
               <Ionicons
                 name="close-circle"
-                size={18}
+                size={ms(18)}
                 color={colors.textMuted}
               />
             </TouchableOpacity>
@@ -421,7 +425,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                 <ActivityIndicator
                   size="small"
                   color={colors.textMuted}
-                  style={{ marginTop: 16 }}
+                  style={{ marginTop: ms(16) }}
                 />
               )}
               {suggestions.map((sug) => (
@@ -433,9 +437,9 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                 >
                   <Ionicons
                     name="search-outline"
-                    size={16}
+                    size={ms(16)}
                     color={colors.textMuted}
-                    style={{ marginRight: 12 }}
+                    style={{ marginRight: ms(12) }}
                   />
                   <Text style={[styles.suggText, { color: colors.text }]}>
                     {sug}
@@ -454,7 +458,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                       { backgroundColor: colors.info ?? "#3B82F6" },
                     ]}
                   >
-                    <Ionicons name="search" size={14} color="#fff" />
+                    <Ionicons name="search" size={ms(14)} color="#fff" />
                   </View>
                   <Text
                     style={[
@@ -494,7 +498,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                     <View style={styles.loadingWrap}>
                       <Ionicons
                         name="alert-circle-outline"
-                        size={32}
+                        size={ms(32)}
                         color={colors.error}
                       />
                       <Text
@@ -530,7 +534,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                             >
                               <Ionicons
                                 name="shield-checkmark"
-                                size={11}
+                                size={ms(11)}
                                 color={colors.textSecondary}
                               />
                               <Text
@@ -608,7 +612,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
             <View style={styles.loadingWrap}>
               <Ionicons
                 name="alert-circle-outline"
-                size={32}
+                size={ms(32)}
                 color={colors.error}
               />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
@@ -619,7 +623,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
             <View style={styles.emptyState}>
               <Ionicons
                 name="book-outline"
-                size={48}
+                size={ms(48)}
                 color={colors.textMuted}
               />
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
@@ -639,7 +643,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                   colors={colors}
                 />
               )}
-              contentContainerStyle={[styles.listContent, { paddingTop: 12 }]}
+              contentContainerStyle={[styles.listContent, { paddingTop: ms(12) }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             />
@@ -688,7 +692,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                   {MEAL_LABELS[mt]}
                 </Text>
                 {mt === mealType && (
-                  <Ionicons name="checkmark" size={16} color={colors.text} />
+                  <Ionicons name="checkmark" size={ms(16)} color={colors.text} />
                 )}
               </TouchableOpacity>
             ))}
@@ -715,55 +719,55 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(12),
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
     alignItems: "center",
     justifyContent: "center",
   },
   mealPicker: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: ms(4),
   },
   mealPickerText: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.semibold,
   },
   searchBarWrap: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(10),
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(10),
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     padding: 0,
   },
   tabRow: {
     flexDirection: "row",
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    marginTop: 12,
+    paddingHorizontal: SPACING.md,
+    marginTop: ms(12),
   },
   tab: {
-    marginRight: 20,
-    paddingBottom: 10,
+    marginRight: ms(20),
+    paddingBottom: ms(10),
     position: "relative",
   },
   tabText: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.medium,
   },
   tabIndicator: {
@@ -771,69 +775,69 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 2,
-    borderRadius: 1,
+    height: ms(2),
+    borderRadius: ms(1),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.bold,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 10,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: ms(10),
   },
   suggRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(14),
   },
-  suggText: { fontSize: 15 },
+  suggText: { fontSize: FONT_SIZES.body },
   searchAllRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: ms(14),
+    gap: ms(12),
   },
   searchAllIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: ms(28),
+    height: ms(28),
+    borderRadius: ms(14),
     alignItems: "center",
     justifyContent: "center",
   },
   searchAllText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: FONTS.medium,
   },
-  listContent: { paddingBottom: 40 },
+  listContent: { paddingBottom: ms(40) },
   resultsSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingRight: 16,
-    marginTop: 16,
-    marginBottom: 10,
+    paddingRight: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: ms(10),
   },
   onlyBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: ms(4),
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(5),
     borderRadius: RADIUS.full,
     borderWidth: 1,
   },
   onlyBadgeText: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: FONTS.medium,
   },
   foodRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 14,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    padding: ms(14),
     borderRadius: RADIUS.lg,
     borderWidth: 1,
   },
@@ -843,82 +847,82 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   foodName: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: FONTS.semibold,
   },
   foodMeta: {
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: FONT_SIZES.small,
+    marginTop: ms(2),
   },
   addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
   },
   loadingWrap: {
     alignItems: "center",
-    paddingTop: 48,
-    gap: 12,
+    paddingTop: ms(48),
+    gap: ms(12),
   },
-  loadingText: { fontSize: 14 },
+  loadingText: { fontSize: FONT_SIZES.label },
   emptyState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    paddingHorizontal: 40,
+    gap: ms(12),
+    paddingHorizontal: ms(40),
   },
-  emptyText: { fontSize: 15 },
+  emptyText: { fontSize: FONT_SIZES.body },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: ms(24),
     fontWeight: FONTS.bold,
     letterSpacing: -0.4,
     textAlign: "center",
   },
   emptySub: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     textAlign: "center",
-    marginTop: -2,
-    marginBottom: 12,
+    marginTop: ms(-2),
+    marginBottom: ms(12),
   },
   addMealBtn: {
     width: "100%",
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
     borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
   },
   addMealText: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.bold,
     color: "#FFFFFF",
   },
   leafTopRight: {
     position: "absolute",
-    right: -10,
-    top: 40,
-    width: 120,
-    height: 120,
+    right: -ms(10),
+    top: vs(40),
+    width: ms(120),
+    height: ms(120),
     opacity: 0.7,
   },
   leafCenterLeft: {
     position: "absolute",
-    left: -55,
+    left: -ms(55),
     top: "32%",
-    width: 120,
-    height: 120,
+    width: ms(120),
+    height: ms(120),
     opacity: 0.7,
     transform: [{ scaleX: -1 }, { rotate: "25deg" }],
   },
   leafBottomLeft: {
     position: "absolute",
-    left: -16,
-    bottom: 30,
-    width: 120,
-    height: 120,
+    left: -ms(16),
+    bottom: vs(30),
+    width: ms(120),
+    height: ms(120),
     opacity: 0.7,
     transform: [{ scaleX: -1 }],
   },
@@ -926,8 +930,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
     bottom: 0,
-    width: 130,
-    height: 130,
+    width: ms(130),
+    height: ms(130),
     opacity: 0.85,
   },
   modalOverlay: {
@@ -937,17 +941,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   mealPickerModal: {
-    width: 260,
+    width: ms(260),
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     overflow: "hidden",
-    paddingVertical: 8,
+    paddingVertical: SPACING.sm,
   },
   mealPickerTitle: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
     fontWeight: FONTS.semibold,
     textAlign: "center",
-    paddingVertical: 10,
+    paddingVertical: ms(10),
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
@@ -955,8 +959,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 13,
+    paddingHorizontal: ms(18),
+    paddingVertical: ms(13),
   },
-  mealPickerOptionText: { fontSize: 15 },
+  mealPickerOptionText: { fontSize: FONT_SIZES.body },
 });

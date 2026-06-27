@@ -10,20 +10,20 @@ const CURATED_CATEGORIES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 function rowToCard(r) {
   let ingredients = [];
-  try { ingredients = Array.isArray(r.ingredients) ? r.ingredients : JSON.parse(r.ingredients ?? '[]'); } catch {}
+  try { ingredients = Array.isArray(r.ingredients) ? r.ingredients : JSON.parse(r.ingredients ?? '[]'); } catch { }
   const meta = r.nutrition ?? {};
   return {
-    id:             String(r.id),
-    name:           r.title,
-    emoji:          r.emoji ?? '🍽️',
-    calories:       r.calories ?? 0,
-    time:           meta.time ?? '—',
-    difficulty:     meta.difficulty ?? 'Medium',
-    category:       r.saved_category ?? meta.category ?? 'dinner',
-    macros:         { protein: r.protein ?? 0, carbs: r.carbs ?? 0, fat: r.fat ?? 0 },
+    id: String(r.id),
+    name: r.title,
+    emoji: r.emoji ?? '🍽️',
+    calories: r.calories ?? 0,
+    time: meta.time ?? '—',
+    difficulty: meta.difficulty ?? 'Medium',
+    category: r.saved_category ?? meta.category ?? 'dinner',
+    macros: { protein: r.protein ?? 0, carbs: r.carbs ?? 0, fat: r.fat ?? 0 },
     ingredients,
-    steps:          r.steps ?? [],
-    nutrition:      r.nutrition ?? { total: { calories: r.calories ?? 0, protein: r.protein ?? 0, carbs: r.carbs ?? 0, fat: r.fat ?? 0 } },
+    steps: r.steps ?? [],
+    nutrition: r.nutrition ?? { total: { calories: r.calories ?? 0, protein: r.protein ?? 0, carbs: r.carbs ?? 0, fat: r.fat ?? 0 } },
     estimatedGrams: meta.estimatedGrams ?? 400,
     // image_url intentionally omitted — clients lazy-fetch via /api/recipes/:id/image
   };

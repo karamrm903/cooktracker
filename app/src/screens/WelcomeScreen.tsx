@@ -14,6 +14,8 @@ import LanguagePickerModal from "../components/LanguagePickerModal";
 import { useLanguage } from "../context/LanguageContext";
 import { LANGUAGE_META } from "../i18n";
 import { BRAND_COLOR, DEFAULT_BG } from "../styles/colors";
+import { FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
+import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
 
 const heroImage = require("../../assets/webp/WelcomeScreen.webp");
 const underlineImage = require("../../assets/webp/WelcomeScreenBottom.webp");
@@ -114,26 +116,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: ms(20),
+    paddingTop: SPACING.sm,
   },
   languagePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: ms(6),
     backgroundColor: COLORS.pillBg,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(7),
+    borderRadius: RADIUS.full,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.07,
     shadowRadius: 4,
     elevation: 2,
   },
-  flagEmoji: { fontSize: 15 },
+  flagEmoji: { fontSize: FONT_SIZES.body },
   languageLabel: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
     fontWeight: "600",
     color: COLORS.pillText,
     letterSpacing: 0.3,
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
   },
   heroImage: {
     width: width * 0.95,
@@ -152,40 +154,40 @@ const styles = StyleSheet.create({
 
   headlineWrap: {
     alignItems: "center",
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   headlineBrown: {
-    fontSize: 36,
+    fontSize: ms(36),
     fontWeight: "800",
     color: COLORS.titleBrown,
     textAlign: "center",
     letterSpacing: -0.5,
   },
   headlineGreen: {
-    fontSize: 36,
+    fontSize: ms(36),
     fontWeight: "800",
     color: COLORS.green,
     textAlign: "center",
     letterSpacing: -0.5,
-    marginTop: 2,
+    marginTop: ms(2),
   },
   underline: {
-    width: 140,
-    height: 12,
-    marginTop: 2,
+    width: ms(140),
+    height: ms(12),
+    marginTop: ms(2),
   },
 
   actions: {
-    paddingHorizontal: 24,
-    marginBottom: 50,
-    gap: 16,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: vs(50),
+    gap: SPACING.md,
     alignItems: "center",
   },
   primaryBtn: {
     width: "100%",
     backgroundColor: COLORS.brand,
-    paddingVertical: 18,
-    borderRadius: 999,
+    paddingVertical: ms(18),
+    borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: COLORS.brand,
@@ -195,13 +197,13 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   primaryBtnText: {
-    fontSize: 17,
+    fontSize: FONT_SIZES.button,
     fontWeight: "700",
     color: COLORS.btnText,
     letterSpacing: 0.2,
   },
   signInRow: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     color: COLORS.subText,
     fontWeight: "400",
   },

@@ -15,7 +15,8 @@ import {
   TextInput,
   ActivityIndicator,
   Animated,
-  PanResponder,
+  FlatList,
+  Modal,
   Image,
   Dimensions,
   LayoutAnimation,
@@ -23,11 +24,20 @@ import {
   UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+
+// Reuse one blurhash placeholder + cache policy for every remote recipe photo.
+const IMG_BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
+const IMG_CACHE_POLICY = "memory-disk";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
-import { SPACING, RADIUS, FONTS } from "../constants/theme";
+import { SPACING, RADIUS, FONTS, FONT_SIZES } from "../constants/theme";
+import {
+  moderateScale as ms,
+  verticalScale as vs,
+} from "../utils/responsive";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { ExpandedNutrition } from "../components/NutritionExpansion";
@@ -35,11 +45,11 @@ import { exploreService } from "../services/exploreService";
 import { useExplore } from "../context/ExploreContext";
 import { saveRecipe, fetchAllRecipes } from "../services/recipeService";
 import { useSubscription } from "../hooks/useSubscription";
+import { useMealLogs } from "../context/MealLogsContext";
 import PaywallModal from "../components/PaywallModal";
+import CommonAlertModal from "../components/CommonModal";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
-const SWIPE_OUT_DURATION = 220;
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
@@ -57,6 +67,10 @@ const CAT_ICON = {
 };
 
 const MACRO_COLORS = { protein: "#EF4444", carbs: "#22C55E", fat: "#EAB308" };
+
+// Saved-library cache. Module scope → loaded once per app launch and reused
+// across tab focus / remounts; null means "not yet loaded this session".
+let _exploreLibraryCache = null;
 
 if (
   Platform.OS === "android" &&
@@ -82,6 +96,20 @@ const CATEGORIES = [
   { id: "snack", labelKey: "explore.categories.snack" },
 ];
 
+// Meal-type picker options (same set as SearchFoodScreen) used when saving a
+// recipe into the dashboard's Today's meals.
+// Cap the swipe carousel to a random subset — fewer cards means far fewer
+// signed-image fetches up front, so the deck loads fast even with a big library.
+const CAROUSEL_DECK_LIMIT = 30;
+
+const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
+const MEAL_LABELS = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snack: "Snack",
+};
+
 function dbToItem(r) {
   const protein = r.protein ?? 0;
   const carbs = r.carbs ?? 0;
@@ -89,7 +117,7 @@ function dbToItem(r) {
   let ingredients = [];
   try {
     ingredients = JSON.parse(r.ingredients ?? "[]");
-  } catch {}
+  } catch { }
   return {
     id: String(r.id),
     name: r.title,
@@ -132,17 +160,17 @@ function getRating(name) {
   return { rating: rating.toFixed(1), reviews };
 }
 
-// passing live pan handlers and a transform style.
-// Each card owns its own image fetch so a load resolution does not re-render
-// the whole deck — only the card whose URL changed.
-const SwipeCard = React.memo(function SwipeCard({
+// ── Instagram-style post card ─────────────────────────────────────────────────
+// A single full-width recipe card inside the horizontal pager. Owns its own
+// image fetch so a load resolution only re-renders this card.
+const PostCard = React.memo(function PostCard({
   card,
   session,
   preloadedImage,
-  style,
-  panHandlers,
   colors,
-  onBookmark,
+  saved,
+  onSave,
+  onOpen,
 }) {
   const ratingData = useMemo(() => getRating(card.name), [card.name]);
   const tagText = useMemo(() => getRecipeTag(card), [card]);
@@ -160,32 +188,33 @@ const SwipeCard = React.memo(function SwipeCard({
     if (preloadedImage) return;
     let cancelled = false;
     exploreService
-      .fetchRecipeImage(session, card.id, card.name)
+      .fetchRecipeImageCached(session, card.id, card.name)
       .then((url) => {
         if (cancelled || !url) return;
-        Image.prefetch(url).catch(() => {});
+        ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => { });
         setImageUrl(url);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [card.id, session, preloadedImage]);
 
-  const cardStyle = useMemo(
-    () => [
-      styles.card,
-      { backgroundColor: colors.surface, borderColor: colors.border },
-      style,
-    ],
-    [colors.surface, colors.border, style],
-  );
-
   return (
-    <Animated.View {...(panHandlers ?? {})} style={cardStyle}>
+    <TouchableOpacity
+      activeOpacity={0.95}
+      onPress={() => onOpen?.(card)}
+      style={[
+        styles.postCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
       {imageUrl ? (
-        <Image
+        <ExpoImage
           source={{ uri: imageUrl }}
           style={styles.cardImage}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy={IMG_CACHE_POLICY}
+          placeholder={{ blurhash: IMG_BLURHASH }}
+          transition={150}
         />
       ) : (
         <View
@@ -205,40 +234,39 @@ const SwipeCard = React.memo(function SwipeCard({
         style={styles.cardOverlay}
       />
 
-      {/* Top Header Badge & Bookmark Icon */}
+      {/* Top Header Badge (save icon moved down next to kcal) */}
       <View style={styles.cardHeader}>
         <View style={styles.badgeContainer}>
           <Text style={styles.badgeText}>🌱 {tagText}</Text>
         </View>
-        {onBookmark ? (
-          <TouchableOpacity
-            style={styles.bookmarkBtn}
-            activeOpacity={0.85}
-            onPress={() => onBookmark(card)}
-          >
-            <Ionicons name="bookmark-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.bookmarkBtn}>
-            <Ionicons name="bookmark-outline" size={18} color="#fff" />
-          </View>
-        )}
       </View>
 
       <View style={styles.cardInfo}>
-        <Text style={styles.cardName} numberOfLines={2}>
-          {card.name}
-        </Text>
+        {/* Row 1 — title + kcal */}
+        <View style={styles.cardTitleRow}>
+          <Text style={styles.cardName} numberOfLines={2}>
+            {card.name}
+          </Text>
+          <View style={styles.caloriesBadge}>
+            <Ionicons
+              name="flame"
+              size={ms(11)}
+              color="#FF6B35"
+              style={{ marginRight: ms(3) }}
+            />
+            <Text style={styles.caloriesText}>{card.calories} kcal</Text>
+          </View>
+        </View>
 
-        {/* Rating and Details Row */}
+        {/* Row 2 — rating / meta + save */}
         <View style={styles.cardMetaRow}>
           <View style={styles.cardMetaLeft}>
             <View style={styles.metaItem}>
               <Ionicons
                 name="star"
-                size={13}
+                size={ms(13)}
                 color="#FFB300"
-                style={{ marginRight: 3 }}
+                style={{ marginRight: ms(3) }}
               />
               <Text style={styles.metaText}>
                 {ratingData.rating} ({ratingData.reviews})
@@ -248,9 +276,9 @@ const SwipeCard = React.memo(function SwipeCard({
             <View style={styles.metaItem}>
               <Ionicons
                 name="time-outline"
-                size={13}
+                size={ms(13)}
                 color="#fff"
-                style={{ marginRight: 3 }}
+                style={{ marginRight: ms(3) }}
               />
               <Text style={styles.metaText}>{card.time || "30 min"}</Text>
             </View>
@@ -258,22 +286,24 @@ const SwipeCard = React.memo(function SwipeCard({
             <View style={styles.metaItem}>
               <Ionicons
                 name="restaurant-outline"
-                size={13}
+                size={ms(13)}
                 color="#fff"
-                style={{ marginRight: 3 }}
+                style={{ marginRight: ms(3) }}
               />
               <Text style={styles.metaText}>{card.difficulty || "Easy"}</Text>
             </View>
           </View>
-          <View style={styles.caloriesBadge}>
+          <TouchableOpacity
+            style={[styles.cardSaveBtn, saved && { backgroundColor: "#fff" }]}
+            activeOpacity={0.85}
+            onPress={() => onSave?.(card)}
+          >
             <Ionicons
-              name="flame"
-              size={11}
-              color="#FF6B35"
-              style={{ marginRight: 3 }}
+              name={saved ? "bookmark" : "bookmark-outline"}
+              size={ms(16)}
+              color={saved ? colors.primary : "#fff"}
             />
-            <Text style={styles.caloriesText}>{card.calories} kcal</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Horizontal Divider Line */}
@@ -304,203 +334,106 @@ const SwipeCard = React.memo(function SwipeCard({
           </View>
         </View>
       </View>
-    </Animated.View>
+    </TouchableOpacity>
   );
 });
 
-// ── Swipe deck ────────────────────────────────────────────────────────────────
-function SwipeDeck({ cards, session, images, colors, onLike, onSkip, onInfo }) {
+// ── Instagram-style post carousel ─────────────────────────────────────────────
+// Full-width, paging horizontal list — swipe left/right snaps cleanly between
+// recipe cards (like sliding through photos in an Instagram post). Endless:
+// the data is tripled and the scroll position is parked in the middle copy, so
+// the user can keep swiping in either direction forever without hitting an end.
+function PostCarousel({ cards, session, images, colors, savedNames, onSave, onOpen }) {
+  const listRef = useRef(null);
   const [index, setIndex] = useState(0);
-  const position = useRef(new Animated.ValueXY()).current;
 
-  // Reset deck when the underlying card set changes.
+  const n = cards.length;
+  const loop = n > 1;
+  // [...cards, ...cards, ...cards] — middle block is the "home" the scroll
+  // position is kept within for seamless wrap-around.
+  const data = useMemo(
+    () => (loop ? [...cards, ...cards, ...cards] : cards),
+    [cards, loop],
+  );
+
+  // Reset to the first card of the middle block when the set changes.
   useEffect(() => {
     setIndex(0);
-    position.setValue({ x: 0, y: 0 });
-  }, [cards]);
-
-  const forceSwipe = useCallback(
-    (direction) => {
-      const x =
-        direction === "right" ? SCREEN_WIDTH * 1.25 : -SCREEN_WIDTH * 1.25;
-      Animated.timing(position, {
-        toValue: { x, y: 0 },
-        duration: SWIPE_OUT_DURATION,
-        useNativeDriver: false,
-      }).start(() => {
-        const card = cards[index];
-        if (direction === "right") onLike?.(card);
-        else onSkip?.(card);
-        position.setValue({ x: 0, y: 0 });
-        setIndex((i) => i + 1);
+    if (loop) {
+      // Defer until the list has measured.
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({
+          offset: n * SCREEN_WIDTH,
+          animated: false,
+        });
       });
-    },
-    [index, cards, onLike, onSkip, position],
-  );
+    }
+  }, [cards, loop, n]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, g) =>
-          Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5,
-        onPanResponderMove: (_, gesture) =>
-          position.setValue({ x: gesture.dx, y: gesture.dy }),
-        onPanResponderRelease: (_, gesture) => {
-          if (gesture.dx > SWIPE_THRESHOLD) forceSwipe("right");
-          else if (gesture.dx < -SWIPE_THRESHOLD) forceSwipe("left");
-          else {
-            // Treat a release with negligible movement as a tap → open details.
-            const isTap = Math.abs(gesture.dx) < 5 && Math.abs(gesture.dy) < 5;
-            Animated.spring(position, {
-              toValue: { x: 0, y: 0 },
-              friction: 5,
-              useNativeDriver: false,
-            }).start(() => {
-              if (isTap) onInfo?.(cards[index]);
-            });
-          }
-        },
-      }),
-    [forceSwipe, position, onInfo, cards, index],
-  );
-
-  // Memoize interpolation nodes — position ref is stable, so these never change.
-  const rotate = useMemo(
-    () =>
-      position.x.interpolate({
-        inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-        outputRange: ["-12deg", "0deg", "12deg"],
-      }),
-    [position],
-  );
-  const likeOpacity = useMemo(
-    () =>
-      position.x.interpolate({
-        inputRange: [0, SWIPE_THRESHOLD],
-        outputRange: [0, 1],
-        extrapolate: "clamp",
-      }),
-    [position],
-  );
-  const skipOpacity = useMemo(
-    () =>
-      position.x.interpolate({
-        inputRange: [-SWIPE_THRESHOLD, 0],
-        outputRange: [1, 0],
-        extrapolate: "clamp",
-      }),
-    [position],
-  );
-
-  const topAnimatedStyle = useMemo(
-    () => ({
-      transform: [
-        { translateX: position.x },
-        { translateY: position.y },
-        { rotate },
-      ],
-      zIndex: 99,
-    }),
-    [position, rotate],
-  );
-
-  const backCardStyle = useMemo(
-    () => ({
-      transform: [{ translateX: 28 }, { scale: 0.94 }, { rotate: "1deg" }],
-      zIndex: 1,
-    }),
+  const getItemLayout = useCallback(
+    (_, i) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * i, index: i }),
     [],
   );
 
-  if (index >= cards.length) {
-    return (
-      <View
-        style={[
-          styles.emptyDeck,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
-      >
-        <Text style={styles.deckEmoji}>🎉</Text>
-        <Text style={[styles.deckText, { color: colors.text }]}>
-          You're all caught up
-        </Text>
-        <TouchableOpacity
-          onPress={() => setIndex(0)}
-          style={[styles.resetBtn, { borderColor: colors.border }]}
-        >
-          <Text style={[styles.resetText, { color: colors.text }]}>
-            Start over
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.deckWrap}>
-      {/* Render in reverse so the active card paints on top */}
-      {cards
-        .map((card, i) => {
-          if (i < index) return null;
-          if (i > index + 1) return null;
-          if (i === index) {
-            return (
-              <SwipeCard
-                key={card.id}
-                card={card}
-                session={session}
-                preloadedImage={images?.[card.id] ?? null}
-                style={topAnimatedStyle}
-                panHandlers={panResponder.panHandlers}
-                colors={colors}
-                onBookmark={onLike}
-              />
-            );
-          }
-          // Card behind — slight scale down + shifted right.
-          return (
-            <SwipeCard
-              key={card.id}
-              card={card}
-              session={session}
-              preloadedImage={images?.[card.id] ?? null}
-              style={backCardStyle}
-              colors={colors}
-            />
-          );
-        })
-        .reverse()}
-
-      {/* Like/Skip stamps */}
-      <Animated.View
-        style={[styles.stamp, styles.stampLike, { opacity: likeOpacity }]}
-        pointerEvents="none"
-      >
-        <Text style={styles.stampText}>SAVE</Text>
-      </Animated.View>
-      <Animated.View
-        style={[styles.stamp, styles.stampSkip, { opacity: skipOpacity }]}
-        pointerEvents="none"
-      >
-        <Text style={styles.stampText}>NOPE</Text>
-      </Animated.View>
-    </View>
+  const onMomentumEnd = useCallback(
+    (e) => {
+      const raw = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+      if (!loop) {
+        setIndex(raw);
+        return;
+      }
+      const real = ((raw % n) + n) % n;
+      setIndex(real);
+      // Jump back into the middle copy when we drift into the outer copies, so
+      // there's always a full block of cards on both sides to scroll into.
+      if (raw < n || raw >= 2 * n) {
+        listRef.current?.scrollToOffset({
+          offset: (n + real) * SCREEN_WIDTH,
+          animated: false,
+        });
+      }
+    },
+    [loop, n],
   );
-}
 
-function ControlBtn({ icon, color, size = 60, onPress }) {
   return (
-    <TouchableOpacity
-      style={[
-        styles.controlBtn,
-        { width: size, height: size, borderRadius: size / 2 },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Ionicons name={icon} size={size * 0.45} color={color} />
-    </TouchableOpacity>
+    <View>
+      <FlatList
+        ref={listRef}
+        data={data}
+        keyExtractor={(c, i) => `${c.id}-${i}`}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        getItemLayout={getItemLayout}
+        initialScrollIndex={loop ? n : 0}
+        onMomentumScrollEnd={onMomentumEnd}
+        extraData={savedNames}
+        renderItem={({ item }) => (
+          <View style={styles.postPage}>
+            <PostCard
+              card={item}
+              session={session}
+              preloadedImage={images?.[item.id] ?? null}
+              colors={colors}
+              saved={savedNames.has(item.name)}
+              onSave={onSave}
+              onOpen={onOpen}
+            />
+          </View>
+        )}
+      />
+
+      {/* Page number — top-right pill overlay (Instagram style) */}
+      {n > 1 && (
+        <View style={styles.pageCounter} pointerEvents="none">
+          <Text style={styles.pageCounterText}>
+            {index + 1}/{n}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -513,7 +446,7 @@ function TrendingRow({ items, session, onPress, colors }) {
       if (imageUrls[it.id] !== undefined) return;
       setImageUrls((prev) => ({ ...prev, [it.id]: null }));
       exploreService
-        .fetchRecipeImage(session, it.id, it.name)
+        .fetchRecipeImageCached(session, it.id, it.name)
         .then((url) => setImageUrls((prev) => ({ ...prev, [it.id]: url })))
         .catch(() => setImageUrls((prev) => ({ ...prev, [it.id]: null })));
     });
@@ -521,14 +454,14 @@ function TrendingRow({ items, session, onPress, colors }) {
 
   if (!items.length) return null;
   return (
-    <View style={{ marginBottom: 24 }}>
+    <View style={{ marginBottom: ms(24) }}>
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
         Trending Now
       </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: ms(24), gap: ms(12) }}
       >
         {items.map((it) => (
           <TouchableOpacity
@@ -541,10 +474,13 @@ function TrendingRow({ items, session, onPress, colors }) {
             activeOpacity={0.85}
           >
             {imageUrls[it.id] ? (
-              <Image
+              <ExpoImage
                 source={{ uri: imageUrls[it.id] }}
                 style={styles.trendingImage}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy={IMG_CACHE_POLICY}
+                placeholder={{ blurhash: IMG_BLURHASH }}
+                transition={150}
               />
             ) : (
               <View
@@ -554,7 +490,7 @@ function TrendingRow({ items, session, onPress, colors }) {
                   { backgroundColor: colors.surfaceAlt },
                 ]}
               >
-                <Text style={{ fontSize: 32 }}>{it.emoji ?? "🍽️"}</Text>
+                <Text style={{ fontSize: ms(32) }}>{it.emoji ?? "🍽️"}</Text>
               </View>
             )}
             <View style={styles.trendingMeta}>
@@ -614,7 +550,7 @@ function RecipeRow({
           </Text>
           <Ionicons
             name={isExpanded ? "chevron-up" : "chevron-down"}
-            size={12}
+            size={ms(12)}
             color={colors.textMuted}
             style={styles.chevron}
           />
@@ -669,6 +605,8 @@ const HRecipeCard = React.memo(function HRecipeCard({
   colors,
   t,
   onStartCooking,
+  saved,
+  onSave,
 }) {
   const [img, setImg] = useState(null);
   const [expanded, setExpanded] = useState(false);
@@ -677,13 +615,13 @@ const HRecipeCard = React.memo(function HRecipeCard({
   useEffect(() => {
     let cancelled = false;
     exploreService
-      .fetchRecipeImage(session, item.id, item.name)
+      .fetchRecipeImageCached(session, item.id, item.name)
       .then((url) => {
         if (cancelled || !url) return;
-        Image.prefetch(url).catch(() => {});
+        ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => { });
         setImg(url);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };
@@ -711,15 +649,31 @@ const HRecipeCard = React.memo(function HRecipeCard({
   return (
     <View style={[styles.hCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {img ? (
-        <Image source={{ uri: img }} style={styles.hCardImg} resizeMode="cover" />
+        <ExpoImage
+          source={{ uri: img }}
+          style={styles.hCardImg}
+          contentFit="cover"
+          cachePolicy={IMG_CACHE_POLICY}
+          placeholder={{ blurhash: IMG_BLURHASH }}
+          transition={150}
+        />
       ) : (
         <View style={[styles.hCardImg, styles.cardImageFallback, { backgroundColor: colors.surfaceAlt }]}>
-          <Text style={{ fontSize: 34 }}>{item.emoji ?? "🍽️"}</Text>
+          <Text style={{ fontSize: ms(34) }}>{item.emoji ?? "🍽️"}</Text>
         </View>
       )}
-      <View style={styles.hBookmark}>
-        <Ionicons name="bookmark-outline" size={15} color={colors.textSecondary} />
-      </View>
+      <TouchableOpacity
+        style={[styles.hBookmark, saved && { backgroundColor: colors.primary }]}
+        activeOpacity={0.8}
+        onPress={() => onSave?.(item)}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      >
+        <Ionicons
+          name={saved ? "bookmark" : "bookmark-outline"}
+          size={ms(15)}
+          color={saved ? "#fff" : colors.textSecondary}
+        />
+      </TouchableOpacity>
 
       <View style={styles.hCardBody}>
         <TouchableOpacity
@@ -732,7 +686,7 @@ const HRecipeCard = React.memo(function HRecipeCard({
           </Text>
           <Ionicons
             name={expanded ? "chevron-up" : "chevron-down"}
-            size={16}
+            size={ms(16)}
             color={colors.textMuted}
           />
         </TouchableOpacity>
@@ -780,10 +734,21 @@ const HRecipeCard = React.memo(function HRecipeCard({
   );
 });
 
-function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSeeAll }) {
+const CAROUSEL_LIMIT = 10;
+
+function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSeeAll, savedNames, onSave }) {
+  // Show at most 10 randomly-picked items so the horizontal list stays light
+  // (each card lazy-fetches its own image). The rest live behind "See All".
+  const displayItems = useMemo(() => {
+    if (items.length <= CAROUSEL_LIMIT) return items;
+    return [...items].sort(() => Math.random() - 0.5).slice(0, CAROUSEL_LIMIT);
+  }, [items]);
+
+  const showSeeAllTile = items.length > CAROUSEL_LIMIT;
+
   if (!items.length) return null;
   return (
-    <View style={{ marginBottom: 24 }}>
+    <View style={{ marginBottom: ms(24) }}>
       <View style={styles.carouselHeader}>
         <Text style={[styles.carouselTitle, { color: colors.text }]}>{title}</Text>
         <TouchableOpacity onPress={onSeeAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -793,9 +758,9 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 24, gap: 14, alignItems: "flex-start" }}
+        contentContainerStyle={{ paddingHorizontal: ms(24), gap: ms(14), alignItems: "flex-start" }}
       >
-        {items.map((it) => (
+        {displayItems.map((it) => (
           <HRecipeCard
             key={it.id}
             item={it}
@@ -803,9 +768,66 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
             colors={colors}
             t={t}
             onStartCooking={onStartCooking}
+            saved={savedNames.has(it.name)}
+            onSave={onSave}
           />
         ))}
+
+        {showSeeAllTile && (
+          <TouchableOpacity
+            style={[
+              styles.seeAllCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+            activeOpacity={0.85}
+            onPress={onSeeAll}
+          >
+            <View style={[styles.seeAllIconWrap, { backgroundColor: colors.tintOrange }]}>
+              <Ionicons name="arrow-forward" size={ms(22)} color={colors.primary} />
+            </View>
+            <Text style={[styles.seeAllCardText, { color: colors.text }]}>
+              {t("explore.seeAll")}
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
+    </View>
+  );
+}
+
+// ── Carousel shimmer ──────────────────────────────────────────────────────────
+// Pulsing placeholder shown while the deck is still loading — exact same
+// footprint (full width × CARD_HEIGHT) as a real carousel card.
+function CarouselSkeleton({ colors }) {
+  const anim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 750, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 750, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+
+  return (
+    <View style={styles.deckSection}>
+      <View style={[styles.postCard, { backgroundColor: colors.surface }]}>
+        <Animated.View
+          style={[styles.skeletonBlock, { backgroundColor: colors.surfaceAlt, opacity: anim }]}
+        />
+        {/* Faux text lines at the bottom, matching the card info area */}
+        <View style={styles.skeletonInfo}>
+          <Animated.View
+            style={[styles.skeletonLineLg, { backgroundColor: colors.surfaceAlt, opacity: anim }]}
+          />
+          <Animated.View
+            style={[styles.skeletonLineSm, { backgroundColor: colors.surfaceAlt, opacity: anim }]}
+          />
+        </View>
+      </View>
     </View>
   );
 }
@@ -826,6 +848,22 @@ export default function ExploreScreen({ navigation }) {
     ensure: ensureExplore,
     refresh: refreshExplore,
   } = useExplore();
+  const { meals, addMeal } = useMealLogs() || {};
+
+  // A recipe counts as "saved" once it's logged into today's dashboard meals.
+  const savedNames = useMemo(
+    () => new Set((meals ?? []).map((m) => m.name)),
+    [meals],
+  );
+
+  const [savePickerRecipe, setSavePickerRecipe] = useState(null);
+  const [savingMeal, setSavingMeal] = useState(false);
+  const [savingType, setSavingType] = useState(null);
+  const [resultModal, setResultModal] = useState({
+    visible: false,
+    variant: "success",
+    message: "",
+  });
 
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -834,17 +872,29 @@ export default function ExploreScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
-  const [dbRecipes, setDbRecipes] = useState([]);
+  const [dbRecipes, setDbRecipes] = useState(() => _exploreLibraryCache ?? []);
   const [dbLoading, setDbLoading] = useState(false);
+  // Whether the library fetch has resolved at least once this session (true
+  // immediately if the cache is already warm). Drives the deck shimmer.
+  const [dbLoaded, setDbLoaded] = useState(() => _exploreLibraryCache !== null);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [swipeError, setSwipeError] = useState(null);
 
   // Filter the preloaded deck by the selected category client-side — avoids a
-  // round trip when the user just toggles a pill.
+  // round trip when the user just toggles a pill. Fall back to the user's saved
+  // library when the curated server deck is empty so the swiper is never blank.
   const swipeCards = useMemo(() => {
-    if (selectedCategory === "all") return preloadedCards;
-    return preloadedCards.filter((c) => c.category === selectedCategory);
-  }, [preloadedCards, selectedCategory]);
+    const base = preloadedCards.length ? preloadedCards : dbRecipes;
+    const filtered =
+      selectedCategory === "all"
+        ? base
+        : base.filter((c) => c.category === selectedCategory);
+    if (filtered.length <= CAROUSEL_DECK_LIMIT) return filtered;
+    // Random 30 so the deck stays light; reshuffles only when the source changes.
+    return [...filtered]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, CAROUSEL_DECK_LIMIT);
+  }, [preloadedCards, dbRecipes, selectedCategory]);
 
   const trending = preloadedTrending;
 
@@ -860,9 +910,10 @@ export default function ExploreScreen({ navigation }) {
     );
   }, [dbRecipes]);
 
-  // Spinner only on true cold start — once cards arrive (DB query, fast) we render
-  // the deck immediately. Signed image URLs stream in afterwards without blocking.
-  const swipeLoading = exploreLoading && !exploreCardsLoaded;
+  // The deck is "resolved" only once the library fetch has returned AND the
+  // curated server deck has settled — otherwise an empty server deck would flash
+  // "No recipes available" while the library (the real fallback) is still loading.
+  const deckResolved = dbLoaded && (exploreCardsLoaded || !exploreLoading);
 
   const loadSwipeDeck = useCallback(() => {
     if (!session?.access_token) return;
@@ -875,13 +926,25 @@ export default function ExploreScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       if (!session?.access_token) return;
-      setDbLoading(true);
-      fetchAllRecipes(session)
-        .then((rows) => setDbRecipes((rows ?? []).map(dbToItem)))
-        .catch(() => {})
-        .finally(() => setDbLoading(false));
 
-      // No-op if the dashboard already preloaded.
+      // Library: fetch once per app launch, then reuse the session cache on
+      // every subsequent focus instead of hitting the server again.
+      if (_exploreLibraryCache === null) {
+        setDbLoading(true);
+        fetchAllRecipes(session)
+          .then((rows) => {
+            const mapped = (rows ?? []).map(dbToItem);
+            _exploreLibraryCache = mapped;
+            setDbRecipes(mapped);
+          })
+          .catch(() => { })
+          .finally(() => {
+            setDbLoading(false);
+            setDbLoaded(true);
+          });
+      }
+
+      // No-op if the dashboard already preloaded (context is session-guarded).
       ensureExplore(session).catch((err) => {
         setSwipeError(err?.message || "Failed to load recipe deck");
       });
@@ -968,32 +1031,60 @@ export default function ExploreScreen({ navigation }) {
     navigation.navigate("RecipeSummary", { recipe, dbId });
   }
 
-  // Swiping right saves the curated recipe into the user's library.
-  async function handleLikeCard(card) {
-    try {
-      await saveRecipe(
-        session,
-        {
-          title: card.name,
-          emoji: card.emoji,
-          steps: card.steps,
-          ingredients: card.ingredients,
-          nutrition: card.nutrition,
-          estimatedGrams: card.estimatedGrams,
-        },
-        null,
-      );
-      // Refresh library silently.
-      fetchAllRecipes(session)
-        .then((rows) => setDbRecipes((rows ?? []).map(dbToItem)))
-        .catch(() => {});
-    } catch (err) {
-      console.warn("[ExploreScreen] like save failed:", err?.message ?? err);
-    }
-  }
-
   function handleCardInfo(card) {
     handleStartCooking(card);
+  }
+
+  // Tapping the save icon (carousel card or horizontal list) opens the
+  // meal-type picker; choosing a slot logs the recipe into today's meals.
+  function handleSaveRequest(recipe) {
+    setSavePickerRecipe(recipe);
+  }
+
+  async function logRecipeAsMeal(mealType) {
+    const recipe = savePickerRecipe;
+    if (!recipe || savingMeal || !addMeal) return;
+    setSavingMeal(true);
+    setSavingType(mealType);
+    const now = new Date();
+    const p = recipe.macros?.protein ?? 0;
+    const c = recipe.macros?.carbs ?? 0;
+    const f = recipe.macros?.fat ?? 0;
+    const meal = {
+      name: recipe.name,
+      calories: recipe.calories ?? 0,
+      protein: p,
+      carbs: c,
+      fat: f,
+      macros: { protein: p, carbs: c, fat: f },
+      mealType,
+      meal: MEAL_LABELS[mealType],
+      time: now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+      loggedAt: now.toISOString(),
+      dateKey: now.toISOString().slice(0, 10),
+      source: "recipe",
+      emoji: recipe.emoji ?? null,
+      recipeId: recipe._dbId ?? recipe.id,
+    };
+    try {
+      await addMeal(meal);
+      setSavePickerRecipe(null);
+      setResultModal({
+        visible: true,
+        variant: "success",
+        message: `${recipe.name} added to ${MEAL_LABELS[mealType]}.`,
+      });
+    } catch (err) {
+      setSavePickerRecipe(null);
+      setResultModal({
+        visible: true,
+        variant: "error",
+        message: err?.message || "Could not log this recipe. Try again.",
+      });
+    } finally {
+      setSavingMeal(false);
+      setSavingType(null);
+    }
   }
 
   const isSearching = query.trim().length > 0;
@@ -1029,7 +1120,7 @@ export default function ExploreScreen({ navigation }) {
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
         >
-          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+          <Ionicons name="search-outline" size={ms(18)} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
             placeholder={t("explore.searchPlaceholder")}
@@ -1048,7 +1139,7 @@ export default function ExploreScreen({ navigation }) {
             >
               <Ionicons
                 name="close-circle"
-                size={18}
+                size={ms(18)}
                 color={colors.textMuted}
               />
             </TouchableOpacity>
@@ -1113,39 +1204,30 @@ export default function ExploreScreen({ navigation }) {
                   {t("explore.planSub")}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={ms(16)} color={colors.textMuted} />
             </TouchableOpacity>
 
-            <View style={styles.deckContainer}>
-              {swipeLoading ? (
+            {swipeCards.length > 0 ? (
+              <View style={styles.deckSection}>
+                <PostCarousel
+                  cards={swipeCards}
+                  session={session}
+                  images={preloadedImages}
+                  colors={colors}
+                  savedNames={savedNames}
+                  onSave={handleSaveRequest}
+                  onOpen={handleCardInfo}
+                />
+              </View>
+            ) : swipeError ? (
+              <View style={styles.deckContainer}>
                 <View
                   style={[
                     styles.emptyDeck,
                     {
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <ActivityIndicator size="small" color={colors.textMuted} />
-                  <Text
-                    style={{
-                      color: colors.textMuted,
-                      marginTop: 8,
-                      fontSize: 13,
-                    }}
-                  >
-                    Loading recipes...
-                  </Text>
-                </View>
-              ) : swipeError ? (
-                <View
-                  style={[
-                    styles.emptyDeck,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      padding: 20,
+                      padding: ms(20),
                       alignItems: "center",
                       justifyContent: "center",
                     },
@@ -1153,14 +1235,14 @@ export default function ExploreScreen({ navigation }) {
                 >
                   <Ionicons
                     name="alert-circle-outline"
-                    size={32}
+                    size={ms(32)}
                     color="#FF6B35"
                   />
                   <Text
                     style={{
                       color: colors.text,
-                      marginTop: 8,
-                      fontSize: 14,
+                      marginTop: SPACING.sm,
+                      fontSize: FONT_SIZES.label,
                       fontWeight: "500",
                       textAlign: "center",
                     }}
@@ -1170,17 +1252,17 @@ export default function ExploreScreen({ navigation }) {
                   <TouchableOpacity
                     onPress={loadSwipeDeck}
                     style={{
-                      marginTop: 12,
-                      paddingHorizontal: 16,
-                      paddingVertical: 6,
-                      borderRadius: 20,
+                      marginTop: ms(12),
+                      paddingHorizontal: SPACING.md,
+                      paddingVertical: ms(6),
+                      borderRadius: ms(20),
                       backgroundColor: colors.text,
                     }}
                   >
                     <Text
                       style={{
                         color: colors.background,
-                        fontSize: 13,
+                        fontSize: FONT_SIZES.small,
                         fontWeight: "600",
                       }}
                     >
@@ -1188,7 +1270,11 @@ export default function ExploreScreen({ navigation }) {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              ) : swipeCards.length === 0 ? (
+              </View>
+            ) : !deckResolved ? (
+              <CarouselSkeleton colors={colors} />
+            ) : (
+              <View style={styles.deckContainer}>
                 <View
                   style={[
                     styles.emptyDeck,
@@ -1202,24 +1288,14 @@ export default function ExploreScreen({ navigation }) {
                   <Text
                     style={[
                       styles.deckText,
-                      { color: colors.text, marginTop: 8 },
+                      { color: colors.text, marginTop: SPACING.sm },
                     ]}
                   >
                     No recipes available
                   </Text>
                 </View>
-              ) : (
-                <SwipeDeck
-                  cards={swipeCards}
-                  session={session}
-                  images={preloadedImages}
-                  colors={colors}
-                  onLike={handleLikeCard}
-                  onSkip={() => {}}
-                  onInfo={handleCardInfo}
-                />
-              )}
-            </View>
+              </View>
+            )}
 
             {dbLoading ? (
               <View style={styles.loadingState}>
@@ -1235,6 +1311,8 @@ export default function ExploreScreen({ navigation }) {
                   colors={colors}
                   t={t}
                   onStartCooking={handleStartCooking}
+                  savedNames={savedNames}
+                  onSave={handleSaveRequest}
                   onSeeAll={() =>
                     navigation.navigate("RecipeList", {
                       title: section.title,
@@ -1299,6 +1377,68 @@ export default function ExploreScreen({ navigation }) {
         )}
       </ScrollView>
 
+      {/* Save → choose meal slot (same picker as SearchFoodScreen) */}
+      <Modal
+        visible={!!savePickerRecipe}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !savingMeal && setSavePickerRecipe(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => !savingMeal && setSavePickerRecipe(null)}
+        >
+          <View
+            style={[
+              styles.mealPickerModal,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>
+              {t("explore.saveTo", { defaultValue: "Save to" })}
+            </Text>
+            {MEAL_TYPES.map((mt) => (
+              <TouchableOpacity
+                key={mt}
+                style={[
+                  styles.mealPickerOption,
+                  savingMeal && savingType !== mt && { opacity: 0.4 },
+                ]}
+                disabled={savingMeal}
+                onPress={() => logRecipeAsMeal(mt)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[styles.mealPickerOptionText, { color: colors.text }]}
+                >
+                  {t(`mealType.${mt}`, { defaultValue: MEAL_LABELS[mt] })}
+                </Text>
+                {savingType === mt ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons name="add" size={ms(18)} color={colors.textMuted} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Success / error after logging */}
+      <CommonAlertModal
+        visible={resultModal.visible}
+        variant={resultModal.variant}
+        title={
+          resultModal.variant === "success"
+            ? t("common.success", { defaultValue: "Logged!" })
+            : t("common.error", { defaultValue: "Error" })
+        }
+        message={resultModal.message}
+        primaryText={t("common.ok", { defaultValue: "Done" })}
+        onPrimary={() => setResultModal((m) => ({ ...m, visible: false }))}
+      />
+
       <PaywallModal
         visible={paywallVisible}
         feature="search"
@@ -1312,49 +1452,53 @@ export default function ExploreScreen({ navigation }) {
   );
 }
 
-const CARD_HEIGHT = 440;
+// Full-bleed Instagram-style aspect — shorter than the old tall deck card.
+const CARD_HEIGHT = Math.round(SCREEN_WIDTH * 0.95);
+// Horizontal carousel sizing — keep the See-All tile identical to a recipe card.
+const HCARD_WIDTH = ms(240);
+const HCARD_COLLAPSED_HEIGHT = ms(210);
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flex: 1 },
   content: { paddingBottom: SPACING.xxl },
 
-  header: { paddingHorizontal: 24, paddingTop: SPACING.lg, marginBottom: 18 },
-  headerLeaf: { position: "absolute", right: 8, top: 4, width: 90, height: 90, opacity: 0.6 },
-  title: { fontSize: 30, fontWeight: FONTS.bold, letterSpacing: -0.5, marginBottom: 4 },
-  headerSubtitle: { fontSize: 13, fontWeight: FONTS.regular },
+  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, marginBottom: ms(18) },
+  headerLeaf: { position: "absolute", right: ms(8), top: ms(4), width: ms(90), height: ms(90), opacity: 0.6 },
+  title: { fontSize: ms(30), fontWeight: FONTS.bold, letterSpacing: -0.5, marginBottom: SPACING.xs },
+  headerSubtitle: { fontSize: FONT_SIZES.small, fontWeight: FONTS.regular },
 
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 24,
+    marginHorizontal: SPACING.lg,
     borderRadius: RADIUS.full,
     borderWidth: 1,
     paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
+    paddingVertical: ms(12),
     gap: SPACING.sm,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
-  searchInput: { flex: 1, fontSize: 15, fontWeight: FONTS.regular, padding: 0 },
+  searchInput: { flex: 1, fontSize: FONT_SIZES.body, fontWeight: FONTS.regular, padding: 0 },
 
-  pillsRow: { paddingHorizontal: 24, gap: SPACING.sm, marginBottom: 20 },
+  pillsRow: { paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: ms(20) },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: ms(6),
+    paddingHorizontal: ms(14),
+    paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
     borderWidth: 1,
   },
-  pillIcon: { width: 15, height: 15 },
-  pillText: { fontSize: 13, fontWeight: FONTS.medium },
+  pillIcon: { width: ms(15), height: ms(15) },
+  pillText: { fontSize: FONT_SIZES.small, fontWeight: FONTS.medium },
 
   // Swipe deck
   deckContainer: {
-    marginHorizontal: 24,
-    height: CARD_HEIGHT + 12,
-    marginBottom: 28,
+    marginHorizontal: SPACING.lg,
+    height: CARD_HEIGHT + ms(12),
+    marginBottom: ms(28),
     overflow: "visible",
   },
   deckWrap: { flex: 1, position: "relative", overflow: "visible" },
@@ -1369,15 +1513,15 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: "100%", height: "100%" },
   cardImageFallback: { alignItems: "center", justifyContent: "center" },
-  cardEmoji: { fontSize: 90 },
+  cardEmoji: { fontSize: ms(90) },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
   cardHeader: {
     position: "absolute",
-    left: 16,
-    right: 16,
-    top: 16,
+    left: SPACING.md,
+    right: SPACING.md,
+    top: SPACING.md,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1385,35 +1529,50 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     backgroundColor: "#fff",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
     borderRadius: RADIUS.full,
   },
   badgeText: {
     color: "#111",
-    fontSize: 10,
+    fontSize: ms(10),
     fontWeight: FONTS.semibold,
   },
   bookmarkBtn: {
     backgroundColor: "rgba(0,0,0,0.35)",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(16),
     alignItems: "center",
     justifyContent: "center",
   },
-  cardInfo: { position: "absolute", left: 16, right: 16, bottom: 16 },
+  cardInfo: { position: "absolute", left: SPACING.md, right: SPACING.md, bottom: SPACING.md },
+  cardTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: ms(8),
+    marginBottom: ms(8),
+  },
   cardName: {
-    fontSize: 22,
+    flex: 1,
+    fontSize: ms(22),
     fontWeight: FONTS.bold,
     color: "#fff",
-    marginBottom: 8,
   },
   cardMetaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: ms(10),
+  },
+  cardSaveBtn: {
+    backgroundColor: "rgba(0,0,0,0.4)",
+    width: ms(30),
+    height: ms(30),
+    borderRadius: ms(15),
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardMetaLeft: {
     flexDirection: "row",
@@ -1425,29 +1584,29 @@ const styles = StyleSheet.create({
   },
   metaText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: FONT_SIZES.caption,
   },
   metaDivider: {
     color: "rgba(255,255,255,0.4)",
-    marginHorizontal: 6,
+    marginHorizontal: ms(6),
   },
   caloriesBadge: {
     backgroundColor: "rgba(0,0,0,0.4)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
     borderRadius: RADIUS.full,
     flexDirection: "row",
     alignItems: "center",
   },
   caloriesText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: FONT_SIZES.caption,
     fontWeight: FONTS.semibold,
   },
   cardDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(255,255,255,0.2)",
-    marginVertical: 10,
+    marginVertical: ms(10),
   },
   macrosRow: {
     flexDirection: "row",
@@ -1460,55 +1619,55 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.bold,
   },
   macroLabel: {
     color: "rgba(255,255,255,0.6)",
-    fontSize: 9,
+    fontSize: ms(9),
     marginTop: 1,
   },
   macroColDivider: {
     width: 1,
-    height: 20,
+    height: ms(20),
     backgroundColor: "rgba(255,255,255,0.15)",
   },
 
   stamp: {
     position: "absolute",
-    top: 32,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    top: ms(32),
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(6),
     borderWidth: 3,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     zIndex: 200,
   },
   stampLike: {
-    right: 24,
+    right: ms(24),
     borderColor: "#22C55E",
     transform: [{ rotate: "15deg" }],
   },
   stampSkip: {
-    left: 24,
+    left: ms(24),
     borderColor: "#EF4444",
     transform: [{ rotate: "-15deg" }],
   },
   stampText: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: FONTS.bold,
     letterSpacing: 2,
   },
 
   controls: {
     position: "absolute",
-    bottom: 8,
+    bottom: SPACING.sm,
     left: 0,
     right: 0,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 18,
+    gap: ms(18),
   },
   controlBtn: {
     backgroundColor: "#fff",
@@ -1528,153 +1687,230 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: ms(10),
   },
-  deckEmoji: { fontSize: 56 },
-  deckText: { fontSize: 16, fontWeight: FONTS.semibold },
+  deckEmoji: { fontSize: ms(56) },
+  deckText: { fontSize: ms(16), fontWeight: FONTS.semibold },
   resetBtn: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
     borderWidth: 1,
   },
-  resetText: { fontSize: 14, fontWeight: FONTS.medium },
+  resetText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.medium },
 
   // Trending
   trendingCard: {
-    width: 160,
+    width: ms(160),
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     overflow: "hidden",
   },
-  trendingImage: { width: "100%", height: 100 },
-  trendingMeta: { padding: 10, gap: 2 },
-  trendingName: { fontSize: 13, fontWeight: FONTS.semibold },
-  trendingSub: { fontSize: 11 },
+  trendingImage: { width: "100%", height: vs(100) },
+  trendingMeta: { padding: ms(10), gap: ms(2) },
+  trendingName: { fontSize: FONT_SIZES.small, fontWeight: FONTS.semibold },
+  trendingSub: { fontSize: FONT_SIZES.caption },
 
   // Plan card + library
   planCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 24,
+    marginHorizontal: SPACING.lg,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     paddingHorizontal: SPACING.md,
-    paddingVertical: 13,
-    gap: 12,
-    marginBottom: 18,
+    paddingVertical: ms(13),
+    gap: ms(12),
+    marginBottom: ms(18),
   },
   planIconWrap: {
-    width: 40,
-    height: 40,
+    width: ms(40),
+    height: ms(40),
     borderRadius: RADIUS.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  planIcon: { width: 22, height: 22 },
+  planIcon: { width: ms(22), height: ms(22) },
   planText: { flex: 1 },
-  planTitle: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 2 },
-  planSub: { fontSize: 12, fontWeight: FONTS.regular },
+  planTitle: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: ms(2) },
+  planSub: { fontSize: ms(12), fontWeight: FONTS.regular },
 
   sectionLabel: {
-    fontSize: 11,
+    fontSize: FONT_SIZES.caption,
     fontWeight: FONTS.semibold,
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    paddingHorizontal: 24,
-    marginBottom: 12,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: ms(12),
   },
-  listCard: { marginHorizontal: 24, borderRadius: RADIUS.lg },
+  listCard: { marginHorizontal: SPACING.lg, borderRadius: RADIUS.lg },
 
   recipeRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING.md,
-    paddingVertical: 14,
-    gap: 12,
+    paddingVertical: ms(14),
+    gap: ms(12),
   },
   recipeInfo: { flex: 1 },
-  recipeName: { fontSize: 15, fontWeight: FONTS.semibold, marginBottom: 3 },
-  recipeMeta: { fontSize: 12, fontWeight: FONTS.regular },
-  recipeRight: { alignItems: "flex-end", gap: 3 },
-  recipeCalories: { fontSize: 13, fontWeight: FONTS.regular },
+  recipeName: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: ms(3) },
+  recipeMeta: { fontSize: ms(12), fontWeight: FONTS.regular },
+  recipeRight: { alignItems: "flex-end", gap: ms(3) },
+  recipeCalories: { fontSize: FONT_SIZES.small, fontWeight: FONTS.regular },
   chevron: { marginTop: 1 },
-  hairline: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
+  hairline: { height: StyleSheet.hairlineWidth, marginLeft: ms(76) },
 
   emptyState: {
     alignItems: "center",
     paddingTop: SPACING.xxl * 2,
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACING.lg,
   },
-  emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  emptyEmoji: { fontSize: ms(48), marginBottom: SPACING.md },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: FONT_SIZES.button,
     fontWeight: FONTS.semibold,
     marginBottom: SPACING.xs,
   },
   emptySub: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: FONTS.regular,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: ms(20),
   },
 
-  loadingState: { alignItems: "center", paddingTop: SPACING.xxl * 2, gap: 16 },
-  loadingText: { fontSize: 14, fontWeight: FONTS.regular },
+  loadingState: { alignItems: "center", paddingTop: SPACING.xxl * 2, gap: SPACING.md },
+  loadingText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.regular },
 
   // Category carousels
   carouselHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 24,
-    marginBottom: 14,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: ms(14),
   },
-  carouselTitle: { fontSize: 18, fontWeight: FONTS.bold, letterSpacing: -0.3 },
-  seeAll: { fontSize: 13, fontWeight: FONTS.medium },
+  carouselTitle: { fontSize: ms(18), fontWeight: FONTS.bold, letterSpacing: -0.3 },
+  seeAll: { fontSize: FONT_SIZES.small, fontWeight: FONTS.medium },
 
   hCard: {
-    width: 240,
+    width: HCARD_WIDTH,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     overflow: "hidden",
   },
-  hCardImg: { width: "100%", height: 130 },
+  hCardImg: { width: "100%", height: ms(130) },
   hBookmark: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: ms(10),
+    right: ms(10),
+    width: ms(28),
+    height: ms(28),
+    borderRadius: ms(14),
     backgroundColor: "rgba(255,255,255,0.9)",
     alignItems: "center",
     justifyContent: "center",
   },
-  hCardBody: { padding: 14 },
-  hDivider: { height: StyleSheet.hairlineWidth, marginTop: 12 },
-  hBar: { height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 14 },
+  hCardBody: { padding: ms(14) },
+  hDivider: { height: StyleSheet.hairlineWidth, marginTop: ms(12) },
+  hBar: { height: ms(6), borderRadius: ms(3), overflow: "hidden", marginBottom: ms(14) },
   hBarFill: { flex: 1, flexDirection: "row" },
   hCardTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    gap: SPACING.sm,
   },
-  hCardName: { flex: 1, fontSize: 15, fontWeight: FONTS.semibold },
-  hCardMeta: { fontSize: 12, marginTop: 3 },
-  hCardKcal: { fontSize: 15, fontWeight: FONTS.bold, marginTop: 10, marginBottom: 8 },
-  hMacroList: { gap: 6, marginBottom: 14 },
+  hCardName: { flex: 1, fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold },
+  hCardMeta: { fontSize: ms(12), marginTop: ms(3) },
+  hCardKcal: { fontSize: FONT_SIZES.body, fontWeight: FONTS.bold, marginTop: ms(10), marginBottom: SPACING.sm },
+  hMacroList: { gap: ms(6), marginBottom: ms(14) },
   hMacroRow: { flexDirection: "row", alignItems: "center" },
-  hDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  hMacroLabel: { flex: 1, fontSize: 13 },
-  hMacroVal: { fontSize: 13, fontWeight: FONTS.semibold },
+  hDot: { width: ms(8), height: ms(8), borderRadius: ms(4), marginRight: SPACING.sm },
+  hMacroLabel: { flex: 1, fontSize: FONT_SIZES.small },
+  hMacroVal: { fontSize: FONT_SIZES.small, fontWeight: FONTS.semibold },
   startBtn: {
     borderRadius: RADIUS.full,
-    paddingVertical: 11,
+    paddingVertical: ms(11),
     alignItems: "center",
     justifyContent: "center",
   },
-  startBtnText: { fontSize: 14, fontWeight: FONTS.bold, color: "#FFFFFF" },
+  startBtnText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.bold, color: "#FFFFFF" },
+
+  // "See All" tile — same footprint as a recipe card, terminates the carousel.
+  seeAllCard: {
+    width: HCARD_WIDTH,
+    height: HCARD_COLLAPSED_HEIGHT,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: ms(10),
+  },
+  seeAllIconWrap: {
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  seeAllCardText: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold },
+
+  // Instagram-style paged carousel
+  deckSection: { marginBottom: ms(28) },
+  postPage: { width: SCREEN_WIDTH },
+  postCard: {
+    width: "100%",
+    height: CARD_HEIGHT,
+    overflow: "hidden",
+  },
+  skeletonBlock: { flex: 1 },
+  skeletonInfo: { padding: SPACING.md, gap: ms(8) },
+  skeletonLineLg: { height: ms(20), width: "60%", borderRadius: ms(6) },
+  skeletonLineSm: { height: ms(14), width: "40%", borderRadius: ms(6) },
+  pageCounter: {
+    position: "absolute",
+    top: ms(12),
+    right: ms(12),
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(4),
+    borderRadius: RADIUS.full,
+  },
+  pageCounterText: {
+    color: "#fff",
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONTS.semibold,
+  },
+
+  // Save → meal-type picker modal (mirrors SearchFoodScreen)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mealPickerModal: {
+    width: ms(260),
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+    paddingVertical: SPACING.sm,
+  },
+  mealPickerTitle: {
+    fontSize: FONT_SIZES.small,
+    fontWeight: FONTS.semibold,
+    textAlign: "center",
+    paddingVertical: ms(10),
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  mealPickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: ms(18),
+    paddingVertical: ms(13),
+  },
+  mealPickerOptionText: { fontSize: FONT_SIZES.body },
 });

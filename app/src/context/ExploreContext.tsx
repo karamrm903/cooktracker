@@ -60,7 +60,7 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
       setImages(map);
       // Warm native image cache so first paint in the swiper is instant.
       Object.values(map).forEach((url) => {
-        if (url) Image.prefetch(url).catch(() => {});
+        if (url) Image.prefetch(url).catch(() => { });
       });
       setImagesLoaded(true);
     } catch (err) {

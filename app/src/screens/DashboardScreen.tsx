@@ -26,7 +26,6 @@ import {
   MacroBar,
   NutrientRow,
 } from "../components/NutritionExpansion";
-import SaveModal from "../components/SaveModal";
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
 import {
   moderateScale as ms,
@@ -34,7 +33,6 @@ import {
   verticalScale as vs,
 } from "../utils/responsive";
 import { useMealLogs } from "../context/MealLogsContext";
-import { useSavedMeals } from "../context/SavedMealsContext";
 import { useTheme } from "../context/ThemeContext";
 import { profileService } from "../services/profile.service";
 import {
@@ -57,7 +55,6 @@ const knifeImg = require("../../assets/webp/Knife.webp");
 const doubleStarImg = require("../../assets/webp/DoubleStar.webp");
 const singleLeafImg = require("../../assets/webp/Plant.webp");
 const chevronRightImg = require("../../assets/webp/ChevronRight.webp");
-const saveImg = require("../../assets/webp/Save.webp");
 const deleteImg = require("../../assets/webp/Delete.webp");
 const sunImg = require("../../assets/webp/Sun.webp");
 const sunCloudImg = require("../../assets/webp/SunUnderCloud.webp");
@@ -101,7 +98,6 @@ if (
 export default function DashboardScreen({ navigation }: DashboardProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { isSaved, getSavedCategory, saveMeal, unsaveMeal } = useSavedMeals();
   const mealLogsContext = useMealLogs() as any;
   const allMeals: Meal[] =
     mealLogsContext.allMeals || mealLogsContext.meals || [];
@@ -181,9 +177,6 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
       setImportChecking(false);
     }
   }
-  const [modalMeal, setModalMeal] = useState<Meal | null>(null);
-  const [toastText, setToastText] = useState<string | null>(null);
-  const toastAnim = useRef(new Animated.Value(0)).current;
   const skeletonAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -271,55 +264,6 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   });
 
   const hasNoMealsLogged = todaysMeals.length === 0;
-
-  function showToast(text) {
-    setToastText(text);
-    toastAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(toastAnim, {
-        toValue: 1,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.delay(1600),
-      Animated.timing(toastAnim, {
-        toValue: 0,
-        duration: 280,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setToastText(null));
-  }
-
-  function handleSave(category: string) {
-    if (!modalMeal) return;
-
-    const mealType = category.toLowerCase() as Meal["mealType"];
-    const mealEmoji =
-      { breakfast: "🍳", lunch: "🥗", dinner: "🍽️", snack: "🍪" }[mealType] ??
-      modalMeal.emoji;
-
-    // Move meal to selected section
-    updateMeal(modalMeal.id, { mealType, meal: category, emoji: mealEmoji });
-
-    // Also bookmark the recipe if it has a source recipe
-    if (modalMeal.recipeId) {
-      saveMeal(modalMeal.recipeId, category);
-    }
-
-    setModalMeal(null);
-    showToast(t("dashboard.movedTo", { category }));
-  }
-
-  function handleRemove() {
-    if (!modalMeal) return;
-
-    if (modalMeal.recipeId) {
-      unsaveMeal(modalMeal.recipeId);
-    }
-
-    setModalMeal(null);
-    showToast(t("dashboard.removedFromSaved"));
-  }
 
   function handleToggle(id) {
     LayoutAnimation.configureNext({
@@ -787,29 +731,6 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                               />
                               <View style={styles.mealActions}>
                                 <TouchableOpacity
-                                  onPress={() => setModalMeal(meal)}
-                                  hitSlop={{
-                                    top: 8,
-                                    bottom: 8,
-                                    left: 8,
-                                    right: 8,
-                                  }}
-                                >
-                                  <Image
-                                    source={saveImg}
-                                    style={[
-                                      styles.actionIcon,
-                                      {
-                                        opacity: isSaved(meal.id ?? meal.name)
-                                          ? 1
-                                          : 0.45,
-                                      },
-                                    ]}
-                                    resizeMode="contain"
-                                  />
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
                                   onPress={() =>
                                     setDeleteModal({
                                       visible: true,
@@ -960,36 +881,6 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
           />
         </TouchableOpacity>
       </ScrollView>
-
-      <SaveModal
-        meal={modalMeal}
-        visible={!!modalMeal}
-        onClose={() => setModalMeal(null)}
-        onSave={handleSave}
-        onRemove={handleRemove}
-        savedCategory={
-          modalMeal
-            ? getSavedCategory(modalMeal.recipeId ?? modalMeal.id)
-            : null
-        }
-        colors={colors}
-        title="Move to…"
-      />
-
-      {/* ── Toast ───────────────────────────────────────────────────── */}
-      {toastText && (
-        <Animated.View
-          style={[
-            styles.toast,
-            { backgroundColor: colors.text, opacity: toastAnim },
-          ]}
-          pointerEvents="none"
-        >
-          <Text style={[styles.toastText, { color: colors.background }]}>
-            {toastText}
-          </Text>
-        </Animated.View>
-      )}
 
       {/* Delete confirmation */}
       <CommonAlertModal
@@ -1291,17 +1182,6 @@ const styles = StyleSheet.create({
     fontWeight: FONTS.medium,
   },
   motivationChevron: { width: ms(16), height: ms(16), opacity: 0.5 },
-
-  // Toast
-  toast: {
-    position: "absolute",
-    bottom: ms(28),
-    alignSelf: "center",
-    paddingHorizontal: ms(20),
-    paddingVertical: ms(10),
-    borderRadius: RADIUS.full,
-  },
-  toastText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.medium },
 
   // Skeleton
   skeletonRingContainer: {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import { FONT_SIZES } from '../constants/theme';
 import { moderateScale as ms } from '../utils/responsive';
 
@@ -14,6 +14,14 @@ interface CalorieRingProps {
   size?: number;
 }
 
+// Progress fills clockwise from the top. The filled arc is coloured in bands by
+// how far along it is: 0–30% orange, 30–60% amber, 60–100% green.
+const BANDS = [
+  { color: '#FF8A45', start: 0,    end: 0.3 },
+  { color: '#FCB857', start: 0.3,  end: 0.6 },
+  { color: '#94AE7F', start: 0.6,  end: 1 },
+];
+
 export function CalorieRing({
   calories,
   goal,
@@ -25,44 +33,54 @@ export function CalorieRing({
   const strokeWidth = ms(14);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
+  const center = size / 2;
 
-  // Protect against division by zero if goal is 0
   const safeGoal = Math.max(goal, 1);
-  const progress = Math.min(calories / safeGoal, 1);
-  const strokeDashoffset = circumference * (1 - progress);
-
+  const progress = Math.min(Math.max(calories / safeGoal, 0), 1);
   const diff = calories - safeGoal;
+
+  // Only the bands the progress has reached, clipped to the current progress.
+  const arcs = BANDS
+    .map((b) => {
+      const segEnd = Math.min(progress, b.end);
+      if (segEnd <= b.start) return null;
+      const frac = segEnd - b.start;
+      return {
+        color: b.color,
+        dash: frac * circumference,
+        rotation: -90 + b.start * 360,
+      };
+    })
+    .filter(Boolean) as { color: string; dash: number; rotation: number }[];
 
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size}>
-        <Defs>
-          <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#FF8A3D" />
-            <Stop offset="100%" stopColor="#FF6B35" />
-          </LinearGradient>
-        </Defs>
+        {/* Empty track */}
         <Circle
           stroke={trackColor}
           fill="none"
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={radius}
           strokeWidth={strokeWidth}
         />
 
-        <Circle
-          stroke="url(#grad)"
-          fill="none"
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
+        {/* Coloured progress bands */}
+        {arcs.map((arc, i) => (
+          <Circle
+            key={i}
+            stroke={arc.color}
+            fill="none"
+            cx={center}
+            cy={center}
+            r={radius}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${arc.dash} ${circumference}`}
+            strokeLinecap="butt"
+            transform={`rotate(${arc.rotation} ${center} ${center})`}
+          />
+        ))}
       </Svg>
 
       <View

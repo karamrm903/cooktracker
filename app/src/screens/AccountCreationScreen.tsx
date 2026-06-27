@@ -35,6 +35,8 @@ import {
 import CommonAlertModal, {
   CommonModalVariant,
 } from "../components/CommonModal";
+import { FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
+import { moderateScale as ms } from "../utils/responsive";
 
 type RootStackParamList = {
   AccountCreation: undefined;
@@ -192,7 +194,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
+            <Ionicons name="arrow-back" size={ms(20)} color={TEXT_DARK} />
           </TouchableOpacity>
 
           {/* Header */}
@@ -211,7 +213,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
               <View style={styles.inputWrap}>
                 <Ionicons
                   name="mail-outline"
-                  size={20}
+                  size={ms(20)}
                   color={ICON_COLOR}
                   style={styles.inputIcon}
                 />
@@ -236,7 +238,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
               <View style={styles.inputWrap}>
                 <Ionicons
                   name="lock-closed-outline"
-                  size={20}
+                  size={ms(20)}
                   color={ICON_COLOR}
                   style={styles.inputIcon}
                 />
@@ -257,7 +259,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
                 >
                   <Ionicons
                     name={passwordVisible ? "eye-outline" : "eye-off-outline"}
-                    size={20}
+                    size={ms(20)}
                     color={ICON_COLOR}
                   />
                 </TouchableOpacity>
@@ -272,7 +274,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
               <View style={styles.inputWrap}>
                 <Ionicons
                   name="lock-closed-outline"
-                  size={20}
+                  size={ms(20)}
                   color={ICON_COLOR}
                   style={styles.inputIcon}
                 />
@@ -293,7 +295,7 @@ export default function AccountCreationScreen({ navigation }: Props) {
                 >
                   <Ionicons
                     name={confirmVisible ? "eye-outline" : "eye-off-outline"}
-                    size={20}
+                    size={ms(20)}
                     color={ICON_COLOR}
                   />
                 </TouchableOpacity>
@@ -380,15 +382,15 @@ export default function AccountCreationScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
   },
   leafDecor: {
     position: "absolute",
-    top: 6,
-    right: -20,
-    width: 170,
-    height: 180,
+    top: ms(6),
+    right: -ms(20),
+    width: ms(170),
+    height: ms(180),
     zIndex: 0,
   },
   leafImg: {
@@ -396,10 +398,10 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   backBtn: {
-    marginTop: 8,
-    width: 42,
-    height: 42,
-    borderRadius: 999,
+    marginTop: SPACING.sm,
+    width: ms(42),
+    height: ms(42),
+    borderRadius: RADIUS.full,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
@@ -410,31 +412,31 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   header: {
-    marginTop: 24,
-    marginBottom: 28,
-    gap: 8,
+    marginTop: SPACING.lg,
+    marginBottom: ms(28),
+    gap: SPACING.sm,
   },
   title: {
-    fontSize: 34,
+    fontSize: FONT_SIZES.h1,
     fontWeight: "800",
     color: TEXT_DARK,
     letterSpacing: -0.5,
-    lineHeight: 42,
+    lineHeight: ms(42),
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     color: TEXT_MUTED,
     fontWeight: "400",
-    lineHeight: 22,
+    lineHeight: ms(22),
   },
   form: {
-    gap: 16,
+    gap: SPACING.md,
   },
   inputGroup: {
-    gap: 8,
+    gap: SPACING.sm,
   },
   label: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     fontWeight: "700",
     color: TEXT_DARK,
   },
@@ -442,36 +444,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: ms(14),
+    paddingHorizontal: ms(14),
     borderWidth: 1,
     borderColor: INPUT_BORDER,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: ms(10),
   },
   input: {
     flex: 1,
-    paddingVertical: 16,
-    fontSize: 15,
+    paddingVertical: SPACING.md,
+    fontSize: FONT_SIZES.body,
     color: TEXT_DARK,
   },
   eyeBtn: {
-    paddingLeft: 10,
+    paddingLeft: ms(10),
   },
   primaryBtn: {
     backgroundColor: BRAND_COLOR,
-    paddingVertical: 18,
-    borderRadius: 999,
+    paddingVertical: ms(18),
+    borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   primaryBtnDisabled: {
     opacity: 0.6,
   },
   primaryBtnText: {
-    fontSize: 17,
+    fontSize: FONT_SIZES.button,
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.2,
@@ -479,8 +481,8 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginVertical: 2,
+    gap: ms(12),
+    marginVertical: ms(2),
   },
   dividerLine: {
     flex: 1,
@@ -488,7 +490,7 @@ const styles = StyleSheet.create({
     backgroundColor: DIVIDER,
   },
   dividerText: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.label,
     color: TEXT_MUTED,
     fontWeight: "500",
   },
@@ -496,29 +498,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: ms(10),
     backgroundColor: "#FFFFFF",
-    paddingVertical: 16,
-    borderRadius: 999,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.full,
     borderWidth: 1,
     borderColor: INPUT_BORDER,
   },
   googleIcon: {
-    width: 20,
-    height: 20,
+    width: ms(20),
+    height: ms(20),
   },
   googleBtnText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: "700",
     color: TEXT_DARK,
     letterSpacing: 0.1,
   },
   termsText: {
-    fontSize: 16,
+    fontSize: ms(16),
     color: TEXT_MUTED,
     textAlign: "center",
-    lineHeight: 18,
-    marginTop: 20,
+    lineHeight: ms(18),
+    marginTop: ms(20),
   },
   termsLink: {
     color: FORGOT_GREEN,

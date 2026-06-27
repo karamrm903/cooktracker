@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,51 +9,60 @@ import {
   ActivityIndicator,
   Modal,
   Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
-import { useSelector } from 'react-redux';
-import { useTheme } from '../context/ThemeContext';
-import { useMealLogs } from '../context/MealLogsContext';
-import { FONTS, RADIUS } from '../constants/theme';
-import CommonAlertModal from '../components/CommonModal';
-import { fetchFoodItemImage, fetchFoodImage } from '../services/foodSearch.service';
-import type { FoodItem } from '../services/foodSearch.service';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Svg, { Circle } from "react-native-svg";
+import { useSelector } from "react-redux";
+import { useTheme } from "../context/ThemeContext";
+import { useMealLogs } from "../context/MealLogsContext";
+import { FONTS, FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
+import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
+import CommonAlertModal from "../components/CommonModal";
+import {
+  fetchFoodItemImage,
+  fetchFoodImage,
+} from "../services/foodSearch.service";
+import type { FoodItem } from "../services/foodSearch.service";
 
-const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealType = (typeof MEAL_TYPES)[number];
 const MEAL_LABELS: Record<MealType, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snack',
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snack: "Snack",
 };
 
 // Macro colors matching the mockup
 const MACRO_COLORS = {
-  carbs:   '#06B6D4',  // cyan
-  fat:     '#8B5CF6',  // purple
-  protein: '#F59E0B',  // amber
+  carbs: "#06B6D4", // cyan
+  fat: "#8B5CF6", // purple
+  protein: "#F59E0B", // amber
 };
 
 interface DonutChartProps {
   calories: number;
   carbsPct: number;
-  fatPct:   number;
+  fatPct: number;
   proteinPct: number;
 }
 
-function DonutChart({ calories, carbsPct, fatPct, proteinPct }: DonutChartProps) {
-  const size = 110;
-  const strokeWidth = 13;
+function DonutChart({
+  calories,
+  carbsPct,
+  fatPct,
+  proteinPct,
+}: DonutChartProps) {
+  const size = ms(110);
+  const strokeWidth = ms(13);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const gap = 0.012; // small gap between segments as fraction of circle
 
   const segments = [
-    { color: MACRO_COLORS.carbs,   pct: carbsPct   / 100 },
-    { color: MACRO_COLORS.fat,     pct: fatPct     / 100 },
+    { color: MACRO_COLORS.carbs, pct: carbsPct / 100 },
+    { color: MACRO_COLORS.fat, pct: fatPct / 100 },
     { color: MACRO_COLORS.protein, pct: proteinPct / 100 },
   ];
 
@@ -67,7 +76,7 @@ function DonutChart({ calories, carbsPct, fatPct, proteinPct }: DonutChartProps)
   });
 
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size}>
         {/* Track */}
         <Circle
@@ -94,7 +103,9 @@ function DonutChart({ calories, carbsPct, fatPct, proteinPct }: DonutChartProps)
         ))}
       </Svg>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
           <Text style={styles.donutCalories}>{calories}</Text>
           <Text style={styles.donutLabel}>cal</Text>
         </View>
@@ -108,24 +119,32 @@ export default function FoodDetailScreen({ navigation, route }: any) {
   const { addMeal } = useMealLogs() as any;
   const session = useSelector((s: any) => s.auth.session);
   const food: FoodItem = route.params?.food;
-  const defaultMealType: MealType = route.params?.defaultMealType ?? 'breakfast';
+  const defaultMealType: MealType =
+    route.params?.defaultMealType ?? "breakfast";
 
-  const [servings, setServings] = useState('1');
+  const [servings, setServings] = useState("1");
   const [mealType, setMealType] = useState<MealType>(defaultMealType);
   const [showMealPicker, setShowMealPicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [modal, setModal] = useState<{ visible: boolean; variant: 'success' | 'error'; message: string }>({
+  const [modal, setModal] = useState<{
+    visible: boolean;
+    variant: "success" | "error";
+    message: string;
+  }>({
     visible: false,
-    variant: 'success',
-    message: '',
+    variant: "success",
+    message: "",
   });
 
   // Lazy-fetch a signed Pexels image on mount. UUID-looking ids refer to a
   // persisted food_items row → /api/food-items/:id/image; everything else (AI
   // search results without a DB row) falls back to /api/food/image keyed by name.
-  const [imageUrl, setImageUrl] = useState<string | null>(food?.imageUrl ?? null);
+  const [imageUrl, setImageUrl] = useState<string | null>(
+    food?.imageUrl ?? null,
+  );
   const [imageLoading, setImageLoading] = useState(false);
-  const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+  const isUuid = (s: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
   useEffect(() => {
     if (!food || imageUrl) return;
@@ -135,74 +154,102 @@ export default function FoodDetailScreen({ navigation, route }: any) {
       ? fetchFoodItemImage(food.id, session, food.name)
       : fetchFoodImage(food.name, session);
     load
-      .then((url) => { if (!cancelled) setImageUrl(url); })
+      .then((url) => {
+        if (!cancelled) setImageUrl(url);
+      })
       .catch(() => {})
-      .finally(() => { if (!cancelled) setImageLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setImageLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [food?.id]);
 
   const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const timeStr = now.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
   const servingsNum = Math.max(parseFloat(servings) || 1, 0.1);
 
   const totalCalories = Math.round(food.calories * servingsNum);
-  const totalProtein  = Math.round(food.macros.protein  * servingsNum * 10) / 10;
-  const totalCarbs    = Math.round(food.macros.carbs    * servingsNum * 10) / 10;
-  const totalFat      = Math.round(food.macros.fat      * servingsNum * 10) / 10;
+  const totalProtein = Math.round(food.macros.protein * servingsNum * 10) / 10;
+  const totalCarbs = Math.round(food.macros.carbs * servingsNum * 10) / 10;
+  const totalFat = Math.round(food.macros.fat * servingsNum * 10) / 10;
 
   const macroCalories = totalProtein * 4 + totalCarbs * 4 + totalFat * 9;
-  const safeMacroCal  = Math.max(macroCalories, 1);
+  const safeMacroCal = Math.max(macroCalories, 1);
 
-  const carbsPct   = Math.round((totalCarbs   * 4 / safeMacroCal) * 100);
-  const fatPct     = Math.round((totalFat     * 9 / safeMacroCal) * 100);
-  const proteinPct = Math.round((totalProtein * 4 / safeMacroCal) * 100);
+  const carbsPct = Math.round(((totalCarbs * 4) / safeMacroCal) * 100);
+  const fatPct = Math.round(((totalFat * 9) / safeMacroCal) * 100);
+  const proteinPct = Math.round(((totalProtein * 4) / safeMacroCal) * 100);
 
   async function handleLog() {
     if (isSaving) return;
     setIsSaving(true);
     try {
       const meal = {
-        name:     food.name,
+        name: food.name,
         calories: totalCalories,
-        protein:  totalProtein,
-        carbs:    totalCarbs,
-        fat:      totalFat,
-        macros:   { protein: totalProtein, carbs: totalCarbs, fat: totalFat },
+        protein: totalProtein,
+        carbs: totalCarbs,
+        fat: totalFat,
+        macros: { protein: totalProtein, carbs: totalCarbs, fat: totalFat },
         mealType,
-        meal:     MEAL_LABELS[mealType],
-        time:     timeStr,
+        meal: MEAL_LABELS[mealType],
+        time: timeStr,
         loggedAt: now.toISOString(),
-        dateKey:  now.toISOString().slice(0, 10),
-        source:   'food_search',
-        emoji:    null,
+        dateKey: now.toISOString().slice(0, 10),
+        source: "food_search",
+        emoji: null,
       };
       await addMeal(meal);
-      setModal({ visible: true, variant: 'success', message: `${food.name} logged to ${MEAL_LABELS[mealType]}.` });
+      setModal({
+        visible: true,
+        variant: "success",
+        message: `${food.name} logged to ${MEAL_LABELS[mealType]}.`,
+      });
     } catch (err: any) {
-      setModal({ visible: true, variant: 'error', message: err?.message || 'Failed to log. Try again.' });
+      setModal({
+        visible: true,
+        variant: "error",
+        message: err?.message || "Failed to log. Try again.",
+      });
       setIsSaving(false);
     }
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top", "bottom"]}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Ionicons name="arrow-back" size={ms(22)} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Add Food</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Add Food
+        </Text>
 
-        <TouchableOpacity onPress={handleLog} disabled={isSaving} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={handleLog}
+          disabled={isSaving}
+          activeOpacity={0.7}
+        >
           {isSaving ? (
-            <ActivityIndicator size="small" color={colors.info ?? '#3B82F6'} />
+            <ActivityIndicator size="small" color={colors.info ?? "#3B82F6"} />
           ) : (
-            <Text style={[styles.logBtn, { color: colors.info ?? '#3B82F6' }]}>Log</Text>
+            <Text style={[styles.logBtn, { color: colors.info ?? "#3B82F6" }]}>
+              Log
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -214,9 +261,16 @@ export default function FoodDetailScreen({ navigation, route }: any) {
       >
         {/* Food name */}
         <View style={styles.foodTitleRow}>
-          <Text style={[styles.foodTitle, { color: colors.text }]}>{food.name}</Text>
+          <Text style={[styles.foodTitle, { color: colors.text }]}>
+            {food.name}
+          </Text>
           {food.verified && (
-            <Ionicons name="shield-checkmark" size={20} color="#22C55E" style={{ marginLeft: 8 }} />
+            <Ionicons
+              name="shield-checkmark"
+              size={ms(20)}
+              color="#22C55E"
+              style={{ marginLeft: ms(8) }}
+            />
           )}
         </View>
 
@@ -224,18 +278,40 @@ export default function FoodDetailScreen({ navigation, route }: any) {
 
         {/* Form rows */}
         <View style={styles.formRow}>
-          <Text style={[styles.formLabel, { color: colors.text }]}>Serving Size</Text>
-          <View style={[styles.formValue, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <Text style={[styles.formValueText, { color: colors.info ?? '#3B82F6' }]}>
+          <Text style={[styles.formLabel, { color: colors.text }]}>
+            Serving Size
+          </Text>
+          <View
+            style={[
+              styles.formValue,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
+          >
+            <Text
+              style={[
+                styles.formValueText,
+                { color: colors.info ?? "#3B82F6" },
+              ]}
+            >
               {food.servingSize}
             </Text>
           </View>
         </View>
 
         <View style={styles.formRow}>
-          <Text style={[styles.formLabel, { color: colors.text }]}>Number of Servings</Text>
+          <Text style={[styles.formLabel, { color: colors.text }]}>
+            Number of Servings
+          </Text>
           <TextInput
-            style={[styles.formValue, styles.formValueInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.info ?? '#3B82F6' }]}
+            style={[
+              styles.formValue,
+              styles.formValueInput,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                color: colors.info ?? "#3B82F6",
+              },
+            ]}
             value={servings}
             onChangeText={setServings}
             keyboardType="decimal-pad"
@@ -245,25 +321,44 @@ export default function FoodDetailScreen({ navigation, route }: any) {
 
         <View style={styles.formRow}>
           <Text style={[styles.formLabel, { color: colors.text }]}>Time</Text>
-          <View style={[styles.formValue, styles.formValueRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginRight: 6 }} />
-            <Text style={[styles.formValueText, { color: colors.textSecondary }]}>{timeStr}</Text>
+          <View
+            style={[
+              styles.formValue,
+              styles.formValueRow,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
+          >
+            <Ionicons
+              name="time-outline"
+              size={ms(14)}
+              color={colors.textMuted}
+              style={{ marginRight: ms(6) }}
+            />
+            <Text
+              style={[styles.formValueText, { color: colors.textSecondary }]}
+            >
+              {timeStr}
+            </Text>
           </View>
         </View>
 
         <View style={styles.formRow}>
           <Text style={[styles.formLabel, { color: colors.text }]}>Meal</Text>
           <TouchableOpacity
-            style={[styles.formValue, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            style={[
+              styles.formValue,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
             onPress={() => setShowMealPicker(true)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.formValueText, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.formValueText, { color: colors.textSecondary }]}
+            >
               {MEAL_LABELS[mealType]}
             </Text>
           </TouchableOpacity>
         </View>
-
 
         {/* Macro chart */}
         <View style={styles.macroSection}>
@@ -276,34 +371,70 @@ export default function FoodDetailScreen({ navigation, route }: any) {
 
           <View style={styles.macroColumns}>
             <View style={styles.macroCol}>
-              <Text style={[styles.macroPct, { color: MACRO_COLORS.carbs }]}>{carbsPct}%</Text>
-              <Text style={[styles.macroGrams, { color: colors.text }]}>{totalCarbs} g</Text>
-              <Text style={[styles.macroName, { color: colors.textMuted }]}>Carbs</Text>
+              <Text style={[styles.macroPct, { color: MACRO_COLORS.carbs }]}>
+                {carbsPct}%
+              </Text>
+              <Text style={[styles.macroGrams, { color: colors.text }]}>
+                {totalCarbs} g
+              </Text>
+              <Text style={[styles.macroName, { color: colors.textMuted }]}>
+                Carbs
+              </Text>
             </View>
             <View style={styles.macroCol}>
-              <Text style={[styles.macroPct, { color: MACRO_COLORS.fat }]}>{fatPct}%</Text>
-              <Text style={[styles.macroGrams, { color: colors.text }]}>{totalFat} g</Text>
-              <Text style={[styles.macroName, { color: colors.textMuted }]}>Fat</Text>
+              <Text style={[styles.macroPct, { color: MACRO_COLORS.fat }]}>
+                {fatPct}%
+              </Text>
+              <Text style={[styles.macroGrams, { color: colors.text }]}>
+                {totalFat} g
+              </Text>
+              <Text style={[styles.macroName, { color: colors.textMuted }]}>
+                Fat
+              </Text>
             </View>
             <View style={styles.macroCol}>
-              <Text style={[styles.macroPct, { color: MACRO_COLORS.protein }]}>{proteinPct}%</Text>
-              <Text style={[styles.macroGrams, { color: colors.text }]}>{totalProtein} g</Text>
-              <Text style={[styles.macroName, { color: colors.textMuted }]}>Protein</Text>
+              <Text style={[styles.macroPct, { color: MACRO_COLORS.protein }]}>
+                {proteinPct}%
+              </Text>
+              <Text style={[styles.macroGrams, { color: colors.text }]}>
+                {totalProtein} g
+              </Text>
+              <Text style={[styles.macroName, { color: colors.textMuted }]}>
+                Protein
+              </Text>
             </View>
           </View>
         </View>
 
-        <View style={[styles.imageWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.imageWrap,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {imageLoading ? (
             <View style={styles.imagePlaceholder}>
               <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
           ) : imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.foodImage} resizeMode="cover" />
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.foodImage}
+              resizeMode="cover"
+            />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={36} color={colors.textMuted} />
-              <Text style={[styles.imagePlaceholderText, { color: colors.textMuted }]}>
+              <Ionicons
+                name="image-outline"
+                size={ms(36)}
+                color={colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.imagePlaceholderText,
+                  { color: colors.textMuted },
+                ]}
+              >
                 No photo available
               </Text>
             </View>
@@ -314,12 +445,12 @@ export default function FoodDetailScreen({ navigation, route }: any) {
       <CommonAlertModal
         visible={modal.visible}
         variant={modal.variant}
-        title={modal.variant === 'success' ? 'Logged!' : 'Error'}
+        title={modal.variant === "success" ? "Logged!" : "Error"}
         message={modal.message}
-        primaryText={modal.variant === 'success' ? 'Done' : 'Try Again'}
+        primaryText={modal.variant === "success" ? "Done" : "Try Again"}
         onPrimary={() => {
-          setModal(m => ({ ...m, visible: false }));
-          if (modal.variant === 'success') navigation.pop(2);
+          setModal((m) => ({ ...m, visible: false }));
+          if (modal.variant === "success") navigation.pop(2);
           else setIsSaving(false);
         }}
       />
@@ -331,8 +462,15 @@ export default function FoodDetailScreen({ navigation, route }: any) {
           activeOpacity={1}
           onPress={() => setShowMealPicker(false)}
         >
-          <View style={[styles.mealPickerModal, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>Select a Meal</Text>
+          <View
+            style={[
+              styles.mealPickerModal,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>
+              Select a Meal
+            </Text>
             {MEAL_TYPES.map((mt) => (
               <TouchableOpacity
                 key={mt}
@@ -348,14 +486,21 @@ export default function FoodDetailScreen({ navigation, route }: any) {
                 <Text
                   style={[
                     styles.mealPickerOptionText,
-                    { color: mt === mealType ? colors.text : colors.textSecondary },
+                    {
+                      color:
+                        mt === mealType ? colors.text : colors.textSecondary,
+                    },
                     mt === mealType && { fontWeight: FONTS.semibold },
                   ]}
                 >
                   {MEAL_LABELS[mt]}
                 </Text>
                 {mt === mealType && (
-                  <Ionicons name="checkmark" size={16} color={colors.text} />
+                  <Ionicons
+                    name="checkmark"
+                    size={ms(16)}
+                    color={colors.text}
+                  />
                 )}
               </TouchableOpacity>
             ))}
@@ -369,156 +514,156 @@ export default function FoodDetailScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: ms(20),
+    paddingVertical: ms(14),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.semibold,
   },
   logBtn: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: FONTS.semibold,
   },
   content: {
-    padding: 20,
-    paddingBottom: 48,
+    padding: ms(20),
+    paddingBottom: SPACING.xxl,
   },
   foodTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: SPACING.md,
   },
   foodTitle: {
-    fontSize: 26,
+    fontSize: ms(26),
     fontWeight: FONTS.bold,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginBottom: 20,
+    marginBottom: ms(20),
   },
   formRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: ms(12),
   },
   formLabel: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: FONTS.medium,
     flex: 1,
   },
   formValue: {
     borderWidth: 1,
     borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minWidth: 110,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(10),
+    minWidth: ms(110),
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   formValueInput: {
-    textAlign: 'right',
-    fontSize: 15,
-    paddingVertical: 9,
-    minWidth: 110,
+    textAlign: "right",
+    fontSize: FONT_SIZES.body,
+    paddingVertical: ms(9),
+    minWidth: ms(110),
   },
   formValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   formValueText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
   },
   macroSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 32,
-    gap: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: SPACING.xl,
+    gap: SPACING.md,
   },
   macroColumns: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
   },
   macroCol: {
-    alignItems: 'center',
-    gap: 2,
+    alignItems: "center",
+    gap: ms(2),
   },
   macroPct: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: FONTS.bold,
   },
   macroGrams: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
     fontWeight: FONTS.semibold,
   },
   macroName: {
-    fontSize: 12,
+    fontSize: ms(12),
   },
   imageWrap: {
-    marginTop: 28,
+    marginTop: ms(28),
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    overflow: 'hidden',
-    height: 200,
+    overflow: "hidden",
+    height: vs(200),
   },
   foodImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   imagePlaceholder: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
   },
   imagePlaceholderText: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
   },
   donutCalories: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: FONTS.bold,
-    color: '#fff',
+    color: "#000",
   },
   donutLabel: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: FONT_SIZES.caption,
+    color: "#999",
     marginTop: 1,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   mealPickerModal: {
-    width: 260,
+    width: ms(260),
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    overflow: 'hidden',
-    paddingVertical: 8,
+    overflow: "hidden",
+    paddingVertical: SPACING.sm,
   },
   mealPickerTitle: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.small,
     fontWeight: FONTS.semibold,
-    textAlign: 'center',
-    paddingVertical: 10,
-    textTransform: 'uppercase',
+    textAlign: "center",
+    paddingVertical: ms(10),
+    textTransform: "uppercase",
     letterSpacing: 0.6,
   },
   mealPickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: ms(18),
+    paddingVertical: ms(13),
   },
   mealPickerOptionText: {
-    fontSize: 15,
+    fontSize: FONT_SIZES.body,
   },
 });
