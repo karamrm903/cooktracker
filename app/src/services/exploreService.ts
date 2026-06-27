@@ -34,20 +34,21 @@ export const exploreService = {
   // GET /api/explore/swipe — curated swipe deck (no images on this payload).
   fetchSwipeDeck: async (
     session: any,
-    opts: { category?: string; q?: string; limit?: number } = {},
-  ): Promise<{ cards: ExploreRecipe[] }> => {
+    opts: { category?: string; q?: string; limit?: number; page?: number } = {},
+  ): Promise<{ cards: ExploreRecipe[]; hasMore: boolean; totalCount?: number }> => {
     const headers = await getAuthHeaders(session);
     const params = new URLSearchParams();
     if (opts.category && opts.category !== 'all') params.set('category', opts.category);
     if (opts.q) params.set('q', opts.q);
     if (opts.limit) params.set('limit', String(opts.limit));
+    if (opts.page) params.set('page', String(opts.page));
     const qs = params.toString();
     const res = await fetch(
       `${getBaseUrl()}/api/explore/swipe${qs ? `?${qs}` : ''}`,
       { headers },
     );
-    const data = await handleResponse<{ cards: ExploreRecipe[] }>(res);
-    return { cards: data.cards ?? [] };
+    const data = await handleResponse<{ cards: ExploreRecipe[]; hasMore?: boolean; totalCount?: number }>(res);
+    return { cards: data.cards ?? [], hasMore: data.hasMore ?? false, totalCount: data.totalCount };
   },
 
   fetchTrending: async (session: any): Promise<{ items: ExploreRecipe[] }> => {

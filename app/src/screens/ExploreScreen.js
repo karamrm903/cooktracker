@@ -27,9 +27,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
-// Reuse one blurhash placeholder + cache policy for every remote recipe photo.
-const IMG_BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
-const IMG_CACHE_POLICY = "memory-disk";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
@@ -48,6 +45,7 @@ import { useSubscription } from "../hooks/useSubscription";
 import { useMealLogs } from "../context/MealLogsContext";
 import PaywallModal from "../components/PaywallModal";
 import CommonAlertModal from "../components/CommonModal";
+import { DEFAULT_BG } from "@/styles/colors";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -191,8 +189,6 @@ const PostCard = React.memo(function PostCard({
           source={{ uri: imageUrl }}
           style={styles.cardImage}
           contentFit="cover"
-          cachePolicy={IMG_CACHE_POLICY}
-          placeholder={{ blurhash: IMG_BLURHASH }}
           transition={150}
         />
       ) : (
@@ -322,93 +318,86 @@ const PostCard = React.memo(function PostCard({
 // recipe cards (like sliding through photos in an Instagram post). Endless:
 // the data is tripled and the scroll position is parked in the middle copy, so
 // the user can keep swiping in either direction forever without hitting an end.
-function PostCarousel({ cards, session, images, colors, savedNames, onSave, onOpen }) {
+function PostCarousel({ cards, totalCount, session, images, colors, savedNames, onSave, onOpen, onLoadMore }) {
   const listRef = useRef(null);
   const [index, setIndex] = useState(0);
 
-  // One bulk request for any deck images not already preloaded by the context.
   const [bulkImages, setBulkImages] = useState({});
-  useEffect(() => {
-    let cancelled = false;
-    // Only fetch ids the swipe payload didn't already ship a URL for. When the
-    // deck is fully inline (the normal case) this skips the bulk request entirely.
-    const ids = cards.filter((c) => !c.imageUrl).map((c) => c.id);
-    if (!ids.length) return;
-    exploreService
-      .loadRecipeImages(session, ids)
-      .then((map) => {
-        if (cancelled) return;
-        Object.values(map).forEach((url) => {
-          if (url) ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => {});
-        });
-        setBulkImages(map);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [cards, session]);
 
-  const n = cards.length;
-  const loop = n > 1;
-  // [...cards, ...cards, ...cards] — middle block is the "home" the scroll
-  // position is kept within for seamless wrap-around.
-  const data = useMemo(
-    () => (loop ? [...cards, ...cards, ...cards] : cards),
-    [cards, loop],
-  );
+  const onViewableItemsChanged = useCallback(({ viewableItems: vItems }) => {
+    const ids = vItems.map((v) => v.item.id).filter(id => !images?.[id] && bulkImages[id] === undefined);
 
-  // Reset to the first card of the middle block when the set changes.
-  useEffect(() => {
-    setIndex(0);
-    if (loop) {
-      // Defer until the list has measured.
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({
-          offset: n * SCREEN_WIDTH,
-          animated: false,
-        });
-      });
+    const lastIndex = vItems.length ? vItems[vItems.length - 1].index : -1;
+    if (lastIndex !== -1 && lastIndex >= cards.length - 5) {
+      onLoadMore();
     }
-  }, [cards, loop, n]);
+
+    if (ids.length > 0) {
+      setBulkImages(prev => {
+        const next = { ...prev };
+        ids.forEach(id => next[id] = null);
+        return next;
+      });
+      exploreService.loadRecipeImages(session, ids).then((map) => {
+        setBulkImages(prev => ({ ...prev, ...map }));
+        Object.entries(map).forEach(([id, url]) => {
+          if (url) {
+            ExpoImage.prefetch(url).catch(() => { });
+          } else {
+            const item = cards.find(c => c.id === id);
+            if (item) {
+              exploreService.fetchRecipeImage(session, id, item.name).then(fallbackUrl => {
+                exploreService.seedImageCache({ [id]: fallbackUrl });
+                setBulkImages(prev => ({ ...prev, [id]: fallbackUrl }));
+                if (fallbackUrl) ExpoImage.prefetch(fallbackUrl).catch(() => { });
+              }).catch(() => { });
+            }
+          }
+        });
+      }).catch(() => { });
+    }
+  }, [images, bulkImages, session, cards.length, onLoadMore]);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 0,
+  }).current;
+
+  const n = totalCount && totalCount > cards.length ? totalCount : cards.length;
 
   const getItemLayout = useCallback(
     (_, i) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * i, index: i }),
     [],
   );
 
-  const onMomentumEnd = useCallback(
+  const onScroll = useCallback(
     (e) => {
       const raw = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-      if (!loop) {
-        setIndex(raw);
-        return;
-      }
-      const real = ((raw % n) + n) % n;
-      setIndex(real);
-      // Jump back into the middle copy when we drift into the outer copies, so
-      // there's always a full block of cards on both sides to scroll into.
-      if (raw < n || raw >= 2 * n) {
-        listRef.current?.scrollToOffset({
-          offset: (n + real) * SCREEN_WIDTH,
-          animated: false,
-        });
+      setIndex(prev => (prev !== raw ? raw : prev));
+      if (raw >= cards.length - 10) {
+        onLoadMore();
       }
     },
-    [loop, n],
+    [cards.length, onLoadMore],
   );
 
   return (
-    <View>
+    <View style={{ flex: 1, backgroundColor: DEFAULT_BG }}>
       <FlatList
         ref={listRef}
-        data={data}
+        data={cards}
         keyExtractor={(c, i) => `${c.id}-${i}`}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
         getItemLayout={getItemLayout}
-        initialScrollIndex={loop ? n : 0}
-        onMomentumScrollEnd={onMomentumEnd}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.5}
         extraData={savedNames}
         renderItem={({ item }) => (
           <View style={styles.postPage}>
@@ -425,7 +414,6 @@ function PostCarousel({ cards, session, images, colors, savedNames, onSave, onOp
         )}
       />
 
-      {/* Page number — top-right pill overlay (Instagram style) */}
       {n > 1 && (
         <View style={styles.pageCounter} pointerEvents="none">
           <Text style={styles.pageCounterText}>
@@ -489,8 +477,6 @@ function TrendingRow({ items, session, onPress, colors }) {
                 source={{ uri: imageUrls[it.id] }}
                 style={styles.trendingImage}
                 contentFit="cover"
-                cachePolicy={IMG_CACHE_POLICY}
-                placeholder={{ blurhash: IMG_BLURHASH }}
                 transition={150}
               />
             ) : (
@@ -648,8 +634,6 @@ const HRecipeCard = React.memo(function HRecipeCard({
           source={{ uri: img }}
           style={styles.hCardImg}
           contentFit="cover"
-          cachePolicy={IMG_CACHE_POLICY}
-          placeholder={{ blurhash: IMG_BLURHASH }}
           transition={150}
         />
       ) : (
@@ -732,33 +716,49 @@ const HRecipeCard = React.memo(function HRecipeCard({
 const CAROUSEL_LIMIT = 10;
 
 function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSeeAll, savedNames, onSave }) {
-  // Show at most 10 randomly-picked items so the horizontal list stays light.
-  // The rest live behind "See All".
-  const displayItems = useMemo(() => {
-    if (items.length <= CAROUSEL_LIMIT) return items;
-    return [...items].sort(() => Math.random() - 0.5).slice(0, CAROUSEL_LIMIT);
-  }, [items]);
+  const displayItems = items;
 
-  // One bulk request for this carousel's images instead of one POST per card.
   const [images, setImages] = useState({});
-  useEffect(() => {
-    let cancelled = false;
-    const ids = displayItems.map((it) => it.id);
-    if (!ids.length) return;
-    exploreService
-      .loadRecipeImages(session, ids)
-      .then((map) => {
-        if (cancelled) return;
-        Object.values(map).forEach((url) => {
-          if (url) ExpoImage.prefetch(url, { cachePolicy: IMG_CACHE_POLICY }).catch(() => {});
-        });
-        setImages(map);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [displayItems, session]);
 
-  const showSeeAllTile = items.length > CAROUSEL_LIMIT;
+  const onViewableItemsChanged = useCallback(({ viewableItems: vItems }) => {
+    const visibleIds = vItems.map((v) => v.item?.id);
+    const lastIndex = vItems.length ? vItems[vItems.length - 1].index : -1;
+    const nextIds = [];
+    if (lastIndex !== -1 && lastIndex + 1 < displayItems.length) nextIds.push(displayItems[lastIndex + 1].id);
+    if (lastIndex !== -1 && lastIndex + 2 < displayItems.length) nextIds.push(displayItems[lastIndex + 2].id);
+
+    const allIdsToLoad = [...new Set([...visibleIds, ...nextIds])];
+    const ids = allIdsToLoad.filter(id => id && images[id] === undefined);
+    if (ids.length > 0) {
+      setImages(prev => {
+        const next = { ...prev };
+        ids.forEach(id => next[id] = null);
+        return next;
+      });
+      exploreService.loadRecipeImages(session, ids).then((map) => {
+        setImages(prev => ({ ...prev, ...map }));
+        Object.entries(map).forEach(([id, url]) => {
+          if (url) {
+            ExpoImage.prefetch(url).catch(() => { });
+          } else {
+            const item = displayItems.find(c => c.id === id);
+            if (item) {
+              exploreService.fetchRecipeImage(session, id, item.name).then(fallbackUrl => {
+                exploreService.seedImageCache({ [id]: fallbackUrl });
+                setImages(prev => ({ ...prev, [id]: fallbackUrl }));
+                if (fallbackUrl) ExpoImage.prefetch(fallbackUrl).catch(() => { });
+              }).catch(() => { });
+            }
+          }
+        });
+      }).catch(() => { });
+    }
+  }, [images, session]);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 1,
+    minimumViewTime: 100,
+  }).current;
 
   if (!items.length) return null;
   return (
@@ -769,25 +769,26 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
           <Text style={[styles.seeAll, { color: colors.textMuted }]}>{t("explore.seeAll")}</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView
+      <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: ms(24), gap: ms(14), alignItems: "flex-start" }}
-      >
-        {displayItems.map((it) => (
+        data={displayItems}
+        keyExtractor={(item) => item.id}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        renderItem={({ item }) => (
           <HRecipeCard
-            key={it.id}
-            item={it}
-            img={images[it.id] ?? null}
+            item={item}
+            img={images[item.id] ?? null}
             colors={colors}
             t={t}
             onStartCooking={onStartCooking}
-            saved={savedNames.has(it.name)}
+            saved={savedNames.has(item.name)}
             onSave={onSave}
           />
-        ))}
-
-        {showSeeAllTile && (
+        )}
+        ListFooterComponent={() => (
           <TouchableOpacity
             style={[
               styles.seeAllCard,
@@ -804,7 +805,7 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
             </Text>
           </TouchableOpacity>
         )}
-      </ScrollView>
+      />
     </View>
   );
 }
@@ -855,12 +856,14 @@ export default function ExploreScreen({ navigation }) {
   const { isSubscribed } = useSubscription();
   const {
     cards: preloadedCards,
+    totalDeckCount,
     trending: preloadedTrending,
     images: preloadedImages,
     cardsLoaded: exploreCardsLoaded,
     loading: exploreLoading,
     ensure: ensureExplore,
     refresh: refreshExplore,
+    loadMoreDeck,
   } = useExplore();
   const { meals, addMeal } = useMealLogs() || {};
 
@@ -899,15 +902,9 @@ export default function ExploreScreen({ navigation }) {
   // library when the curated server deck is empty so the swiper is never blank.
   const swipeCards = useMemo(() => {
     const base = preloadedCards.length ? preloadedCards : dbRecipes;
-    const filtered =
-      selectedCategory === "all"
-        ? base
-        : base.filter((c) => c.category === selectedCategory);
-    if (filtered.length <= CAROUSEL_DECK_LIMIT) return filtered;
-    // Random 30 so the deck stays light; reshuffles only when the source changes.
-    return [...filtered]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, CAROUSEL_DECK_LIMIT);
+    return selectedCategory === "all"
+      ? base
+      : base.filter((c) => c.category === selectedCategory);
   }, [preloadedCards, dbRecipes, selectedCategory]);
 
   const trending = preloadedTrending;
@@ -958,7 +955,7 @@ export default function ExploreScreen({ navigation }) {
             for (let i = 0; i < ids.length; i += 100) {
               exploreService
                 .loadRecipeImages(session, ids.slice(i, i + 100))
-                .catch(() => {});
+                .catch(() => { });
             }
           })
           .catch(() => { })
@@ -1119,7 +1116,7 @@ export default function ExploreScreen({ navigation }) {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
+      style={[styles.safe, { backgroundColor: DEFAULT_BG }]}
       edges={["top"]}
     >
       <ScrollView
@@ -1235,12 +1232,14 @@ export default function ExploreScreen({ navigation }) {
               <View style={styles.deckSection}>
                 <PostCarousel
                   cards={swipeCards}
+                  totalCount={totalDeckCount}
                   session={session}
                   images={preloadedImages}
                   colors={colors}
                   savedNames={savedNames}
                   onSave={handleSaveRequest}
                   onOpen={handleCardInfo}
+                  onLoadMore={() => loadMoreDeck(session)}
                 />
               </View>
             ) : swipeError ? (

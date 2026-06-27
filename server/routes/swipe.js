@@ -65,34 +65,36 @@ function signCards(rows) {
 
 // GET /api/explore/swipe — curated swipe deck (global recipes, no images).
 router.get('/explore/swipe', requireAuth, async (req, res) => {
-  const { category, q, limit = 20 } = req.query ?? {};
-  const max = Math.min(Number(limit) || 20, 50);
+  const { category, q, limit = 20, page = 1 } = req.query ?? {};
+  const parsedLimit = Number(limit) || 20;
+  const parsedPage = Math.max(1, Number(page) || 1);
+  const offset = (parsedPage - 1) * parsedLimit;
 
-  const cacheKey = `swipe:${category || 'all'}:${(q || '').trim().toLowerCase()}:${max}`;
+  const cacheKey = `swipe:${category || 'all'}:${(q || '').trim().toLowerCase()}:${parsedLimit}:${parsedPage}`;
   const cached = cacheGet(cacheKey);
-  if (cached) return res.json({ cards: cached });
+  if (cached) return res.json({ cards: cached.cards, hasMore: cached.hasMore, totalCount: cached.totalCount });
 
   // Whitelist curated categories so AI search cache / food-search autocomplete
   // rows can never leak into the deck.
   let query = adminClient
     .from('recipes')
-    .select('id, title, emoji, calories, protein, carbs, fat, ingredients, steps, nutrition, saved_category, image_url')
+    .select('id, title, emoji, calories, protein, carbs, fat, ingredients, steps, nutrition, saved_category, image_url', { count: 'exact' })
     .is('user_id', null)
-    .in('saved_category', CURATED_CATEGORIES)
-    .limit(max);
+    .range(offset, offset + parsedLimit - 1);
 
   if (category && category !== 'all') query = query.eq('saved_category', category);
   if (q && typeof q === 'string' && q.trim()) query = query.ilike('title', `%${q.trim()}%`);
 
-  const { data, error } = await query;
+  const { data, count, error } = await query;
   if (error) {
     console.error('[swipe] ✖', error.message);
     return res.status(500).json({ error: error.message });
   }
 
   const cards = await signCards(data);
-  cacheSet(cacheKey, cards);
-  res.json({ cards });
+  const hasMore = cards.length === parsedLimit;
+  cacheSet(cacheKey, { cards, hasMore, totalCount: count });
+  res.json({ cards, hasMore, totalCount: count });
 });
 
 // GET /api/explore/trending — small horizontal "Trending Now" set.
@@ -104,7 +106,6 @@ router.get('/explore/trending', requireAuth, async (req, res) => {
     .from('recipes')
     .select('id, title, emoji, calories, protein, carbs, fat, saved_category, nutrition, image_url')
     .is('user_id', null)
-    .in('saved_category', CURATED_CATEGORIES)
     .order('created_at', { ascending: false })
     .limit(10);
 
