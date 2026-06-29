@@ -13,6 +13,7 @@ import {
   Easing,
   Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RADIUS, FONTS, FONT_SIZES, SPACING } from '../constants/theme';
 import { moderateScale as ms } from '../utils/responsive';
@@ -25,6 +26,7 @@ const SAVE_CATEGORIES = [
 ];
 
 export default function SaveModal({ meal, visible, onClose, onSave, onRemove, savedCategory, colors, title }) {
+  const insets = useSafeAreaInsets();
   const [showing,         setShowing]         = useState(false);
   const [displayCategory, setDisplayCategory] = useState(null);
 
@@ -65,7 +67,7 @@ export default function SaveModal({ meal, visible, onClose, onSave, onRemove, sa
       </Animated.View>
 
       <Animated.View
-        style={[sav.sheet, { backgroundColor: colors.surface, transform: [{ translateY: sheetTranslateY }] }]}
+        style={[sav.sheet, { backgroundColor: colors.surface, paddingBottom: ms(20) + insets.bottom, transform: [{ translateY: sheetTranslateY }] }]}
       >
         <View style={[sav.handle, { backgroundColor: colors.border }]} />
         <Text style={[sav.sheetTitle, { color: colors.textMuted }]}>
@@ -114,7 +116,6 @@ const sav = StyleSheet.create({
     borderTopLeftRadius: ms(20),
     borderTopRightRadius: ms(20),
     paddingTop: ms(12),
-    paddingBottom: ms(44),
     paddingHorizontal: SPACING.md,
   },
   handle: {

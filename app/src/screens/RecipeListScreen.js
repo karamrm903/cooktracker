@@ -26,6 +26,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useMealLogs } from "../context/MealLogsContext";
 import { exploreService } from "../services/exploreService";
 import CommonAlertModal from "../components/CommonModal";
+import { BRAND_COLOR, DEFAULT_BG, TEXT_DARK, TEXT_MUTED, INPUT_BORDER } from "../styles/colors";
 
 const SCREEN_BG = "#FCF7F3";
 const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
@@ -341,10 +342,10 @@ export default function RecipeListScreen({ navigation, route }) {
           <View
             style={[
               styles.mealPickerModal,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              { backgroundColor: DEFAULT_BG, borderColor: INPUT_BORDER },
             ]}
           >
-            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>
+            <Text style={[styles.mealPickerTitle, { color: TEXT_MUTED }]}>
               {t("explore.saveTo", { defaultValue: "Save to" })}
             </Text>
             {MEAL_TYPES.map((mt) => (
@@ -358,13 +359,13 @@ export default function RecipeListScreen({ navigation, route }) {
                 onPress={() => logRecipeAsMeal(mt)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.mealPickerOptionText, { color: colors.text }]}>
+                <Text style={[styles.mealPickerOptionText, { color: TEXT_DARK }]}>
                   {t(`mealType.${mt}`, { defaultValue: MEAL_LABELS[mt] })}
                 </Text>
                 {savingType === mt ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                  <ActivityIndicator size="small" color={BRAND_COLOR} />
                 ) : (
-                  <Ionicons name="add" size={ms(18)} color={colors.textMuted} />
+                  <Ionicons name="add" size={ms(18)} color={BRAND_COLOR} />
                 )}
               </TouchableOpacity>
             ))}

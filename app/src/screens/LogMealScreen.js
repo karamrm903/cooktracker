@@ -10,7 +10,7 @@ import {
   Image,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import { useMealLogs } from "../context/MealLogsContext";
@@ -131,6 +131,7 @@ export default function LogMealScreen({ navigation, route }) {
     }
   }
 
+  const insets = useSafeAreaInsets();
   const canSave = name.trim() && !isSaving;
 
   const inputStyle = [
@@ -139,7 +140,7 @@ export default function LogMealScreen({ navigation, route }) {
   ];
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: SCREEN_BG }]} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: SCREEN_BG }]} edges={["top"]}>
       {/* Decorative background */}
       <Image source={leafImg} style={styles.leafTopLeft} resizeMode="contain" />
       <Image source={leafImg} style={styles.leafMidRight} resizeMode="contain" />
@@ -346,7 +347,7 @@ export default function LogMealScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Save */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: SPACING.lg + insets.bottom }]}>
         <TouchableOpacity
           onPress={handleSave}
           style={[

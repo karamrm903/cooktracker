@@ -30,4 +30,4 @@ export const PLACEHOLDER = "#B5A597";
 export const ICON_COLOR = "#7A5E4D";
 export const INPUT_BORDER = "#E8DDD0";
 export const DIVIDER = "#E0D3C2";
-export const FORGOT_GREEN = "#7BA77B";
+export const FORGOT_GREEN = "#94AE7F";

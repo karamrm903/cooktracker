@@ -5,14 +5,14 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  SafeAreaView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { useTheme } from '../context/ThemeContext';
 import { useLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from '../context/LanguageContext';
 import { LANGUAGE_META } from '../i18n';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '../constants/theme';
+import { BRAND_COLOR, DEFAULT_BG, TEXT_DARK, TEXT_MUTED, DIVIDER } from '../styles/colors';
 import { moderateScale as ms } from '../utils/responsive';
 import { profileService } from '../services/profile.service';
 
@@ -23,8 +23,8 @@ interface Props {
 
 export default function LanguagePickerModal({ visible, onClose }: Props) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const { language, setLanguage } = useLanguage();
+  const insets = useSafeAreaInsets();
   const session = useSelector((state: any) => state.auth.session);
 
   async function handleSelect(lang: SupportedLanguage) {
@@ -50,13 +50,18 @@ export default function LanguagePickerModal({ visible, onClose }: Props) {
         activeOpacity={1}
         onPress={onClose}
       />
-      <SafeAreaView style={[styles.sheet, { backgroundColor: colors.background }]}>
-        <View style={[styles.handle, { backgroundColor: colors.border }]} />
+      <View
+        style={[
+          styles.sheet,
+          { backgroundColor: DEFAULT_BG, paddingBottom: SPACING.xl + insets.bottom },
+        ]}
+      >
+        <View style={[styles.handle, { backgroundColor: DIVIDER }]} />
 
-        <Text style={[styles.title, { color: colors.text }]}>
+        <Text style={[styles.title, { color: TEXT_DARK }]}>
           {t('language.title')}
         </Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+        <Text style={[styles.subtitle, { color: TEXT_MUTED }]}>
           {t('language.subtitle')}
         </Text>
 
@@ -69,35 +74,35 @@ export default function LanguagePickerModal({ visible, onClose }: Props) {
                 key={lang}
                 style={[
                   styles.option,
-                  { backgroundColor: colors.surface },
-                  isActive && { backgroundColor: colors.cardActive },
+                  { backgroundColor: '#FFFFFF' },
+                  isActive && { backgroundColor: BRAND_COLOR },
                 ]}
                 onPress={() => handleSelect(lang)}
                 activeOpacity={0.75}
               >
-                <View style={[styles.langCode, { backgroundColor: isActive ? colors.primary : colors.surfaceAlt }]}>
-                  <Text style={[styles.langCodeText, { color: isActive ? '#fff' : colors.text }]}>
+                <View style={[styles.langCode, { backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#F1E9E0' }]}>
+                  <Text style={[styles.langCodeText, { color: isActive ? '#fff' : TEXT_DARK }]}>
                     {lang.toUpperCase()}
                   </Text>
                 </View>
                 <View style={styles.optionText}>
-                  <Text style={[styles.nativeLabel, { color: isActive ? colors.cardActiveText : colors.text }]}>
+                  <Text style={[styles.nativeLabel, { color: isActive ? '#fff' : TEXT_DARK }]}>
                     {meta.nativeLabel}
                   </Text>
                   {meta.nativeLabel !== meta.label && (
-                    <Text style={[styles.englishLabel, { color: isActive ? colors.cardActiveSub : colors.textMuted }]}>
+                    <Text style={[styles.englishLabel, { color: isActive ? 'rgba(255,255,255,0.8)' : TEXT_MUTED }]}>
                       {meta.label}
                     </Text>
                   )}
                 </View>
                 {isActive && (
-                  <Text style={[styles.checkmark, { color: colors.cardActiveText }]}>✓</Text>
+                  <Text style={[styles.checkmark, { color: '#fff' }]}>✓</Text>
                 )}
               </TouchableOpacity>
             );
           })}
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

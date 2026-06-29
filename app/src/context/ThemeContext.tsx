@@ -6,17 +6,7 @@
 //    const { colors, isDark, toggleTheme } = useTheme();
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
-import { useColorScheme } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const THEME_KEY = "@nutrily_theme";
+import React, { createContext, useContext } from "react";
 
 // ── Color token type ──────────────────────────────────────────────────────────
 
@@ -251,8 +241,6 @@ export const darkColors: Colors = {
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
-type ThemeMode = "light" | "dark";
-
 interface ThemeContextValue {
   colors: Colors;
   isDark: boolean;
@@ -266,34 +254,12 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme();
-  // null = not yet loaded from storage
-  const [userTheme, setUserTheme] = useState<ThemeMode | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  // Load persisted preference on mount
-  useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY).then((stored) => {
-      if (stored === "light" || stored === "dark") {
-        setUserTheme(stored);
-      }
-      setLoaded(true);
-    });
-  }, []);
-
-  // Determine active theme: user choice > system
-  const isDark = false;
-
-  const colors = isDark ? darkColors : lightColors;
-
-  const toggleTheme = useCallback(() => {
-    const next: ThemeMode = isDark ? "light" : "dark";
-    setUserTheme(next);
-    AsyncStorage.setItem(THEME_KEY, next);
-  }, [isDark]);
-
+  // Dark mode disabled for now — always light, ignore system/stored preference.
+  // darkColors kept exported for when it's re-enabled.
   return (
-    <ThemeContext.Provider value={{ colors, isDark, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{ colors: lightColors, isDark: false, toggleTheme: () => {} }}
+    >
       {children}
     </ThemeContext.Provider>
   );

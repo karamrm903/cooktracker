@@ -45,7 +45,7 @@ import { useSubscription } from "../hooks/useSubscription";
 import { useMealLogs } from "../context/MealLogsContext";
 import PaywallModal from "../components/PaywallModal";
 import CommonAlertModal from "../components/CommonModal";
-import { DEFAULT_BG } from "@/styles/colors";
+import { DEFAULT_BG, BRAND_COLOR, TEXT_DARK, TEXT_MUTED, INPUT_BORDER } from "@/styles/colors";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -1415,10 +1415,10 @@ export default function ExploreScreen({ navigation }) {
           <View
             style={[
               styles.mealPickerModal,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              { backgroundColor: DEFAULT_BG, borderColor: INPUT_BORDER },
             ]}
           >
-            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>
+            <Text style={[styles.mealPickerTitle, { color: TEXT_MUTED }]}>
               {t("explore.saveTo", { defaultValue: "Save to" })}
             </Text>
             {MEAL_TYPES.map((mt) => (
@@ -1433,14 +1433,14 @@ export default function ExploreScreen({ navigation }) {
                 activeOpacity={0.7}
               >
                 <Text
-                  style={[styles.mealPickerOptionText, { color: colors.text }]}
+                  style={[styles.mealPickerOptionText, { color: TEXT_DARK }]}
                 >
                   {t(`mealType.${mt}`, { defaultValue: MEAL_LABELS[mt] })}
                 </Text>
                 {savingType === mt ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                  <ActivityIndicator size="small" color={BRAND_COLOR} />
                 ) : (
-                  <Ionicons name="add" size={ms(18)} color={colors.textMuted} />
+                  <Ionicons name="add" size={ms(18)} color={BRAND_COLOR} />
                 )}
               </TouchableOpacity>
             ))}

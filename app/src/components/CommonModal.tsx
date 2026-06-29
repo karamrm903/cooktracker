@@ -1,9 +1,15 @@
 import React, { useEffect, useRef } from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
 import { FONT_SIZES, RADIUS } from '../constants/theme';
 import { moderateScale as ms } from '../utils/responsive';
+
+// Figma revamp palette (light only)
+const BRAND_COLOR = "#FF8A45";
+const DEFAULT_BG = "#FCF7F3";
+const TEXT_DARK = "#3D2618";
+const TEXT_MUTED = "#8C7363";
+const INPUT_BORDER = "#E8DDD0";
 
 export type CommonModalVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -33,7 +39,6 @@ const CommonAlertModal: React.FC<CommonModalProps> = ({
   onSecondary,
   onClose,
 }) => {
-  const { colors } = useTheme();
   const scaleValue = useRef(new Animated.Value(0.9)).current;
   const opacityValue = useRef(new Animated.Value(0)).current;
 
@@ -70,7 +75,7 @@ const CommonAlertModal: React.FC<CommonModalProps> = ({
       case 'error':   return { icon: 'close-circle',        color: '#EF4444' };
       case 'warning': return { icon: 'warning',             color: '#F59E0B' };
       case 'success': return { icon: 'checkmark-circle',    color: '#22C55E' };
-      default:        return { icon: 'information-circle',  color: colors.text };
+      default:        return { icon: 'information-circle',  color: BRAND_COLOR };
     }
   };
 
@@ -83,31 +88,31 @@ const CommonAlertModal: React.FC<CommonModalProps> = ({
         <Animated.View
           style={[
             styles.card,
-            { backgroundColor: colors.surface, opacity: opacityValue, transform: [{ scale: scaleValue }] },
+            { backgroundColor: DEFAULT_BG, opacity: opacityValue, transform: [{ scale: scaleValue }] },
           ]}
         >
           <View style={[styles.iconWrap, { backgroundColor: color + '18' }]}>
             <Ionicons name={icon as any} size={ms(34)} color={color} />
           </View>
 
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          <Text style={[styles.message, { color: colors.textMuted }]}>{message}</Text>
+          <Text style={[styles.title, { color: TEXT_DARK }]}>{title}</Text>
+          <Text style={[styles.message, { color: TEXT_MUTED }]}>{message}</Text>
 
           <View style={styles.buttons}>
             {secondaryText && (
               <TouchableOpacity
-                style={[styles.btn, styles.btnSecondary, { borderColor: colors.border }]}
+                style={[styles.btn, styles.btnSecondary, { borderColor: INPUT_BORDER }]}
                 onPress={handleSecondary}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.btnText, { color: colors.textSecondary }]}>{secondaryText}</Text>
+                <Text style={[styles.btnText, { color: TEXT_DARK }]}>{secondaryText}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               style={[
                 styles.btn,
                 styles.btnPrimary,
-                { backgroundColor: color },
+                { backgroundColor: BRAND_COLOR },
                 secondaryText ? styles.btnFlex : styles.btnFull,
               ]}
               onPress={handlePrimary}

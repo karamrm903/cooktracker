@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { useTheme } from "../context/ThemeContext";
 import { FONTS, FONT_SIZES, RADIUS, SHADOWS, SPACING } from "../constants/theme";
+import { BRAND_COLOR, DEFAULT_BG, TEXT_DARK, TEXT_MUTED, INPUT_BORDER } from "../styles/colors";
 import {
   moderateScale as ms,
   verticalScale as vs,
@@ -661,10 +662,10 @@ export default function SearchFoodScreen({ navigation, route }: any) {
           <View
             style={[
               styles.mealPickerModal,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              { backgroundColor: DEFAULT_BG, borderColor: INPUT_BORDER },
             ]}
           >
-            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>
+            <Text style={[styles.mealPickerTitle, { color: TEXT_MUTED }]}>
               Select a Meal
             </Text>
             {MEAL_TYPES.map((mt) => (
@@ -672,7 +673,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                 key={mt}
                 style={[
                   styles.mealPickerOption,
-                  mt === mealType && { backgroundColor: colors.surfaceAlt },
+                  mt === mealType && { backgroundColor: BRAND_COLOR + "14" },
                 ]}
                 onPress={() => {
                   setMealType(mt);
@@ -684,7 +685,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                     styles.mealPickerOptionText,
                     {
                       color:
-                        mt === mealType ? colors.text : colors.textSecondary,
+                        mt === mealType ? TEXT_DARK : TEXT_MUTED,
                     },
                     mt === mealType && { fontWeight: FONTS.semibold },
                   ]}
@@ -692,7 +693,7 @@ export default function SearchFoodScreen({ navigation, route }: any) {
                   {MEAL_LABELS[mt]}
                 </Text>
                 {mt === mealType && (
-                  <Ionicons name="checkmark" size={ms(16)} color={colors.text} />
+                  <Ionicons name="checkmark" size={ms(16)} color={BRAND_COLOR} />
                 )}
               </TouchableOpacity>
             ))}

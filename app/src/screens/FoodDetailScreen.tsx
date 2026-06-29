@@ -17,6 +17,7 @@ import { useSelector } from "react-redux";
 import { useTheme } from "../context/ThemeContext";
 import { useMealLogs } from "../context/MealLogsContext";
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
+import { BRAND_COLOR, DEFAULT_BG, TEXT_DARK, TEXT_MUTED, INPUT_BORDER } from "../styles/colors";
 import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
 import CommonAlertModal from "../components/CommonModal";
 import {
@@ -465,10 +466,10 @@ export default function FoodDetailScreen({ navigation, route }: any) {
           <View
             style={[
               styles.mealPickerModal,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              { backgroundColor: DEFAULT_BG, borderColor: INPUT_BORDER },
             ]}
           >
-            <Text style={[styles.mealPickerTitle, { color: colors.text }]}>
+            <Text style={[styles.mealPickerTitle, { color: TEXT_MUTED }]}>
               Select a Meal
             </Text>
             {MEAL_TYPES.map((mt) => (
@@ -476,7 +477,7 @@ export default function FoodDetailScreen({ navigation, route }: any) {
                 key={mt}
                 style={[
                   styles.mealPickerOption,
-                  mt === mealType && { backgroundColor: colors.surfaceAlt },
+                  mt === mealType && { backgroundColor: BRAND_COLOR + "14" },
                 ]}
                 onPress={() => {
                   setMealType(mt);
@@ -488,7 +489,7 @@ export default function FoodDetailScreen({ navigation, route }: any) {
                     styles.mealPickerOptionText,
                     {
                       color:
-                        mt === mealType ? colors.text : colors.textSecondary,
+                        mt === mealType ? TEXT_DARK : TEXT_MUTED,
                     },
                     mt === mealType && { fontWeight: FONTS.semibold },
                   ]}
@@ -499,7 +500,7 @@ export default function FoodDetailScreen({ navigation, route }: any) {
                   <Ionicons
                     name="checkmark"
                     size={ms(16)}
-                    color={colors.text}
+                    color={BRAND_COLOR}
                   />
                 )}
               </TouchableOpacity>

@@ -5,12 +5,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
 import { RADIUS, FONTS, FONT_SIZES, SPACING } from '../constants/theme';
 import { moderateScale as ms } from '../utils/responsive';
+import {
+  BRAND_COLOR,
+  DEFAULT_BG,
+  TEXT_DARK,
+  TEXT_MUTED,
+  DIVIDER,
+} from '../styles/colors';
 
 export type PaywallFeature = 'recipe_import' | 'search' | 'cooking_mode' | 'saved_recipes';
 
@@ -66,7 +72,7 @@ export default function PaywallModal({
   onClose,
   onUpgrade,
 }: PaywallModalProps) {
-  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const meta = FEATURE_META[feature];
 
   return (
@@ -80,19 +86,19 @@ export default function PaywallModal({
       <View style={s.overlay}>
         <TouchableOpacity style={s.backdrop} activeOpacity={1} onPress={onClose} />
 
-        <View style={[s.sheet, { backgroundColor: colors.background }]}>
+        <View style={[s.sheet, { backgroundColor: DEFAULT_BG, paddingBottom: SPACING.md + insets.bottom }]}>
           {/* Handle */}
-          <View style={[s.handle, { backgroundColor: colors.border }]} />
+          <View style={[s.handle, { backgroundColor: DIVIDER }]} />
 
           {/* Close */}
           <TouchableOpacity style={s.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="close" size={ms(20)} color={colors.textMuted} />
+            <Ionicons name="close" size={ms(20)} color={TEXT_MUTED} />
           </TouchableOpacity>
 
           {/* Feature header */}
           <Text style={s.emoji}>{meta.emoji}</Text>
-          <Text style={[s.title, { color: colors.text }]}>{meta.title}</Text>
-          <Text style={[s.description, { color: colors.textSecondary }]}>
+          <Text style={[s.title, { color: TEXT_DARK }]}>{meta.title}</Text>
+          <Text style={[s.description, { color: TEXT_MUTED }]}>
             {meta.description}
             {limit && used !== undefined && feature !== 'cooking_mode' && feature !== 'saved_recipes'
               ? ` (${used}/${limit} used)`
@@ -100,33 +106,30 @@ export default function PaywallModal({
           </Text>
 
           {/* Benefits */}
-          <View style={[s.benefitsCard, { backgroundColor: colors.surface }]}>
-            <Text style={[s.benefitsLabel, { color: colors.textMuted }]}>PREMIUM INCLUDES</Text>
+          <View style={s.benefitsCard}>
+            <Text style={[s.benefitsLabel, { color: TEXT_MUTED }]}>PREMIUM INCLUDES</Text>
             {BENEFITS.map((b) => (
               <View key={b.icon} style={s.benefitRow}>
-                <Ionicons name={b.icon as any} size={ms(18)} color={colors.primary} />
-                <Text style={[s.benefitText, { color: colors.text }]}>{b.text}</Text>
+                <Ionicons name={b.icon as any} size={ms(18)} color={BRAND_COLOR} />
+                <Text style={[s.benefitText, { color: TEXT_DARK }]}>{b.text}</Text>
               </View>
             ))}
           </View>
 
           {/* CTA */}
           <TouchableOpacity
-            style={[s.ctaBtn, { backgroundColor: colors.btnPrimary }]}
+            style={s.ctaBtn}
             onPress={onUpgrade}
             activeOpacity={0.85}
           >
-            <Text style={[s.ctaBtnText, { color: colors.btnPrimaryText }]}>
+            <Text style={s.ctaBtnText}>
               Get Premium
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-            <Text style={[s.dismissText, { color: colors.textMuted }]}>Maybe Later</Text>
+            <Text style={[s.dismissText, { color: TEXT_MUTED }]}>Maybe Later</Text>
           </TouchableOpacity>
-
-          {/* iOS safe area padding */}
-          {Platform.OS === 'ios' && <View style={{ height: ms(20) }} />}
         </View>
       </View>
     </Modal>
@@ -174,6 +177,7 @@ const s = StyleSheet.create({
 
   benefitsCard: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     gap: ms(12),
@@ -197,13 +201,14 @@ const s = StyleSheet.create({
 
   ctaBtn: {
     width: '100%',
+    backgroundColor: BRAND_COLOR,
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.full,
     alignItems: 'center',
     marginBottom: ms(12),
-    shadowColor: '#000',
+    shadowColor: BRAND_COLOR,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -211,6 +216,7 @@ const s = StyleSheet.create({
     fontSize: ms(16),
     fontWeight: FONTS.bold,
     letterSpacing: 0.2,
+    color: '#FFFFFF',
   },
   dismissText: {
     fontSize: FONT_SIZES.label,
