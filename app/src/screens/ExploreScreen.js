@@ -31,10 +31,7 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
 import { SPACING, RADIUS, FONTS, FONT_SIZES } from "../constants/theme";
-import {
-  moderateScale as ms,
-  verticalScale as vs,
-} from "../utils/responsive";
+import { moderateScale as ms, verticalScale as vs } from "../utils/responsive";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { ExpandedNutrition } from "../components/NutritionExpansion";
@@ -45,9 +42,24 @@ import { useSubscription } from "../hooks/useSubscription";
 import { useMealLogs } from "../context/MealLogsContext";
 import PaywallModal from "../components/PaywallModal";
 import CommonAlertModal from "../components/CommonModal";
-import { DEFAULT_BG, BRAND_COLOR, TEXT_DARK, TEXT_MUTED, INPUT_BORDER } from "@/styles/colors";
+import {
+  DEFAULT_BG,
+  BRAND_COLOR,
+  TEXT_DARK,
+  TEXT_MUTED,
+  INPUT_BORDER,
+} from "@/styles/colors";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
+// 3-item peek carousel: center card ~80% width, side cards peek.
+const CARD_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
+const CARD_INSET = Math.round((SCREEN_WIDTH - CARD_WIDTH) / 2);
+// Parallax feel (mirrors reanimated-carousel v4 parallax mode defaults).
+// Offset small enough that side cards sit beside center without overlapping.
+const PARALLAX_SCALE = 0.86;
+const PARALLAX_OFFSET = 0;
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const leafImg = require("../../assets/webp/UserInfoLeaf.webp");
@@ -115,7 +127,7 @@ function dbToItem(r) {
   let ingredients = [];
   try {
     ingredients = JSON.parse(r.ingredients ?? "[]");
-  } catch { }
+  } catch {}
   return {
     id: String(r.id),
     name: r.title,
@@ -318,100 +330,221 @@ const PostCard = React.memo(function PostCard({
 // recipe cards (like sliding through photos in an Instagram post). Endless:
 // the data is tripled and the scroll position is parked in the middle copy, so
 // the user can keep swiping in either direction forever without hitting an end.
-function PostCarousel({ cards, totalCount, session, images, colors, savedNames, onSave, onOpen, onLoadMore }) {
-  const listRef = useRef(null);
+function PostCarousel({
+  cards,
+  totalCount,
+  session,
+  images,
+  colors,
+  savedNames,
+  onSave,
+  onOpen,
+  onLoadMore,
+}) {
+  const carouselRef = useRef(null);
   const [index, setIndex] = useState(0);
-
   const [bulkImages, setBulkImages] = useState({});
 
-  const onViewableItemsChanged = useCallback(({ viewableItems: vItems }) => {
-    const ids = vItems.map((v) => v.item.id).filter(id => !images?.[id] && bulkImages[id] === undefined);
+  // ── Infinite wrap (both directions) ──────────────────────────────────────
+  // Enabled only once the whole deck is loaded (every page fetched). Until then
+  // the list paginates forward normally. Technique: clone the last card in
+  // front + the first card at the end → [lastClone, ...cards, firstClone]. Park
+  // at the real first (virtual index 1). When the user drifts onto a clone,
+  // onMomentumScrollEnd silently scrollToIndex()s across the seam (no anim) so
+  // the loop is invisible in either direction.
+  const realLen = cards.length;
+  const loopEnabled = !!totalCount && cards.length >= totalCount && realLen > 1;
+  const data = loopEnabled ? [cards[realLen - 1], ...cards, cards[0]] : cards;
+  // Virtual list index → real card index.
+  const toReal = useCallback(
+    (v) => {
+      if (!loopEnabled) return v;
+      if (v <= 0) return realLen - 1;
+      if (v >= realLen + 1) return 0;
+      return v - 1;
+    },
+    [loopEnabled, realLen],
+  );
 
-    const lastIndex = vItems.length ? vItems[vItems.length - 1].index : -1;
-    if (lastIndex !== -1 && lastIndex >= cards.length - 5) {
-      onLoadMore();
-    }
-
-    if (ids.length > 0) {
-      setBulkImages(prev => {
+  const loadImagesFor = useCallback(
+    (ids) => {
+      const needed = ids.filter(
+        (id) => id && !images?.[id] && bulkImages[id] === undefined,
+      );
+      if (!needed.length) return;
+      setBulkImages((prev) => {
         const next = { ...prev };
-        ids.forEach(id => next[id] = null);
+        needed.forEach((id) => (next[id] = null));
         return next;
       });
-      exploreService.loadRecipeImages(session, ids).then((map) => {
-        setBulkImages(prev => ({ ...prev, ...map }));
-        Object.entries(map).forEach(([id, url]) => {
-          if (url) {
-            ExpoImage.prefetch(url).catch(() => { });
-          } else {
-            const item = cards.find(c => c.id === id);
-            if (item) {
-              exploreService.fetchRecipeImage(session, id, item.name).then(fallbackUrl => {
-                exploreService.seedImageCache({ [id]: fallbackUrl });
-                setBulkImages(prev => ({ ...prev, [id]: fallbackUrl }));
-                if (fallbackUrl) ExpoImage.prefetch(fallbackUrl).catch(() => { });
-              }).catch(() => { });
+      exploreService
+        .loadRecipeImages(session, needed)
+        .then((map) => {
+          setBulkImages((prev) => ({ ...prev, ...map }));
+          Object.entries(map).forEach(([id, url]) => {
+            if (url) {
+              ExpoImage.prefetch(url).catch(() => {});
+            } else {
+              const item = cards.find((c) => c.id === id);
+              if (item) {
+                exploreService
+                  .fetchRecipeImage(session, id, item.name)
+                  .then((fallbackUrl) => {
+                    exploreService.seedImageCache({ [id]: fallbackUrl });
+                    setBulkImages((prev) => ({ ...prev, [id]: fallbackUrl }));
+                    if (fallbackUrl)
+                      ExpoImage.prefetch(fallbackUrl).catch(() => {});
+                  })
+                  .catch(() => {});
+              }
             }
-          }
-        });
-      }).catch(() => { });
-    }
-  }, [images, bulkImages, session, cards.length, onLoadMore]);
+          });
+        })
+        .catch(() => {});
+    },
+    [images, bulkImages, session, cards],
+  );
 
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-    minimumViewTime: 0,
-  }).current;
+  useEffect(() => {
+    loadImagesFor(cards.slice(0, 3).map((c) => c.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards]);
+
+  const handleIndexChange = useCallback(
+    (i) => {
+      const real = toReal(i);
+      setIndex(real);
+      const ids = [
+        cards[real]?.id,
+        cards[real + 1]?.id,
+        cards[real + 2]?.id,
+      ].filter(Boolean);
+      loadImagesFor(ids);
+      // Prefetch the next page a full 10 cards ahead of the end. API pages are
+      // 20 items, so firing at each multiple of 10 (10, 20, 30…) gives the
+      // fetch + its images ~10 cards of runway to land before the user reaches
+      // the current page's last item — no more stall on the boundary card.
+      // Skipped once looping: the deck is fully loaded, nothing left to fetch.
+      if (!loopEnabled && real > 0 && real % 10 === 0) onLoadMore();
+    },
+    [cards, loadImagesFor, onLoadMore, toReal, loopEnabled],
+  );
 
   const n = totalCount && totalCount > cards.length ? totalCount : cards.length;
 
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const lastIndexRef = useRef(0);
+
+  const onNativeScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+        useNativeDriver: true,
+        listener: (e) => {
+          const raw = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+          if (lastIndexRef.current === raw) return;
+          lastIndexRef.current = raw;
+          handleIndexChange(raw);
+        },
+      }),
+    [scrollX, handleIndexChange],
+  );
+
+  // Once a swipe settles on a cloned edge, hop across the seam without
+  // animation so the deck appears to loop endlessly in both directions.
+  const onMomentumEnd = useCallback(
+    (e) => {
+      if (!loopEnabled) return;
+      const v = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+      if (v <= 0) {
+        carouselRef.current?.scrollToIndex({ index: realLen, animated: false });
+        lastIndexRef.current = realLen;
+      } else if (v >= realLen + 1) {
+        carouselRef.current?.scrollToIndex({ index: 1, animated: false });
+        lastIndexRef.current = 1;
+      }
+    },
+    [loopEnabled, realLen],
+  );
+
   const getItemLayout = useCallback(
-    (_, i) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * i, index: i }),
+    (_, i) => ({ length: CARD_WIDTH, offset: CARD_WIDTH * i, index: i }),
     [],
   );
 
-  const onScroll = useCallback(
-    (e) => {
-      const raw = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-      setIndex(prev => (prev !== raw ? raw : prev));
-      if (raw >= cards.length - 10) {
-        onLoadMore();
-      }
+  const renderCard = useCallback(
+    ({ item, index: i }) => {
+      const inputRange = [
+        (i - 1) * CARD_WIDTH,
+        i * CARD_WIDTH,
+        (i + 1) * CARD_WIDTH,
+      ];
+      // Parallax: side items scale down + pull inward so they visually
+      // overlap the centered card. Mirrors reanimated-carousel v4's
+      // parallaxScrollingScale + parallaxScrollingOffset formula.
+      const scale = scrollX.interpolate({
+        inputRange,
+        outputRange: [PARALLAX_SCALE, 1, PARALLAX_SCALE],
+        extrapolate: "clamp",
+      });
+      const translateX = scrollX.interpolate({
+        inputRange,
+        outputRange: [-PARALLAX_OFFSET, 0, PARALLAX_OFFSET],
+        extrapolate: "clamp",
+      });
+      const opacity = scrollX.interpolate({
+        inputRange,
+        outputRange: [0.5, 1, 0.5],
+        extrapolate: "clamp",
+      });
+      return (
+        <Animated.View
+          style={{
+            width: CARD_WIDTH,
+            transform: [{ translateX }, { scale }],
+            opacity,
+          }}
+        >
+          <PostCard
+            card={item}
+            session={session}
+            preloadedImage={images?.[item.id] ?? bulkImages[item.id] ?? null}
+            colors={colors}
+            saved={savedNames.has(item.name)}
+            onSave={onSave}
+            onOpen={onOpen}
+          />
+        </Animated.View>
+      );
     },
-    [cards.length, onLoadMore],
+    [scrollX, session, images, bulkImages, colors, savedNames, onSave, onOpen],
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: DEFAULT_BG }}>
-      <FlatList
-        ref={listRef}
-        data={cards}
+    <View style={{ backgroundColor: DEFAULT_BG }}>
+      <AnimatedFlatList
+        ref={carouselRef}
+        data={data}
         keyExtractor={(c, i) => `${c.id}-${i}`}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
+        snapToInterval={CARD_WIDTH}
+        snapToAlignment="start"
+        disableIntervalMomentum
+        contentContainerStyle={{ paddingHorizontal: CARD_INSET }}
         getItemLayout={getItemLayout}
-        onScroll={onScroll}
+        initialScrollIndex={loopEnabled ? 1 : 0}
+        onScroll={onNativeScroll}
+        onMomentumScrollEnd={onMomentumEnd}
         scrollEventThrottle={16}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        onEndReached={onLoadMore}
+        onEndReached={loopEnabled ? undefined : onLoadMore}
         onEndReachedThreshold={0.5}
         extraData={savedNames}
-        renderItem={({ item }) => (
-          <View style={styles.postPage}>
-            <PostCard
-              card={item}
-              session={session}
-              preloadedImage={images?.[item.id] ?? bulkImages[item.id] ?? null}
-              colors={colors}
-              saved={savedNames.has(item.name)}
-              onSave={onSave}
-              onOpen={onOpen}
-            />
-          </View>
-        )}
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={false}
+        renderItem={renderCard}
       />
 
       {n > 1 && (
@@ -435,7 +568,8 @@ function TrendingRow({ items, session, onPress, colors }) {
     // POST against the single Render worker for images the server already gave us.
     const seeded = {};
     items.forEach((it) => {
-      if (it.imageUrl && imageUrls[it.id] === undefined) seeded[it.id] = it.imageUrl;
+      if (it.imageUrl && imageUrls[it.id] === undefined)
+        seeded[it.id] = it.imageUrl;
     });
     if (Object.keys(seeded).length) {
       setImageUrls((prev) => ({ ...prev, ...seeded }));
@@ -628,7 +762,12 @@ const HRecipeCard = React.memo(function HRecipeCard({
   }
 
   return (
-    <View style={[styles.hCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.hCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
       {img ? (
         <ExpoImage
           source={{ uri: img }}
@@ -637,7 +776,13 @@ const HRecipeCard = React.memo(function HRecipeCard({
           transition={150}
         />
       ) : (
-        <View style={[styles.hCardImg, styles.cardImageFallback, { backgroundColor: colors.surfaceAlt }]}>
+        <View
+          style={[
+            styles.hCardImg,
+            styles.cardImageFallback,
+            { backgroundColor: colors.surfaceAlt },
+          ]}
+        >
           <Text style={{ fontSize: ms(34) }}>{item.emoji ?? "🍽️"}</Text>
         </View>
       )}
@@ -660,7 +805,10 @@ const HRecipeCard = React.memo(function HRecipeCard({
           activeOpacity={0.7}
           onPress={toggle}
         >
-          <Text style={[styles.hCardName, { color: colors.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.hCardName, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {item.name}
           </Text>
           <Ionicons
@@ -670,21 +818,37 @@ const HRecipeCard = React.memo(function HRecipeCard({
           />
         </TouchableOpacity>
 
-        <Text style={[styles.hCardMeta, { color: colors.textMuted }]} numberOfLines={1}>
+        <Text
+          style={[styles.hCardMeta, { color: colors.textMuted }]}
+          numberOfLines={1}
+        >
           {item.calories} kcal · {item.time || "45 min"} · ★ {rating}
         </Text>
 
         {expanded && (
           <>
-            <View style={[styles.hDivider, { backgroundColor: colors.border }]} />
-            <Text style={[styles.hCardKcal, { color: colors.text }]}>{item.calories} kcal</Text>
+            <View
+              style={[styles.hDivider, { backgroundColor: colors.border }]}
+            />
+            <Text style={[styles.hCardKcal, { color: colors.text }]}>
+              {item.calories} kcal
+            </Text>
 
             <View style={[styles.hBar, { backgroundColor: colors.surfaceAlt }]}>
               {macroTotal > 0 && (
                 <View style={styles.hBarFill}>
-                  <View style={{ flex: pCal, backgroundColor: MACRO_COLORS.protein }} />
-                  <View style={{ flex: cCal, backgroundColor: MACRO_COLORS.carbs }} />
-                  <View style={{ flex: fCal, backgroundColor: MACRO_COLORS.fat }} />
+                  <View
+                    style={{
+                      flex: pCal,
+                      backgroundColor: MACRO_COLORS.protein,
+                    }}
+                  />
+                  <View
+                    style={{ flex: cCal, backgroundColor: MACRO_COLORS.carbs }}
+                  />
+                  <View
+                    style={{ flex: fCal, backgroundColor: MACRO_COLORS.fat }}
+                  />
                 </View>
               )}
             </View>
@@ -693,8 +857,17 @@ const HRecipeCard = React.memo(function HRecipeCard({
               {macros.map((m) => (
                 <View key={m.l} style={styles.hMacroRow}>
                   <View style={[styles.hDot, { backgroundColor: m.c }]} />
-                  <Text style={[styles.hMacroLabel, { color: colors.textSecondary }]}>{m.l}</Text>
-                  <Text style={[styles.hMacroVal, { color: colors.text }]}>{m.v}g</Text>
+                  <Text
+                    style={[
+                      styles.hMacroLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {m.l}
+                  </Text>
+                  <Text style={[styles.hMacroVal, { color: colors.text }]}>
+                    {m.v}g
+                  </Text>
                 </View>
               ))}
             </View>
@@ -704,7 +877,9 @@ const HRecipeCard = React.memo(function HRecipeCard({
               activeOpacity={0.85}
               onPress={() => onStartCooking(item)}
             >
-              <Text style={styles.startBtnText}>{t("explore.startCooking")}</Text>
+              <Text style={styles.startBtnText}>
+                {t("explore.startCooking")}
+              </Text>
             </TouchableOpacity>
           </>
         )}
@@ -715,45 +890,67 @@ const HRecipeCard = React.memo(function HRecipeCard({
 
 const CAROUSEL_LIMIT = 10;
 
-function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSeeAll, savedNames, onSave }) {
+function RecipeCarousel({
+  title,
+  items,
+  session,
+  colors,
+  t,
+  onStartCooking,
+  onSeeAll,
+  savedNames,
+  onSave,
+}) {
   const displayItems = items;
 
   const [images, setImages] = useState({});
 
-  const onViewableItemsChanged = useCallback(({ viewableItems: vItems }) => {
-    const visibleIds = vItems.map((v) => v.item?.id);
-    const lastIndex = vItems.length ? vItems[vItems.length - 1].index : -1;
-    const nextIds = [];
-    if (lastIndex !== -1 && lastIndex + 1 < displayItems.length) nextIds.push(displayItems[lastIndex + 1].id);
-    if (lastIndex !== -1 && lastIndex + 2 < displayItems.length) nextIds.push(displayItems[lastIndex + 2].id);
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems: vItems }) => {
+      const visibleIds = vItems.map((v) => v.item?.id);
+      const lastIndex = vItems.length ? vItems[vItems.length - 1].index : -1;
+      const nextIds = [];
+      if (lastIndex !== -1 && lastIndex + 1 < displayItems.length)
+        nextIds.push(displayItems[lastIndex + 1].id);
+      if (lastIndex !== -1 && lastIndex + 2 < displayItems.length)
+        nextIds.push(displayItems[lastIndex + 2].id);
 
-    const allIdsToLoad = [...new Set([...visibleIds, ...nextIds])];
-    const ids = allIdsToLoad.filter(id => id && images[id] === undefined);
-    if (ids.length > 0) {
-      setImages(prev => {
-        const next = { ...prev };
-        ids.forEach(id => next[id] = null);
-        return next;
-      });
-      exploreService.loadRecipeImages(session, ids).then((map) => {
-        setImages(prev => ({ ...prev, ...map }));
-        Object.entries(map).forEach(([id, url]) => {
-          if (url) {
-            ExpoImage.prefetch(url).catch(() => { });
-          } else {
-            const item = displayItems.find(c => c.id === id);
-            if (item) {
-              exploreService.fetchRecipeImage(session, id, item.name).then(fallbackUrl => {
-                exploreService.seedImageCache({ [id]: fallbackUrl });
-                setImages(prev => ({ ...prev, [id]: fallbackUrl }));
-                if (fallbackUrl) ExpoImage.prefetch(fallbackUrl).catch(() => { });
-              }).catch(() => { });
-            }
-          }
+      const allIdsToLoad = [...new Set([...visibleIds, ...nextIds])];
+      const ids = allIdsToLoad.filter((id) => id && images[id] === undefined);
+      if (ids.length > 0) {
+        setImages((prev) => {
+          const next = { ...prev };
+          ids.forEach((id) => (next[id] = null));
+          return next;
         });
-      }).catch(() => { });
-    }
-  }, [images, session]);
+        exploreService
+          .loadRecipeImages(session, ids)
+          .then((map) => {
+            setImages((prev) => ({ ...prev, ...map }));
+            Object.entries(map).forEach(([id, url]) => {
+              if (url) {
+                ExpoImage.prefetch(url).catch(() => {});
+              } else {
+                const item = displayItems.find((c) => c.id === id);
+                if (item) {
+                  exploreService
+                    .fetchRecipeImage(session, id, item.name)
+                    .then((fallbackUrl) => {
+                      exploreService.seedImageCache({ [id]: fallbackUrl });
+                      setImages((prev) => ({ ...prev, [id]: fallbackUrl }));
+                      if (fallbackUrl)
+                        ExpoImage.prefetch(fallbackUrl).catch(() => {});
+                    })
+                    .catch(() => {});
+                }
+              }
+            });
+          })
+          .catch(() => {});
+      }
+    },
+    [images, session],
+  );
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 1,
@@ -764,15 +961,26 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
   return (
     <View style={{ marginBottom: ms(24) }}>
       <View style={styles.carouselHeader}>
-        <Text style={[styles.carouselTitle, { color: colors.text }]}>{title}</Text>
-        <TouchableOpacity onPress={onSeeAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={[styles.seeAll, { color: colors.textMuted }]}>{t("explore.seeAll")}</Text>
+        <Text style={[styles.carouselTitle, { color: colors.text }]}>
+          {title}
+        </Text>
+        <TouchableOpacity
+          onPress={onSeeAll}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={[styles.seeAll, { color: colors.textMuted }]}>
+            {t("explore.seeAll")}
+          </Text>
         </TouchableOpacity>
       </View>
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: ms(24), gap: ms(14), alignItems: "flex-start" }}
+        contentContainerStyle={{
+          paddingHorizontal: ms(24),
+          gap: ms(14),
+          alignItems: "flex-start",
+        }}
         data={displayItems}
         keyExtractor={(item) => item.id}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -797,8 +1005,17 @@ function RecipeCarousel({ title, items, session, colors, t, onStartCooking, onSe
             activeOpacity={0.85}
             onPress={onSeeAll}
           >
-            <View style={[styles.seeAllIconWrap, { backgroundColor: colors.tintOrange }]}>
-              <Ionicons name="arrow-forward" size={ms(22)} color={colors.primary} />
+            <View
+              style={[
+                styles.seeAllIconWrap,
+                { backgroundColor: colors.tintOrange },
+              ]}
+            >
+              <Ionicons
+                name="arrow-forward"
+                size={ms(22)}
+                color={colors.primary}
+              />
             </View>
             <Text style={[styles.seeAllCardText, { color: colors.text }]}>
               {t("explore.seeAll")}
@@ -819,8 +1036,16 @@ function CarouselSkeleton({ colors }) {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 750, useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0.4, duration: 750, useNativeDriver: true }),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+        Animated.timing(anim, {
+          toValue: 0.4,
+          duration: 750,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
@@ -831,15 +1056,24 @@ function CarouselSkeleton({ colors }) {
     <View style={styles.deckSection}>
       <View style={[styles.postCard, { backgroundColor: colors.surface }]}>
         <Animated.View
-          style={[styles.skeletonBlock, { backgroundColor: colors.surfaceAlt, opacity: anim }]}
+          style={[
+            styles.skeletonBlock,
+            { backgroundColor: colors.surfaceAlt, opacity: anim },
+          ]}
         />
         {/* Faux text lines at the bottom, matching the card info area */}
         <View style={styles.skeletonInfo}>
           <Animated.View
-            style={[styles.skeletonLineLg, { backgroundColor: colors.surfaceAlt, opacity: anim }]}
+            style={[
+              styles.skeletonLineLg,
+              { backgroundColor: colors.surfaceAlt, opacity: anim },
+            ]}
           />
           <Animated.View
-            style={[styles.skeletonLineSm, { backgroundColor: colors.surfaceAlt, opacity: anim }]}
+            style={[
+              styles.skeletonLineSm,
+              { backgroundColor: colors.surfaceAlt, opacity: anim },
+            ]}
           />
         </View>
       </View>
@@ -955,10 +1189,10 @@ export default function ExploreScreen({ navigation }) {
             for (let i = 0; i < ids.length; i += 100) {
               exploreService
                 .loadRecipeImages(session, ids.slice(i, i + 100))
-                .catch(() => { });
+                .catch(() => {});
             }
           })
-          .catch(() => { })
+          .catch(() => {})
           .finally(() => {
             setDbLoading(false);
             setDbLoaded(true);
@@ -1126,7 +1360,11 @@ export default function ExploreScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Image source={leafImg} style={styles.headerLeaf} resizeMode="contain" />
+          <Image
+            source={leafImg}
+            style={styles.headerLeaf}
+            resizeMode="contain"
+          />
           <Text style={[styles.title, { color: colors.text }]}>
             {t("explore.title")}
           </Text>
@@ -1141,7 +1379,11 @@ export default function ExploreScreen({ navigation }) {
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
         >
-          <Ionicons name="search-outline" size={ms(18)} color={colors.textMuted} />
+          <Ionicons
+            name="search-outline"
+            size={ms(18)}
+            color={colors.textMuted}
+          />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
             placeholder={t("explore.searchPlaceholder")}
@@ -1182,7 +1424,9 @@ export default function ExploreScreen({ navigation }) {
                 style={[
                   styles.pill,
                   {
-                    backgroundColor: isActive ? colors.tintOrange : colors.surface,
+                    backgroundColor: isActive
+                      ? colors.tintOrange
+                      : colors.surface,
                     borderColor: isActive ? colors.primary : colors.border,
                   },
                 ]}
@@ -1190,7 +1434,11 @@ export default function ExploreScreen({ navigation }) {
                 activeOpacity={0.7}
               >
                 {icon && (
-                  <Image source={icon} style={styles.pillIcon} resizeMode="contain" />
+                  <Image
+                    source={icon}
+                    style={styles.pillIcon}
+                    resizeMode="contain"
+                  />
                 )}
                 <Text
                   style={[
@@ -1210,12 +1458,24 @@ export default function ExploreScreen({ navigation }) {
         {!isSearching ? (
           <>
             <TouchableOpacity
-              style={[styles.planCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[
+                styles.planCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               onPress={() => navigation.navigate("Plan")}
               activeOpacity={0.7}
             >
-              <View style={[styles.planIconWrap, { backgroundColor: colors.tintGreen }]}>
-                <Image source={calendarPlanImg} style={styles.planIcon} resizeMode="contain" />
+              <View
+                style={[
+                  styles.planIconWrap,
+                  { backgroundColor: colors.tintGreen },
+                ]}
+              >
+                <Image
+                  source={calendarPlanImg}
+                  style={styles.planIcon}
+                  resizeMode="contain"
+                />
               </View>
               <View style={styles.planText}>
                 <Text style={[styles.planTitle, { color: colors.text }]}>
@@ -1225,7 +1485,11 @@ export default function ExploreScreen({ navigation }) {
                   {t("explore.planSub")}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={ms(16)} color={colors.textMuted} />
+              <Ionicons
+                name="chevron-forward"
+                size={ms(16)}
+                color={colors.textMuted}
+              />
             </TouchableOpacity>
 
             {swipeCards.length > 0 ? (
@@ -1486,9 +1750,25 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: SPACING.xxl },
 
-  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, marginBottom: ms(18) },
-  headerLeaf: { position: "absolute", right: ms(8), top: ms(4), width: ms(90), height: ms(90), opacity: 0.6 },
-  title: { fontSize: ms(30), fontWeight: FONTS.bold, letterSpacing: -0.5, marginBottom: SPACING.xs },
+  header: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    marginBottom: ms(18),
+  },
+  headerLeaf: {
+    position: "absolute",
+    right: ms(8),
+    top: ms(4),
+    width: ms(90),
+    height: ms(90),
+    opacity: 0.6,
+  },
+  title: {
+    fontSize: ms(30),
+    fontWeight: FONTS.bold,
+    letterSpacing: -0.5,
+    marginBottom: SPACING.xs,
+  },
   headerSubtitle: { fontSize: FONT_SIZES.small, fontWeight: FONTS.regular },
 
   searchBar: {
@@ -1502,9 +1782,18 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginBottom: SPACING.md,
   },
-  searchInput: { flex: 1, fontSize: FONT_SIZES.body, fontWeight: FONTS.regular, padding: 0 },
+  searchInput: {
+    flex: 1,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONTS.regular,
+    padding: 0,
+  },
 
-  pillsRow: { paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: ms(20) },
+  pillsRow: {
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+    marginBottom: ms(20),
+  },
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1569,7 +1858,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cardInfo: { position: "absolute", left: SPACING.md, right: SPACING.md, bottom: SPACING.md },
+  cardInfo: {
+    position: "absolute",
+    left: SPACING.md,
+    right: SPACING.md,
+    bottom: SPACING.md,
+  },
   cardTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1756,7 +2050,11 @@ const styles = StyleSheet.create({
   },
   planIcon: { width: ms(22), height: ms(22) },
   planText: { flex: 1 },
-  planTitle: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: ms(2) },
+  planTitle: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONTS.semibold,
+    marginBottom: ms(2),
+  },
   planSub: { fontSize: ms(12), fontWeight: FONTS.regular },
 
   sectionLabel: {
@@ -1777,7 +2075,11 @@ const styles = StyleSheet.create({
     gap: ms(12),
   },
   recipeInfo: { flex: 1 },
-  recipeName: { fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold, marginBottom: ms(3) },
+  recipeName: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONTS.semibold,
+    marginBottom: ms(3),
+  },
   recipeMeta: { fontSize: ms(12), fontWeight: FONTS.regular },
   recipeRight: { alignItems: "flex-end", gap: ms(3) },
   recipeCalories: { fontSize: FONT_SIZES.small, fontWeight: FONTS.regular },
@@ -1802,7 +2104,11 @@ const styles = StyleSheet.create({
     lineHeight: ms(20),
   },
 
-  loadingState: { alignItems: "center", paddingTop: SPACING.xxl * 2, gap: SPACING.md },
+  loadingState: {
+    alignItems: "center",
+    paddingTop: SPACING.xxl * 2,
+    gap: SPACING.md,
+  },
   loadingText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.regular },
 
   // Category carousels
@@ -1813,7 +2119,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     marginBottom: ms(14),
   },
-  carouselTitle: { fontSize: ms(18), fontWeight: FONTS.bold, letterSpacing: -0.3 },
+  carouselTitle: {
+    fontSize: ms(18),
+    fontWeight: FONTS.bold,
+    letterSpacing: -0.3,
+  },
   seeAll: { fontSize: FONT_SIZES.small, fontWeight: FONTS.medium },
 
   hCard: {
@@ -1836,7 +2146,12 @@ const styles = StyleSheet.create({
   },
   hCardBody: { padding: ms(14) },
   hDivider: { height: StyleSheet.hairlineWidth, marginTop: ms(12) },
-  hBar: { height: ms(6), borderRadius: ms(3), overflow: "hidden", marginBottom: ms(14) },
+  hBar: {
+    height: ms(6),
+    borderRadius: ms(3),
+    overflow: "hidden",
+    marginBottom: ms(14),
+  },
   hBarFill: { flex: 1, flexDirection: "row" },
   hCardTitleRow: {
     flexDirection: "row",
@@ -1846,10 +2161,20 @@ const styles = StyleSheet.create({
   },
   hCardName: { flex: 1, fontSize: FONT_SIZES.body, fontWeight: FONTS.semibold },
   hCardMeta: { fontSize: ms(12), marginTop: ms(3) },
-  hCardKcal: { fontSize: FONT_SIZES.body, fontWeight: FONTS.bold, marginTop: ms(10), marginBottom: SPACING.sm },
+  hCardKcal: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONTS.bold,
+    marginTop: ms(10),
+    marginBottom: SPACING.sm,
+  },
   hMacroList: { gap: ms(6), marginBottom: ms(14) },
   hMacroRow: { flexDirection: "row", alignItems: "center" },
-  hDot: { width: ms(8), height: ms(8), borderRadius: ms(4), marginRight: SPACING.sm },
+  hDot: {
+    width: ms(8),
+    height: ms(8),
+    borderRadius: ms(4),
+    marginRight: SPACING.sm,
+  },
   hMacroLabel: { flex: 1, fontSize: FONT_SIZES.small },
   hMacroVal: { fontSize: FONT_SIZES.small, fontWeight: FONTS.semibold },
   startBtn: {
@@ -1858,7 +2183,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  startBtnText: { fontSize: FONT_SIZES.label, fontWeight: FONTS.bold, color: "#FFFFFF" },
+  startBtnText: {
+    fontSize: FONT_SIZES.label,
+    fontWeight: FONTS.bold,
+    color: "#FFFFFF",
+  },
 
   // "See All" tile — same footprint as a recipe card, terminates the carousel.
   seeAllCard: {
@@ -1881,10 +2210,10 @@ const styles = StyleSheet.create({
 
   // Instagram-style paged carousel
   deckSection: { marginBottom: ms(28) },
-  postPage: { width: SCREEN_WIDTH },
   postCard: {
     width: "100%",
     height: CARD_HEIGHT,
+    borderRadius: RADIUS.lg,
     overflow: "hidden",
   },
   skeletonBlock: { flex: 1 },
@@ -1892,12 +2221,11 @@ const styles = StyleSheet.create({
   skeletonLineLg: { height: ms(20), width: "60%", borderRadius: ms(6) },
   skeletonLineSm: { height: ms(14), width: "40%", borderRadius: ms(6) },
   pageCounter: {
-    position: "absolute",
-    top: ms(12),
-    right: ms(12),
+    alignSelf: "center",
+    marginTop: ms(12),
     backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: ms(10),
-    paddingVertical: ms(4),
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(5),
     borderRadius: RADIUS.full,
   },
   pageCounterText: {
