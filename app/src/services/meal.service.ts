@@ -9,6 +9,12 @@ export const mealService = {
     return data.meals;
   },
 
+  getHistory: async (session: any, page: number = 1, limit: number = 10): Promise<{ history: any[]; hasMore: boolean; totalDays: number }> => {
+    const headers = await getAuthHeaders(session);
+    const response = await fetch(`${getBaseUrl()}/api/calories/history?page=${page}&limit=${limit}`, { headers });
+    return handleResponse<{ history: any[]; hasMore: boolean; totalDays: number }>(response);
+  },
+
   addMeal: async (session: any, meal: Omit<Meal, 'id'>): Promise<Meal> => {
     const headers = await getAuthHeaders(session);
     const response = await fetch(`${getBaseUrl()}/api/meals`, {

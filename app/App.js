@@ -27,6 +27,7 @@ const TAB_ICONS = {
   Dashboard: require("./assets/pngs/home.png"),
   Explore: require("./assets/pngs/compass.png"),
   Profile: require("./assets/pngs/profile.png"),
+  Calories: require("./assets/pngs/kcalVector.png"),
 };
 const TAB_ACTIVE = "#FF8A45";
 const TAB_INACTIVE = "#7C6F64";
@@ -379,8 +380,8 @@ function MainTabs() {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
-      {/* <Tab.Screen name="Friends" component={FriendsScreen} />
-      <Tab.Screen name="Calories" component={CaloriesScreen} /> */}
+      <Tab.Screen name="Calories" component={CaloriesScreen} />
+      {/* <Tab.Screen name="Friends" component={FriendsScreen} /> */}
       {hasResolved && !isSubscribed && (
         <Tab.Screen
           name="Premium"

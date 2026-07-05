@@ -10,6 +10,7 @@ import authRoutes     from './auth.js';
 import swipeRoutes    from './swipe.js';
 import imageRoutes    from './images.js';
 import recipeRoutes   from './recipes.js';
+import caloriesRoutes from './calories.js';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use('/api', accountRoutes);
 router.use('/api', swipeRoutes);
 router.use('/api', imageRoutes);
 router.use('/api', recipeRoutes);
+router.use('/api', caloriesRoutes);
 
 // Webhook (signature-verified, not JWT-authenticated)
 router.use('/webhooks', webhookRoutes);
