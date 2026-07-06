@@ -110,9 +110,9 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const mealLogsContext = useMealLogs() as any;
   const allMeals: Meal[] =
     mealLogsContext.allMeals || mealLogsContext.meals || [];
-  const removeMeal = mealLogsContext.removeMeal || (() => { });
-  const updateMeal = mealLogsContext.updateMeal || (() => { });
-  const refreshMeals = mealLogsContext.refreshMeals || (() => { });
+  const removeMeal = mealLogsContext.removeMeal || (() => {});
+  const updateMeal = mealLogsContext.updateMeal || (() => {});
+  const refreshMeals = mealLogsContext.refreshMeals || (() => {});
   const isLoadingMeals: boolean = mealLogsContext.isLoadingMeals ?? false;
   const isInitialLoad: boolean = mealLogsContext.isInitialLoad ?? true;
   const showMealSkeleton = isLoadingMeals && isInitialLoad;
@@ -161,7 +161,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
 
       // Warm the Explore deck + image cache in the background so the swiper
       // is instant when the user opens the Explore tab.
-      ensureExplore(session).catch(() => { });
+      ensureExplore(session).catch(() => {});
     }, [refreshMeals, session, ensureExplore]),
   );
 
@@ -263,14 +263,14 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         meals.length > 0
           ? meals
           : [
-            {
-              id: `pending_${section.key}`,
-              name: label,
-              pending: true,
-              mealType: section.key as any,
-              emoji: section.emoji,
-            } as Meal,
-          ],
+              {
+                id: `pending_${section.key}`,
+                name: label,
+                pending: true,
+                mealType: section.key as any,
+                emoji: section.emoji,
+              } as Meal,
+            ],
     };
   });
 
@@ -648,9 +648,9 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                           onPress={
                             meal.pending
                               ? () =>
-                                navigation.navigate("SearchFood", {
-                                  defaultMealType: meal.mealType,
-                                })
+                                  navigation.navigate("SearchFood", {
+                                    defaultMealType: meal.mealType,
+                                  })
                               : () => handleToggle(meal.id)
                           }
                         >
@@ -1086,7 +1086,6 @@ const styles = StyleSheet.create({
   // Meals list — one card per section
   mealsCard: {
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
     overflow: "hidden",
     marginBottom: ms(12),
   },
