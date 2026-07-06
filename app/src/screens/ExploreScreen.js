@@ -547,13 +547,13 @@ function PostCarousel({
         renderItem={renderCard}
       />
 
-      {n > 1 && (
+      {/* {n > 1 && (
         <View style={styles.pageCounter} pointerEvents="none">
           <Text style={styles.pageCounterText}>
             {index + 1}/{n}
           </Text>
         </View>
-      )}
+      )} */}
     </View>
   );
 }
