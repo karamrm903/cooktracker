@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -9,15 +9,31 @@ import {
   Platform,
   Linking,
   ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import type { Colors } from '../context/ThemeContext';
-import { SPACING, RADIUS, FONTS } from '../constants/theme';
-import { useSubscription } from '../hooks/useSubscription';
-import { subscriptionService } from '../services/subscription.service';
-import CommonAlertModal, { CommonModalVariant } from '../components/CommonModal';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { RADIUS, FONTS } from "../constants/theme";
+import { moderateScale as ms } from "../utils/responsive";
+import { useSubscription } from "../hooks/useSubscription";
+import { subscriptionService } from "../services/subscription.service";
+import CommonAlertModal, {
+  CommonModalVariant,
+} from "../components/CommonModal";
+
+const SCREEN_BG = "#FCF7F3";
+const TEXT_DARK = "#493026";
+const TEXT_MUTED = "#7F6C64";
+const BORDER = "#EDE5DE";
+const ORANGE = "#E89457";
+const GREEN = "#94AE7F";
+const BADGE_BG = "#D6EEE5";
+const BADGE_TEXT = "#007A4B";
+
+const PREMIUM_FEATURES = [
+  "All premium features",
+  "Unlimited access",
+  "Cancel anytime",
+];
 
 type AlertState = {
   visible: boolean;
@@ -30,31 +46,33 @@ type AlertState = {
   onSecondary?: () => void;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  free:      'Not Subscribed',
-  trial:     'Free Trial',
-  active:    'Premium',
-  cancelled: 'Premium (Cancels Soon)',
-  expired:   'Expired',
+/** Badge copy per status — free tier still reads "Active" since it is the plan in force. */
+const BADGE_LABELS: Record<string, string> = {
+  free: "Active",
+  trial: "Trial",
+  active: "Active",
+  cancelled: "Cancelling",
+  expired: "Expired",
 };
 
-const STATUS_COLORS = (colors: Colors): Record<string, string> => ({
-  free:      colors.textMuted,
-  trial:     '#F59E0B',
-  active:    colors.primary,
-  cancelled: '#F59E0B',
-  expired:   colors.error,
-});
+function FeatureRow({ label }: { label: string }) {
+  return (
+    <View style={styles.featureRow}>
+      <Ionicons name="checkmark" size={ms(18)} color={GREEN} />
+      <Text style={styles.featureText}>{label}</Text>
+    </View>
+  );
+}
 
 export default function ManageSubscriptionScreen({ navigation }: any) {
-  const { colors } = useTheme();
-  const styles = makeStyles(colors);
-  const statusColors = STATUS_COLORS(colors);
-
-  const { isSubscribed, status, expiresAt, trialEndsAt, plan, sync } = useSubscription();
+  const { isSubscribed, status, expiresAt, trialEndsAt, sync } =
+    useSubscription();
   const [restoring, setRestoring] = useState(false);
   const [alert, setAlert] = useState<AlertState>({
-    visible: false, title: '', message: '', variant: 'info',
+    visible: false,
+    title: "",
+    message: "",
+    variant: "info",
   });
 
   // Re-sync on focus so a freshly-landed purchase webhook or an App Store
@@ -62,24 +80,25 @@ export default function ManageSubscriptionScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       sync();
-    }, [sync])
+    }, [sync]),
   );
 
-  const handleCancel = () => {
+  const handleManage = () => {
     const url =
-      Platform.OS === 'ios'
-        ? 'https://apps.apple.com/account/subscriptions'
-        : 'https://play.google.com/store/account/subscriptions';
+      Platform.OS === "ios"
+        ? "https://apps.apple.com/account/subscriptions"
+        : "https://play.google.com/store/account/subscriptions";
 
     setAlert({
       visible: true,
-      variant: 'warning',
-      title: 'Cancel Subscription',
-      message: Platform.OS === 'ios'
-        ? "You'll be taken to App Store subscription settings to cancel."
-        : "You'll be taken to Google Play to cancel.",
-      secondaryText: 'Not Now',
-      primaryText: 'Continue',
+      variant: "info",
+      title: "Manage Subscription",
+      message:
+        Platform.OS === "ios"
+          ? "You'll be taken to App Store subscription settings."
+          : "You'll be taken to Google Play subscription settings.",
+      secondaryText: "Not Now",
+      primaryText: "Continue",
       onPrimary: () => Linking.openURL(url),
     });
   };
@@ -92,16 +111,16 @@ export default function ManageSubscriptionScreen({ navigation }: any) {
       await sync();
       setAlert({
         visible: true,
-        variant: 'success',
-        title: 'Purchases Restored',
-        message: 'Your subscription has been restored.',
+        variant: "success",
+        title: "Purchases Restored",
+        message: "Your subscription has been restored.",
       });
     } catch (err: any) {
       setAlert({
         visible: true,
-        variant: 'error',
-        title: 'Restore Failed',
-        message: err.message ?? 'Please try again.',
+        variant: "error",
+        title: "Restore Failed",
+        message: err.message ?? "Please try again.",
       });
     } finally {
       setRestoring(false);
@@ -109,127 +128,159 @@ export default function ManageSubscriptionScreen({ navigation }: any) {
   };
 
   const formatDate = (iso: string | null) => {
-    if (!iso) return '—';
+    if (!iso) return "—";
     return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
-  const validUntil =
-    status === 'trial' ? trialEndsAt : expiresAt;
+  // Premium layout covers anyone with entitlement in force — including a
+  // cancelled sub still inside its paid period.
+  const showPremiumLayout = isSubscribed || status === "cancelled";
+  const validUntil = status === "trial" ? trialEndsAt : expiresAt;
+  const dateLabel =
+    status === "trial"
+      ? "Trial ends"
+      : status === "cancelled"
+        ? "Access until"
+        : "Next billing date";
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: SCREEN_BG }]}
+      edges={["top"]}
+    >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={ms(20)} color={TEXT_DARK} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Subscription</Text>
-        <View style={{ width: 38 }} />
+        <Text style={styles.headerTitle}>Subscription</Text>
+        <View style={{ width: ms(36) }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {showPremiumLayout ? (
+          /* ── Premium: single card with features, billing date, manage CTA ── */
+          <View style={styles.card}>
+            <Text style={styles.cardEyebrow}>CURRENT PLAN</Text>
+            <View style={styles.cardDivider} />
 
-        {/* Plan card */}
-        <View style={[styles.planCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.planCardTop}>
-            <Ionicons
-              name="diamond-outline"
-              size={28}
-              color={statusColors[status] ?? colors.textMuted}
-            />
-            <View style={styles.planCardInfo}>
-              <Text style={[styles.planLabel, { color: colors.text }]}>
-                {STATUS_LABELS[status] ?? 'Not Subscribed'}
-              </Text>
-              {plan && (
-                <Text style={[styles.planSub, { color: colors.textMuted }]}>
-                  {plan === 'weekly' ? 'Weekly plan' : plan === 'monthly' ? 'Monthly plan' : 'Yearly plan'}
-                </Text>
-              )}
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: `${statusColors[status] ?? colors.textMuted}20` }]}>
-              <Text style={[styles.statusBadgeText, { color: statusColors[status] ?? colors.textMuted }]}>
-                {status === 'active' ? 'Active' :
-                 status === 'trial' ? 'Trial' :
-                 status === 'cancelled' ? 'Cancelling' :
-                 status === 'expired' ? 'Expired' : 'Inactive'}
-              </Text>
-            </View>
-          </View>
-
-          {validUntil && (
-            <>
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <View style={styles.dateRow}>
-                <Text style={[styles.dateLabel, { color: colors.textMuted }]}>
-                  {status === 'trial'
-                    ? 'Trial ends'
-                    : status === 'cancelled'
-                    ? 'Access until'
-                    : 'Renews'}
-                </Text>
-                <Text style={[styles.dateValue, { color: colors.text }]}>
-                  {formatDate(validUntil)}
+            <View style={styles.planTitleRow}>
+              <Text style={styles.planTitle}>Premium Plan</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {BADGE_LABELS[status] ?? "Active"}
                 </Text>
               </View>
-            </>
-          )}
-        </View>
-
-        {/* Non-subscribed — upgrade prompt */}
-        {!isSubscribed && status !== 'cancelled' && (
-          <TouchableOpacity
-            style={[styles.upgradeBtn, { backgroundColor: colors.primary }]}
-            onPress={() => navigation.navigate('Subscription')}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.upgradeBtnText, { color: colors.btnPrimaryText }]}>
-              Upgrade to Premium
+            </View>
+            <Text style={styles.planSub}>
+              Full access to all premium features
             </Text>
-          </TouchableOpacity>
+
+            <View style={styles.featureList}>
+              {PREMIUM_FEATURES.map((f) => (
+                <FeatureRow key={f} label={f} />
+              ))}
+            </View>
+
+            {validUntil && (
+              <>
+                <View style={styles.cardDivider} />
+                <View style={styles.dateRow}>
+                  <Text style={styles.dateLabel}>{dateLabel}</Text>
+                  <Text style={styles.dateValue}>{formatDate(validUntil)}</Text>
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.cta}
+              onPress={handleManage}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.ctaText}>Manage Subscription</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          /* ── Free: current-plan card + premium promo card ─────────────── */
+          <>
+            <View style={styles.card}>
+              <Text style={styles.cardEyebrow}>CURRENT PLAN</Text>
+              <View style={styles.cardDivider} />
+
+              <View style={styles.planTitleRow}>
+                <Text style={styles.planTitle}>Free Plan</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {BADGE_LABELS[status] ?? "Active"}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.planSub}>Basic access and features</Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardEyebrow}>PREMIUM PLAN</Text>
+              <View style={styles.cardDivider} />
+
+              <Text style={styles.planTitle}>Unlock Premium</Text>
+              <Text style={styles.planSub}>Get more from your experience</Text>
+
+              <View style={styles.featureList}>
+                {PREMIUM_FEATURES.map((f) => (
+                  <FeatureRow key={f} label={f} />
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.cta}
+                onPress={() => navigation.navigate("Subscription")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.ctaText}>Update To Premium</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
-        {/* Actions */}
-        <View style={[styles.actionsCard, { backgroundColor: colors.surface }]}>
-
-          {/* Manage / cancel — only for active/trial subscribers */}
-          {(status === 'active' || status === 'trial') && (
-            <>
-              <TouchableOpacity style={styles.actionRow} onPress={handleCancel} activeOpacity={0.7}>
-                <Ionicons name="close-circle-outline" size={20} color={colors.error} />
-                <Text style={[styles.actionLabel, { color: colors.error }]}>Cancel Subscription</Text>
-                <Ionicons name="open-outline" size={14} color={colors.error} />
-              </TouchableOpacity>
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            </>
-          )}
-
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={handleRestore}
-            disabled={restoring}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="refresh-outline" size={20} color={colors.textMuted} />
-            <Text style={[styles.actionLabel, { color: colors.text }]}>Restore Purchases</Text>
-            {restoring
-              ? <ActivityIndicator size="small" color={colors.textMuted} />
-              : <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />}
-          </TouchableOpacity>
-        </View>
-
         {/* Info note */}
-        <Text style={[styles.infoNote, { color: colors.textMuted }]}>
-          {Platform.OS === 'ios'
-            ? 'Subscriptions are managed through your Apple ID. Cancellation takes effect at the end of the current billing period.'
-            : 'Subscriptions are managed through Google Play. Cancellation takes effect at the end of the current billing period.'}
-        </Text>
-
+        <View style={styles.info}>
+          <Text style={styles.infoNote}>
+            {Platform.OS === "ios"
+              ? "Subscriptions are managed through your Apple ID."
+              : "Subscriptions are managed through Google Play."}
+          </Text>
+          <Text style={styles.infoNote2}>
+            {
+              "\nCancellation takes effect at the end of the current billing period."
+            }
+          </Text>
+        </View>
       </ScrollView>
+
+      {/* Restore — required for store compliance, kept as a quiet text link */}
+      <TouchableOpacity
+        style={styles.restoreBtn}
+        onPress={handleRestore}
+        disabled={restoring}
+        activeOpacity={0.7}
+      >
+        {restoring ? (
+          <ActivityIndicator size="small" color={TEXT_MUTED} />
+        ) : (
+          <Text style={styles.restoreText}>Restore Purchases</Text>
+        )}
+      </TouchableOpacity>
 
       <CommonAlertModal
         visible={alert.visible}
@@ -252,115 +303,164 @@ export default function ManageSubscriptionScreen({ navigation }: any) {
   );
 }
 
-function makeStyles(colors: Colors) {
-  return StyleSheet.create({
-    safe: { flex: 1 },
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
 
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
-    backBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 999,
-      backgroundColor: colors.surfaceAlt,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      fontSize: 17,
-      fontWeight: FONTS.semibold,
-    },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: ms(20),
+    paddingVertical: ms(12),
+  },
+  backBtn: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+  },
 
-    content: {
-      padding: 24,
-      gap: 16,
-    },
+  content: {
+    paddingHorizontal: ms(20),
+    paddingTop: ms(8),
+    paddingBottom: ms(40),
+    gap: ms(16),
+  },
 
-    planCard: {
-      borderRadius: RADIUS.lg,
-      overflow: 'hidden',
-    },
-    planCardTop: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: SPACING.md,
-      gap: 14,
-    },
-    planCardInfo: { flex: 1, gap: 2 },
-    planLabel: {
-      fontSize: 17,
-      fontWeight: FONTS.bold,
-    },
-    planSub: {
-      fontSize: 13,
-      fontWeight: FONTS.regular,
-    },
-    statusBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: RADIUS.full,
-    },
-    statusBadgeText: {
-      fontSize: 12,
-      fontWeight: FONTS.semibold,
-    },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: ms(20),
+    padding: ms(20),
+  },
+  cardEyebrow: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+    opacity: 0.5,
+  },
+  cardDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#F4F4F4",
+    marginVertical: ms(14),
+  },
 
-    divider: { height: 1 },
+  planTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  planTitle: {
+    fontSize: ms(18),
+    lineHeight: ms(26),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+  },
+  planSub: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    fontWeight: FONTS.medium,
+    color: TEXT_MUTED,
+    marginTop: ms(6),
+  },
+  badge: {
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(5),
+    borderRadius: RADIUS.full,
+    backgroundColor: BADGE_BG,
+  },
+  badgeText: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    fontWeight: FONTS.bold,
+    color: BADGE_TEXT,
+  },
 
-    dateRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: SPACING.md,
-      paddingVertical: 14,
-    },
-    dateLabel: {
-      fontSize: 14,
-      fontWeight: FONTS.regular,
-    },
-    dateValue: {
-      fontSize: 14,
-      fontWeight: FONTS.semibold,
-    },
+  featureList: { marginTop: ms(18), gap: ms(14) },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: ms(10) },
+  featureText: {
+    fontSize: ms(14),
+    lineHeight: ms(22),
+    fontWeight: FONTS.medium,
+    color: TEXT_DARK,
+  },
 
-    upgradeBtn: {
-      paddingVertical: 16,
-      borderRadius: RADIUS.full,
-      alignItems: 'center',
-    },
-    upgradeBtnText: {
-      fontSize: 16,
-      fontWeight: FONTS.bold,
-      letterSpacing: 0.2,
-    },
+  dateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dateLabel: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    fontWeight: FONTS.medium,
+    color: TEXT_MUTED,
+  },
+  dateValue: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    fontWeight: FONTS.bold,
+    color: TEXT_MUTED,
+  },
 
-    actionsCard: {
-      borderRadius: RADIUS.lg,
-      overflow: 'hidden',
-    },
-    actionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: SPACING.md,
-      paddingVertical: 15,
-      gap: 14,
-    },
-    actionLabel: {
-      flex: 1,
-      fontSize: 15,
-      fontWeight: FONTS.medium,
-    },
+  cta: {
+    marginTop: ms(20),
+    paddingVertical: ms(16),
+    borderRadius: RADIUS.full,
+    alignItems: "center",
+    backgroundColor: ORANGE,
+  },
+  ctaText: {
+    fontSize: ms(16),
+    lineHeight: ms(22),
+    fontWeight: FONTS.bold,
+    color: "#FFFFFF",
+  },
 
-    infoNote: {
-      fontSize: 12,
-      lineHeight: 18,
-      textAlign: 'center',
-      paddingHorizontal: 8,
-    },
-  });
-}
+  info: {
+    position: "relative",
+  },
+
+  infoNote: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    color: TEXT_MUTED,
+    position: "absolute",
+    alignSelf: "center",
+  },
+
+  infoNote2: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
+    textAlign: "center",
+    color: TEXT_MUTED,
+    paddingHorizontal: ms(84),
+    position: "absolute",
+    alignSelf: "center",
+  },
+
+  restoreBtn: {
+    alignItems: "center",
+    paddingVertical: ms(6),
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: ms(80),
+    alignSelf: "center",
+  },
+  restoreText: {
+    fontSize: ms(13),
+    lineHeight: ms(18),
+    fontWeight: FONTS.medium,
+    color: TEXT_MUTED,
+    textDecorationLine: "underline",
+  },
+});

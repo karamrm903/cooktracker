@@ -1,88 +1,130 @@
-import React, { useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { SPACING, RADIUS, FONTS } from '../constants/theme';
-import { useTheme } from '../context/ThemeContext';
-import { useLanguage } from '../context/LanguageContext';
-import { LANGUAGE_META } from '../i18n';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useDispatch, useSelector } from 'react-redux';
-import { setAuthSession, setPersistedAccessToken, setOnboardingStatus } from '../store/slices/authSlice';
-import { clearSubscription } from '../store/slices/subscriptionSlice';
-import { authService } from '../services/auth.service';
-import { profileService } from '../services/profile.service';
-import { subscriptionService } from '../services/subscription.service';
-import { useSubscription } from '../hooks/useSubscription';
-import { RootState } from '../store';
-import LanguagePickerModal from '../components/LanguagePickerModal';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import { RADIUS, FONTS } from "../constants/theme";
+import { moderateScale as ms } from "../utils/responsive";
+import { SVG_ICONS, SVG_ICON_COMPONENT_MAP } from "../constants/svgIcons";
+import { useLanguage } from "../context/LanguageContext";
+import { LANGUAGE_META } from "../i18n";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  setAuthSession,
+  setPersistedAccessToken,
+  setOnboardingStatus,
+} from "../store/slices/authSlice";
+import { clearSubscription } from "../store/slices/subscriptionSlice";
+import { authService } from "../services/auth.service";
+import { profileService } from "../services/profile.service";
+import { subscriptionService } from "../services/subscription.service";
+import { useSubscription } from "../hooks/useSubscription";
+import { RootState } from "../store";
+import LanguagePickerModal from "../components/LanguagePickerModal";
+
+const SCREEN_BG = "#FCF7F3";
+const TEXT_DARK = "#493026";
+const TEXT_MUTED = "#7F6C64";
+const GREEN = "#94AE7F";
+const GREEN_LIGHT = "#E1EADA";
+const RED = "#E04D4D";
+
+const leafImg = require("../../assets/pngs/caloriesLeaf.png");
+const fireImg = require("../../assets/webp/StreakFire.webp");
 
 const SUBSCRIPTION_LABELS: Record<string, string> = {
-  free: 'Not Subscribed',
-  trial: 'Free Trial Active',
-  active: 'Premium',
-  cancelled: 'Premium (Cancels Soon)',
-  expired: 'Expired',
+  free: "Not subscribed",
+  trial: "Free trial active",
+  active: "Premium",
+  cancelled: "Premium (cancels soon)",
+  expired: "Expired",
 };
-
-// const GROUPS = ['Account', 'Preferences', 'More'] as const;  // removed — all settings rows were stubs with no onPress
 
 const GOAL_LABELS: Record<string, string> = {
-  lose:     'Lose Weight',
-  maintain: 'Maintain Weight',
-  muscle:   'Build Muscle',
-  healthy:  'Eat Healthy',
+  lose: "Lose weight",
+  maintain: "Maintain weight",
+  muscle: "Build muscle",
+  healthy: "Eat healthy",
 };
+
+/** Renders an icon from the shared SVG registry by its SVG_ICONS key. */
+function SvgIcon({ name, ...props }: { name: string; [k: string]: any }) {
+  const Icon = SVG_ICON_COMPONENT_MAP[name];
+  return Icon ? <Icon {...props} /> : null;
+}
+
+type RowProps = {
+  icon: string;
+  label: string;
+  subtitle?: string;
+  value?: string;
+  onPress?: () => void;
+};
+
+function SettingsRow({ icon, label, subtitle, value, onPress }: RowProps) {
+  return (
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.rowIcon}>
+        <SvgIcon name={icon} color={TEXT_DARK} />
+      </View>
+      <View style={styles.rowTextWrap}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        {!!subtitle && <Text style={styles.rowSubtitle}>{subtitle}</Text>}
+      </View>
+      {!!value && <Text style={styles.rowValue}>{value}</Text>}
+      <SvgIcon name={SVG_ICONS.CHEVRON_RIGHT_ICON} color={TEXT_DARK} />
+    </TouchableOpacity>
+  );
+}
 
 export default function ProfileScreen({ navigation }: any) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const { language } = useLanguage();
   const [langPickerVisible, setLangPickerVisible] = useState(false);
-  const [goalLabel,   setGoalLabel]   = useState<string | null>(null);
+  const [goalLabel, setGoalLabel] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
-
-  // removed — placeholder state, not persisted to DB
-  // const [mealVisibility, setMealVisibility] = useState(USER.mealVisibility ?? 'friends');
-  // const [shareMealNames, setShareMealNames] = useState(USER.shareMealNames ?? true);
-  // const [shareCalories, setShareCalories] = useState(USER.shareCalories ?? true);
-  // const [shareMacros, setShareMacros] = useState(USER.shareMacros ?? true);
 
   const { user, session } = useSelector((state: RootState) => state.auth);
   const streak = useSelector((state: RootState) => state.meals.streak);
   const dispatch = useDispatch();
-  const { isSubscribed, status: subStatus, expiresAt } = useSubscription();
+  const { status: subStatus, expiresAt, isSubscribed } = useSubscription();
 
   useFocusEffect(
     useCallback(() => {
       if (!session?.access_token) return;
-      profileService.getProfile(session)
-        .then(p => {
+      profileService
+        .getProfile(session)
+        .then((p) => {
           if (p?.goal) setGoalLabel(GOAL_LABELS[p.goal] ?? p.goal);
           setProfileName(p?.name || null);
         })
         .catch(() => {});
-    }, [session])
+    }, [session]),
   );
 
-  const emailPrefix = user?.email ? user.email.split('@')[0] : 'Chef';
+  const emailPrefix = user?.email ? user.email.split("@")[0] : "Chef";
   const displayName = profileName || emailPrefix;
-  // const displayName = user?.email ? user.email.split('@')[0] : USER.name;  // old — no name priority
   const initials = displayName
     .split(/[\s._-]/)
     .map((n: string) => n[0])
-    .join('')
+    .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  const subscriptionSubtitle =
+    (SUBSCRIPTION_LABELS[subStatus] ?? "Not subscribed") +
+    (isSubscribed && expiresAt
+      ? ` · ${subStatus === "cancelled" ? "until " : "renews "}${new Date(expiresAt).toLocaleDateString()}`
+      : "");
 
   const handleLogout = async () => {
     try {
@@ -93,19 +135,19 @@ export default function ProfileScreen({ navigation }: any) {
       dispatch(setOnboardingStatus(false));
       dispatch(clearSubscription());
     } catch (err) {
-      console.error('Logout error', err);
+      console.error("Logout error", err);
     }
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'This permanently deletes your account, all meals, recipes, and subscription data. This cannot be undone.',
+      "Delete Account",
+      "This permanently deletes your account, all meals, recipes, and subscription data. This cannot be undone.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete My Account',
-          style: 'destructive',
+          text: "Delete My Account",
+          style: "destructive",
           onPress: async () => {
             try {
               await subscriptionService.deleteAccount(session);
@@ -115,223 +157,134 @@ export default function ProfileScreen({ navigation }: any) {
               dispatch(setOnboardingStatus(false));
               dispatch(clearSubscription());
             } catch (err: any) {
-              Alert.alert('Error', err.message ?? 'Account deletion failed. Please try again.');
+              Alert.alert(
+                "Error",
+                err.message ?? "Account deletion failed. Please try again.",
+              );
             }
           },
         },
-      ]
+      ],
     );
   };
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={['top']}
+      style={[styles.safe, { backgroundColor: SCREEN_BG }]}
+      edges={["top"]}
     >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ────────────────────────────────────────────────── */}
+        {/* ── Header: title + streak pill ───────────────────────────── */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+          <Text style={styles.title}>Profile</Text>
+          <View style={styles.streakPill}>
+            <Image
+              source={fireImg}
+              style={styles.streakFire}
+              resizeMode="contain"
+            />
+            <Text style={styles.streakCount}>{Math.max(1, streak)}</Text>
+          </View>
         </View>
 
-        {/* ── Profile card ──────────────────────────────────────────── */}
-        <View style={styles.profileSection}>
-          <View style={[styles.avatar, { backgroundColor: colors.surfaceAlt }]}>
-            <Text style={[styles.avatarInitials, { color: colors.text }]}>
-              {initials}
-            </Text>
+        {/* ── Identity block (leaf sits behind, to the right) ───────── */}
+        <View style={styles.identity}>
+          <Image
+            source={leafImg}
+            style={styles.decorLeaf}
+            resizeMode="contain"
+          />
+
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+            <View style={styles.cameraBadge}>
+              <SvgIcon name={SVG_ICONS.CAMERA_ICON} />
+            </View>
           </View>
-          <Text style={[styles.profileName, { color: colors.text }]}>
-            {displayName}
-          </Text>
-          {/* removed — USER.username was placeholder @alexrivera, not stored in DB */}
-          {/* <Text style={[styles.profileUsername, { color: colors.textMuted }]}>{USER.username}</Text> */}
+
+          <Text style={styles.profileName}>{displayName}</Text>
+
           {goalLabel && (
-            <View style={[styles.goalPill, { backgroundColor: colors.surfaceAlt }]}>
-              <Text style={[styles.goalPillText, { color: colors.textSecondary }]}>
-                {goalLabel}
-              </Text>
+            <View style={styles.goalPill}>
+              <SvgIcon
+                name={SVG_ICONS.MAINTAIN_WEIGHT_ICON}
+                color={TEXT_DARK}
+              />
+              <Text style={styles.goalPillText}>{goalLabel}</Text>
             </View>
           )}
-          {/* old goal pill — was showing USER.goal placeholder */}
-          {/* <View style={[styles.goalPill, { backgroundColor: colors.surfaceAlt }]}>
-            <Text style={[styles.goalPillText, { color: colors.textSecondary }]}>{USER.goal}</Text>
-          </View> */}
         </View>
-
-        {/* ── Streak stat ───────────────────────────────────────────── */}
-        <View style={[styles.statsRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-          <View style={styles.statItem}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              <Ionicons name="flame" size={20} color="#FF6B35" />
-              <Text style={[styles.statBig, { color: colors.text, marginBottom: 0 }]}>
-                {Math.max(1, streak)}
-              </Text>
-            </View>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-              Day Streak
-            </Text>
-          </View>
-          {/* removed — USER.totalMealsLogged (312) and USER.goalsMetThisMonth (18) were hardcoded placeholders */}
-          {/* <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statBig, { color: colors.text }]}>{USER.totalMealsLogged}</Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Meals Logged</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statBig, { color: colors.text }]}>{USER.goalsMetThisMonth}</Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Goals Met</Text>
-          </View> */}
-        </View>
-
-        {/* removed — Meal Privacy section had no DB persistence (no column in users table) */}
-        {/* <View style={[styles.privacySection, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.privacyTitle, { color: colors.text }]}>Meal Privacy</Text>
-          <Text style={[styles.privacyLabel, { color: colors.textMuted }]}>Who can see my meals</Text>
-          <View style={styles.privacyOptionsRow}>
-            {['private','friends','public'].map(v => (
-              <TouchableOpacity key={v} style={[styles.privacyChip,{backgroundColor:colors.surfaceAlt},mealVisibility===v&&{backgroundColor:colors.text}]} onPress={()=>setMealVisibility(v)}>
-                <Text style={[styles.privacyChipText,{color:colors.text},mealVisibility===v&&styles.privacyChipTextActive]}>{v.charAt(0).toUpperCase()+v.slice(1)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={[styles.toggleRow,{borderTopColor:colors.border}]}>
-            <Text style={[styles.toggleLabel,{color:colors.text}]}>Share meal names</Text>
-            <TouchableOpacity onPress={()=>setShareMealNames(!shareMealNames)}><Text style={[styles.toggleValue,{color:colors.text}]}>{shareMealNames?'On':'Off'}</Text></TouchableOpacity>
-          </View>
-          <View style={[styles.toggleRow,{borderTopColor:colors.border}]}>
-            <Text style={[styles.toggleLabel,{color:colors.text}]}>Share calories</Text>
-            <TouchableOpacity onPress={()=>setShareCalories(!shareCalories)}><Text style={[styles.toggleValue,{color:colors.text}]}>{shareCalories?'On':'Off'}</Text></TouchableOpacity>
-          </View>
-          <View style={[styles.toggleRow,{borderTopColor:colors.border}]}>
-            <Text style={[styles.toggleLabel,{color:colors.text}]}>Share macros</Text>
-            <TouchableOpacity onPress={()=>setShareMacros(!shareMacros)}><Text style={[styles.toggleValue,{color:colors.text}]}>{shareMacros?'On':'Off'}</Text></TouchableOpacity>
-          </View>
-        </View> */}
 
         {/* ── Account ───────────────────────────────────────────────── */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Account</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.7}>
-              <Ionicons name="person-outline" size={18} color={colors.textMuted} />
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Edit Profile</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+        <Text style={styles.sectionHeading}>ACCOUNT</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon={SVG_ICONS.EDIT_PROFILE_ICON}
+            label="Edit profile"
+            onPress={() => navigation.navigate("EditProfile")}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            icon={SVG_ICONS.SUBSCRIPTION_ICON}
+            label="Manage subscription"
+            subtitle={subscriptionSubtitle}
+            onPress={() => navigation.navigate("ManageSubscription")}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            icon={SVG_ICONS.LANGUAGE_ICON}
+            label={t("profile.settings.language")}
+            value={LANGUAGE_META[language].label}
+            onPress={() => setLangPickerVisible(true)}
+          />
         </View>
 
-        {/* removed — these settings rows had no onPress handlers (stubs):
-          Edit Profile, Dietary Preferences, Health Goals (Account group)
-          Notifications, Units & Measurements, Privacy & Security (Preferences group)
-          Help & Support, Rate the App (More group)
-        */}
-        {/* {GROUPS.map((group) => {
-          const items = PROFILE_SETTINGS.filter((s) => s.group === group);
-          return (
-            <View key={group} style={styles.settingsGroup}>
-              <Text style={[styles.groupLabel, { color: colors.textMuted }]}>{group}</Text>
-              <View style={[styles.groupCard, { backgroundColor: colors.surface }]}>
-                {items.map((item, index) => {
-                  const isDanger = !!item.danger;
-                  return (
-                    <React.Fragment key={item.id}>
-                      {index > 0 && <View style={[styles.rowHairline, { backgroundColor: colors.border }]} />}
-                      <TouchableOpacity style={styles.settingsRow} activeOpacity={0.7}
-                        onPress={item.id === 'language' ? () => setLangPickerVisible(true) : undefined}>
-                        <Ionicons name={item.icon} size={18} color={isDanger ? colors.error : colors.textMuted} />
-                        <Text style={[styles.settingsLabel, { color: isDanger ? colors.error : colors.text }]}>
-                          {item.id === 'language' ? t('profile.settings.language') : item.label}
-                        </Text>
-                        {!isDanger && (
-                          <>
-                            {item.id === 'language' && (
-                              <Text style={[styles.settingsBadge, { color: colors.textMuted }]}>
-                                {LANGUAGE_META[language].flag} {language.toUpperCase()}
-                              </Text>
-                            )}
-                            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    </React.Fragment>
-                  );
-                })}
-              </View>
-            </View>
-          );
-        })} */}
-
-        {/* ── Subscription ──────────────────────────────────────────── */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Subscription</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            {/* Manage Subscription — always navigates to the manage screen,
-                regardless of whether a subscription is active. */}
-            <TouchableOpacity
-              style={[styles.row, { gap: 14 }]}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('ManageSubscription' as any)}
-            >
-              <Ionicons name="diamond-outline" size={18} color={isSubscribed ? colors.primary : colors.textMuted} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>
-                  Manage Subscription
-                </Text>
-                <Text style={[{ fontSize: 12, color: colors.textMuted, marginTop: 1 }]}>
-                  {SUBSCRIPTION_LABELS[subStatus] ?? 'Not Subscribed'}
-                  {isSubscribed && expiresAt
-                    ? ` · ${subStatus === 'cancelled' ? 'until ' : 'renews '}${new Date(expiresAt).toLocaleDateString()}`
-                    : ''}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+        {/* ── Support ───────────────────────────────────────────────── */}
+        <Text style={styles.sectionHeading}>SUPPORT</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon={SVG_ICONS.CONTACT_US_ICON}
+            label="Contact us"
+            onPress={() => navigation.navigate("ContactUs")}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            icon={SVG_ICONS.PRIVACY_POLICY_ICON}
+            label="Privacy policy"
+            onPress={() => navigation.navigate("Legal", { type: "privacy" })}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            icon={SVG_ICONS.TERMS_AND_CONDITION_ICON}
+            label="Terms and conditions"
+            onPress={() => navigation.navigate("Legal", { type: "terms" })}
+          />
         </View>
 
-        {/* ── Preferences ───────────────────────────────────────────── */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Preferences</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <TouchableOpacity style={styles.row} onPress={() => setLangPickerVisible(true)} activeOpacity={0.7}>
-              <Ionicons name="language-outline" size={18} color={colors.textMuted} />
-              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('profile.settings.language')}</Text>
-              <Text style={[styles.rowBadge, { color: colors.textMuted }]}>
-                {language.toUpperCase()}
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── Sign out ──────────────────────────────────────────────── */}
+        {/* ── Log out ───────────────────────────────────────────────── */}
         <TouchableOpacity
-          style={[styles.signOutBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={styles.logoutBtn}
           activeOpacity={0.7}
           onPress={handleLogout}
         >
-          <Text style={[styles.signOutText, { color: colors.error }]}>Log Out</Text>
+          <Text style={styles.logoutText}>Log Out</Text>
+          <SvgIcon name={SVG_ICONS.LOGOUT_ICON} color={RED} />
         </TouchableOpacity>
 
-        {/* ── Delete account (GDPR) ────────────────────────────────── */}
+        {/* ── Delete account (GDPR / store compliance) ──────────────── */}
         <TouchableOpacity
-          style={[styles.signOutBtn, { backgroundColor: 'transparent', borderColor: 'transparent', marginTop: -8 }]}
+          style={styles.deleteBtn}
           activeOpacity={0.7}
           onPress={handleDeleteAccount}
         >
-          <Text style={[styles.signOutText, { color: colors.textDisabled, fontSize: 13 }]}>Delete Account</Text>
+          <Text style={styles.deleteText}>Delete Account</Text>
         </TouchableOpacity>
-
-        {/* ── Version ───────────────────────────────────────────────── */}
-        <Text style={[styles.version, { color: colors.textMuted }]}>
-          Nutrily v1.0.0
-        </Text>
       </ScrollView>
 
       <LanguagePickerModal
@@ -343,149 +296,173 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  scroll:  { flex: 1 },
-  content: { paddingBottom: SPACING.xxl },
+  safe: { flex: 1 },
+  scroll: { flex: 1 },
+  content: { paddingBottom: ms(32) },
 
   header: {
-    paddingHorizontal: 24,
-    paddingTop: SPACING.lg,
-    marginBottom: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: ms(20),
+    paddingTop: ms(8),
   },
   title: {
-    fontSize: 28,
+    fontSize: ms(28),
+    lineHeight: ms(34),
     fontWeight: FONTS.bold,
-    letterSpacing: -0.5,
+    color: TEXT_DARK,
+  },
+  streakPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: ms(6),
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(8),
+    borderRadius: RADIUS.full,
+    backgroundColor: "#FFFFFF",
+  },
+  streakFire: { width: ms(16), height: ms(16) },
+  streakCount: {
+    fontSize: ms(18),
+    lineHeight: ms(26),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
   },
 
-  profileSection: {
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginBottom: 28,
+  identity: {
+    alignItems: "center",
+    marginTop: ms(8),
+    marginBottom: ms(20),
   },
+  decorLeaf: {
+    position: "absolute",
+    right: ms(-10),
+    top: ms(4),
+    width: ms(150),
+    height: ms(120),
+  },
+  avatarWrap: { width: ms(64), height: ms(64) },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(32),
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarInitials: {
-    fontSize: 24,
+    fontSize: ms(24),
     fontWeight: FONTS.bold,
+    color: "#FFFFFF",
+  },
+  cameraBadge: {
+    position: "absolute",
+    right: ms(-2),
+    bottom: ms(-2),
+    width: ms(22),
+    height: ms(22),
+    borderRadius: ms(11),
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: ms(2),
+    borderColor: SCREEN_BG,
   },
   profileName: {
-    fontSize: 20,
+    fontSize: ms(20),
+    lineHeight: ms(22),
     fontWeight: FONTS.bold,
-    marginTop: 14,
-    marginBottom: 8,
+    color: TEXT_DARK,
+    marginTop: ms(10),
+    marginBottom: ms(8),
   },
-  // profileUsername: { fontSize: 13, fontWeight: FONTS.regular, marginTop: 3 },  // removed — placeholder
   goalPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: ms(8),
+    paddingHorizontal: ms(20),
+    paddingVertical: ms(8),
     borderRadius: RADIUS.full,
+    backgroundColor: GREEN_LIGHT,
   },
   goalPillText: {
-    fontSize: 12,
-    fontWeight: FONTS.medium,
-  },
-
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    marginBottom: 32,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  statBig: {
-    fontSize: 22,
+    fontSize: ms(12),
+    lineHeight: ms(18),
     fontWeight: FONTS.bold,
-    marginBottom: 3,
+    color: TEXT_DARK,
   },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: FONTS.regular,
-    textAlign: 'center',
-  },
-  // statDivider: { width: 1, height: 32 },  // removed — only streak stat kept
 
-  section: { marginBottom: 32 },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: FONTS.semibold,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    paddingHorizontal: 24,
-    marginBottom: 8,
+  sectionHeading: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+    marginHorizontal: ms(20),
+    marginBottom: ms(10),
   },
   card: {
-    borderRadius: RADIUS.lg,
-    marginHorizontal: 24,
-    overflow: 'hidden',
+    backgroundColor: "#FFFFFF",
+    borderRadius: ms(20),
+    marginHorizontal: ms(20),
+    padding: ms(16),
+    marginBottom: ms(24),
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#EDE5DE",
+    marginVertical: ms(4),
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 15,
-    gap: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: ms(12),
+    gap: ms(12),
   },
+  rowIcon: { width: ms(20), alignItems: "center" },
+  rowTextWrap: { flex: 1 },
   rowLabel: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+  },
+  rowSubtitle: {
+    fontSize: ms(12),
+    lineHeight: ms(18),
     fontWeight: FONTS.medium,
+    color: TEXT_MUTED,
   },
-  rowBadge: {
-    fontSize: 13,
+  rowValue: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: TEXT_MUTED,
+  },
+
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: ms(10),
+    marginHorizontal: ms(20),
+    paddingVertical: ms(14),
+    borderRadius: RADIUS.full,
+    backgroundColor: "#FFFFFF",
+  },
+  logoutText: {
+    fontSize: ms(16),
+    lineHeight: ms(22),
+    fontWeight: FONTS.bold,
+    color: RED,
+  },
+  deleteBtn: {
+    alignItems: "center",
+    paddingVertical: ms(14),
+  },
+  deleteText: {
+    fontSize: ms(13),
     fontWeight: FONTS.medium,
-    marginRight: 4,
-  },
-
-  // removed — settings groups (stubs with no handlers)
-  // settingsContainer: { gap: 0 },
-  // settingsGroup: { marginBottom: 32 },
-  // groupLabel: { fontSize: 11, fontWeight: FONTS.semibold, letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: 24, marginBottom: 8 },
-  // groupCard: { borderRadius: RADIUS.lg, marginHorizontal: 24, overflow: 'hidden' },
-  // settingsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 15, gap: 14 },
-  // settingsLabel: { flex: 1, fontSize: 15, fontWeight: FONTS.medium },
-  // settingsBadge: { fontSize: 13, fontWeight: FONTS.medium, marginRight: 4 },
-  // rowHairline: { height: StyleSheet.hairlineWidth, marginLeft: 0 },
-
-  // removed — meal privacy section (UI only, no DB persistence)
-  // privacySection: { marginHorizontal: 24, marginBottom: 28, borderRadius: RADIUS.lg, padding: 16 },
-  // privacyTitle: { fontSize: 18, fontWeight: FONTS.bold, marginBottom: 14 },
-  // privacyLabel: { fontSize: 13, fontWeight: FONTS.medium, marginBottom: 10 },
-  // privacyOptionsRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
-  // privacyChip: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
-  // privacyChipActive: {},
-  // privacyChipText: { fontSize: 14, fontWeight: FONTS.medium },
-  // privacyChipTextActive: { color: '#FFFFFF' },
-  // toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
-  // toggleLabel: { fontSize: 15, fontWeight: FONTS.medium },
-  // toggleValue: { fontSize: 14, fontWeight: FONTS.bold },
-
-  signOutBtn: {
-    marginHorizontal: 24,
-    marginBottom: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-  },
-  signOutText: {
-    fontSize: 16,
-    fontWeight: FONTS.semibold,
-  },
-  version: {
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: FONTS.regular,
-    marginTop: SPACING.xs,
+    color: TEXT_MUTED,
   },
 });

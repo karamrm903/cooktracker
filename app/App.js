@@ -11,12 +11,13 @@ GoogleSignin.configure({
 // RevenueCat: configure with the platform-specific public SDK key.
 // iOS key starts with "appl_", Android key starts with "goog_".
 // Skip init if the Android key hasn't been filled in yet (prevents SDK crash).
-import Purchases from 'react-native-purchases';
-import { Platform } from 'react-native';
-const RC_KEY = Platform.OS === 'ios'
-  ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
-  : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
-if (RC_KEY && !RC_KEY.startsWith('TODO')) {
+import Purchases from "react-native-purchases";
+import { Platform } from "react-native";
+const RC_KEY =
+  Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
+    : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+if (RC_KEY && !RC_KEY.startsWith("TODO")) {
   Purchases.configure({ apiKey: RC_KEY });
 }
 
@@ -50,7 +51,10 @@ import { MealLogsProvider } from "./src/context/MealLogsContext";
 import { ExploreProvider } from "./src/context/ExploreContext";
 import "./src/i18n";
 import { profileService } from "./src/services/profile.service";
-import { useSubscription, useSubscriptionSync } from "./src/hooks/useSubscription";
+import {
+  useSubscription,
+  useSubscriptionSync,
+} from "./src/hooks/useSubscription";
 import { SUPPORTED_LANGUAGES } from "./src/i18n";
 
 import { Provider, useDispatch, useSelector } from "react-redux";
@@ -98,6 +102,8 @@ import SearchFoodScreen from "./src/screens/SearchFoodScreen";
 import FoodDetailScreen from "./src/screens/FoodDetailScreen";
 import EditProfileScreen from "./src/screens/EditProfileScreen";
 import ManageSubscriptionScreen from "./src/screens/ManageSubscriptionScreen";
+import LegalScreen from "./src/screens/LegalScreen";
+import ContactUsScreen from "./src/screens/ContactUsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -110,7 +116,7 @@ function AuthStateWrapper({ children }) {
     async function loadState() {
       try {
         const onboardingComplete = await AsyncStorage.getItem(
-          "hasCompletedOnboarding"
+          "hasCompletedOnboarding",
         );
         if (onboardingComplete === "true") {
           dispatch(setOnboardingStatus(true));
@@ -158,28 +164,31 @@ function AuthStateWrapper({ children }) {
           // Only log out of RC if user was actually logged in (has a named ID, not anonymous)
           try {
             const info = await Purchases.getCustomerInfo();
-            if (!info.originalAppUserId.startsWith('$RCAnonymousID')) {
+            if (!info.originalAppUserId.startsWith("$RCAnonymousID")) {
               await Purchases.logOut();
             }
-          } catch { }
+          } catch {}
           return;
         }
 
         // Log RevenueCat in with the Supabase user ID so purchases are tied to the user
-        if (event === 'SIGNED_IN' && newSession.user?.id) {
-          await Purchases.logIn(newSession.user.id).catch(err => {
-            console.warn('[RevenueCat] logIn failed:', err.message);
+        if (event === "SIGNED_IN" && newSession.user?.id) {
+          await Purchases.logIn(newSession.user.id).catch((err) => {
+            console.warn("[RevenueCat] logIn failed:", err.message);
           });
         }
 
         // After verifying a password-recovery OTP, route the user to the
         // ResetPassword screen rather than the regular post-login destination.
-        if (event === 'PASSWORD_RECOVERY' && navigationRef.isReady()) {
-          navigationRef.reset({ index: 0, routes: [{ name: 'ResetPassword' }] });
+        if (event === "PASSWORD_RECOVERY" && navigationRef.isReady()) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: "ResetPassword" }],
+          });
         }
 
         dispatch(
-          setAuthSession({ user: newSession.user, session: newSession })
+          setAuthSession({ user: newSession.user, session: newSession }),
         );
 
         // Keep Supabase Realtime authorized with the latest JWT so the
@@ -289,7 +298,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
       style={[
         tb.wrap,
         {
-          backgroundColor: colors.background,
+          backgroundColor: "#FCF7F3",
           paddingTop: 16,
           paddingBottom: Math.max(insets.bottom, 12) + 10,
         },
@@ -317,7 +326,8 @@ function CustomTabBar({ state, descriptors, navigation }) {
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            if (!focused && !event.defaultPrevented)
+              navigation.navigate(route.name);
           };
 
           return (
@@ -328,7 +338,11 @@ function CustomTabBar({ state, descriptors, navigation }) {
               activeOpacity={0.75}
             >
               {pngIcon ? (
-                <Image source={pngIcon} style={[tb.icon, { tintColor: color }]} resizeMode="contain" />
+                <Image
+                  source={pngIcon}
+                  style={[tb.icon, { tintColor: color }]}
+                  resizeMode="contain"
+                />
               ) : (
                 <Ionicons
                   name={focused ? "diamond" : "diamond-outline"}
@@ -339,7 +353,9 @@ function CustomTabBar({ state, descriptors, navigation }) {
               <Text style={[tb.label, { color }]} numberOfLines={1}>
                 {label}
               </Text>
-              <View style={[tb.dot, focused && { backgroundColor: TAB_ACTIVE }]} />
+              <View
+                style={[tb.dot, focused && { backgroundColor: TAB_ACTIVE }]}
+              />
             </TouchableOpacity>
           );
         })}
@@ -362,7 +378,12 @@ const tb = StyleSheet.create({
   tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
   icon: { width: 24, height: 24 },
   label: { fontSize: 12, fontWeight: "600" },
-  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "transparent" },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "transparent",
+  },
 });
 
 // ── Tab navigator ──────────────────────────────────────────────────────────────
@@ -398,7 +419,7 @@ function MainTabs() {
 function AppContent({ onRouteChange }) {
   const { isDark } = useTheme();
   const { isHydrated, session, persistedAccessToken } = useSelector(
-    (state) => state.auth
+    (state) => state.auth,
   );
 
   // Single source of subscription syncing for the whole app (mount once here).
@@ -442,8 +463,16 @@ function AppContent({ onRouteChange }) {
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="CookingMode" component={CookingModeScreen} />
             <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-            <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen
+              name="ManageSubscription"
+              component={ManageSubscriptionScreen}
+            />
+            <Stack.Screen name="Legal" component={LegalScreen} />
+            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+            />
             <Stack.Screen name="UserSetup" component={UserSetupScreen} />
           </Stack.Navigator>
         ) : (
@@ -464,9 +493,18 @@ function AppContent({ onRouteChange }) {
               component={AccountCreationScreen}
             />
             <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-            <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+            />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+            />
+            <Stack.Screen
+              name="OtpVerification"
+              component={OtpVerificationScreen}
+            />
             <Stack.Screen name="MainTabs" component={MainTabs} />
           </Stack.Navigator>
         )}

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -9,14 +10,27 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useSelector } from 'react-redux';
-import { useTheme } from '../context/ThemeContext';
-import { profileService } from '../services/profile.service';
-import { SPACING, RADIUS, FONTS } from '../constants/theme';
-import { RootState } from '../store';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useSelector } from "react-redux";
+import { profileService } from "../services/profile.service";
+import { RADIUS, FONTS } from "../constants/theme";
+import { moderateScale as ms } from "../utils/responsive";
+import { SVG_ICONS, SVG_ICON_COMPONENT_MAP } from "../constants/svgIcons";
+import { RootState } from "../store";
+
+const SCREEN_BG = "#FCF7F3";
+const TEXT_DARK = "#493026";
+const TEXT_MUTED = "#7F6C64";
+const BRAND_PURPLE = "#502F4C";
+const BORDER = "#4930261A";
+const ORANGE = "#F97316";
+
+const fireImg = require("../../assets/webp/StreakFire.webp");
+const muscleImg = require("../../assets/pngs/muscleVector.png");
+const leafImg = require("../../assets/pngs/leafVector.png");
+const dropImg = require("../../assets/pngs/dropVector.png");
 
 // ── Same formula as UserSetupScreen ──────────────────────────────────────────
 function calculateTargets(
@@ -30,16 +44,25 @@ function calculateTargets(
   const w = parseFloat(weightKg) || 70;
   const h = parseFloat(heightCm) || 170;
   const a = parseInt(age) || 25;
-  const bmr = gender === 'female'
-    ? 10 * w + 6.25 * h - 5 * a - 161
-    : 10 * w + 6.25 * h - 5 * a + 5;
+  const bmr =
+    gender === "female"
+      ? 10 * w + 6.25 * h - 5 * a - 161
+      : 10 * w + 6.25 * h - 5 * a + 5;
   const activityMap: Record<string, number> = {
-    sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725,
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    very: 1.725,
   };
   const goalMap: Record<string, number> = {
-    lose: -500, maintain: 0, muscle: 300, healthy: 0,
+    lose: -500,
+    maintain: 0,
+    muscle: 300,
+    healthy: 0,
   };
-  const calories = Math.round(bmr * (activityMap[activity] ?? 1.375) + (goalMap[goal] ?? 0));
+  const calories = Math.round(
+    bmr * (activityMap[activity] ?? 1.375) + (goalMap[goal] ?? 0),
+  );
   let protein = Math.min(Math.round(w * 1.8), 220);
   let fat = Math.max(Math.round(w * 0.8), 40);
   const carbs = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
@@ -47,52 +70,73 @@ function calculateTargets(
 }
 
 const GOALS = [
-  { key: 'lose',     label: 'Lose Weight',      icon: 'trending-down' },
-  { key: 'maintain', label: 'Maintain Weight',   icon: 'scale'         },
-  { key: 'muscle',   label: 'Build Muscle',      icon: 'barbell'       },
-  { key: 'healthy',  label: 'Eat Healthy',       icon: 'leaf'          },
+  { key: "lose", label: "Lose weight", icon: SVG_ICONS.LOOS_WEIGHT_ICON },
+  {
+    key: "maintain",
+    label: "Maintain weight",
+    icon: SVG_ICONS.MAINTAIN_WEIGHT_ICON,
+  },
+  { key: "muscle", label: "Build muscle", icon: SVG_ICONS.BUILD_MUSCLE_ICON },
+  { key: "healthy", label: "Eat healthy", icon: SVG_ICONS.EAT_HEALTHY_ICON },
 ];
 
 const ACTIVITIES = [
-  { key: 'sedentary', label: 'Sedentary',         icon: 'bed'     },
-  { key: 'light',     label: 'Lightly Active',    icon: 'walk'    },
-  { key: 'moderate',  label: 'Moderately Active', icon: 'bicycle' },
-  { key: 'very',      label: 'Very Active',       icon: 'flame'   },
+  { key: "sedentary", label: "Sedentary", icon: SVG_ICONS.SEDENTARY_ICON },
+  {
+    key: "light",
+    label: "Lightly active",
+    icon: SVG_ICONS.LIGHTLY_ACTIVE_ICON,
+  },
+  {
+    key: "moderate",
+    label: "Moderately active",
+    icon: SVG_ICONS.BUILD_MUSCLE_ACTIVITY_ICON,
+  },
+  { key: "very", label: "Very active", icon: SVG_ICONS.VERY_ACTIVE_ICON },
 ];
 
 const GENDERS = [
-  { key: 'male',   label: 'Male'   },
-  { key: 'female', label: 'Female' },
-  { key: 'other',  label: 'Other'  },
+  { key: "male", label: "Male" },
+  { key: "female", label: "Female" },
+  { key: "other", label: "Other" },
 ];
 
+/** Renders an icon from the shared SVG registry by its SVG_ICONS key. */
+function SvgIcon({ name, ...props }: { name: string; [k: string]: any }) {
+  const Icon = SVG_ICON_COMPONENT_MAP[name];
+  return Icon ? <Icon {...props} /> : null;
+}
+
 export default function EditProfileScreen({ navigation }: any) {
-  const { colors } = useTheme();
   const { session } = useSelector((state: RootState) => state.auth);
 
-  const [loading,  setLoading]  = useState(true);
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [name,     setName]     = useState('');
-  const [gender,   setGender]   = useState('male');
-  const [age,      setAge]      = useState('');
-  const [heightCm, setHeightCm] = useState('');
-  const [weightKg, setWeightKg] = useState('');
-  const [goal,     setGoal]     = useState('maintain');
-  const [activity, setActivity] = useState('moderate');
+  const [name, setName] = useState("");
+  const [gender, setGender] = useState("male");
+  const [age, setAge] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [goal, setGoal] = useState("maintain");
+  const [activity, setActivity] = useState("moderate");
 
   useEffect(() => {
-    if (!session?.access_token) { setLoading(false); return; }
-    profileService.getProfile(session)
-      .then(p => {
+    if (!session?.access_token) {
+      setLoading(false);
+      return;
+    }
+    profileService
+      .getProfile(session)
+      .then((p) => {
         if (!p) return;
-        if (p.name)         setName(p.name);
-        if (p.gender)       setGender(p.gender);
-        if (p.age)          setAge(String(p.age));
-        if (p.height_cm)    setHeightCm(String(p.height_cm));
-        if (p.weight_kg)    setWeightKg(String(p.weight_kg));
-        if (p.goal)         setGoal(p.goal);
+        if (p.name) setName(p.name);
+        if (p.gender) setGender(p.gender);
+        if (p.age) setAge(String(p.age));
+        if (p.height_cm) setHeightCm(String(p.height_cm));
+        if (p.weight_kg) setWeightKg(String(p.weight_kg));
+        if (p.goal) setGoal(p.goal);
         if (p.activity_level) setActivity(p.activity_level);
       })
       .catch(() => {})
@@ -104,7 +148,14 @@ export default function EditProfileScreen({ navigation }: any) {
     setSaving(true);
     setError(null);
     try {
-      const nutrition = calculateTargets(gender, age, heightCm, weightKg, goal, activity);
+      const nutrition = calculateTargets(
+        gender,
+        age,
+        heightCm,
+        weightKg,
+        goal,
+        activity,
+      );
       await profileService.updateProfile(session, {
         name: name.trim() || null,
         gender,
@@ -117,7 +168,7 @@ export default function EditProfileScreen({ navigation }: any) {
       } as any);
       navigation.goBack();
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save');
+      setError(err?.message ?? "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -125,245 +176,410 @@ export default function EditProfileScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: SCREEN_BG }]}
+        edges={["top"]}
+      >
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.text} />
+          <ActivityIndicator size="large" color={TEXT_DARK} />
         </View>
       </SafeAreaView>
     );
   }
 
-  const nutrition = calculateTargets(gender, age, heightCm, weightKg, goal, activity);
+  const nutrition = calculateTargets(
+    gender,
+    age,
+    heightCm,
+    weightKg,
+    goal,
+    activity,
+  );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: SCREEN_BG }]}
+      edges={["top"]}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         {/* Header */}
-        <View style={[styles.topBar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={22} color={colors.text} />
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={ms(20)} color={TEXT_DARK} />
           </TouchableOpacity>
-          <Text style={[styles.topTitle, { color: colors.text }]}>Edit Profile</Text>
+          <Text style={styles.topTitle}>Edit Profile</Text>
           <TouchableOpacity
             onPress={handleSave}
             disabled={saving}
             style={[styles.saveBtn, { opacity: saving ? 0.5 : 1 }]}
           >
-            {saving
-              ? <ActivityIndicator size="small" color={colors.primary} />
-              : <Text style={[styles.saveBtnText, { color: colors.primary }]}>Save</Text>
-            }
+            {saving ? (
+              <ActivityIndicator size="small" color={ORANGE} />
+            ) : (
+              <Text style={styles.saveBtnText}>Save</Text>
+            )}
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {error && (
-            <View style={[styles.errorBanner, { backgroundColor: colors.error + '20' }]}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
           {/* Name */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Display Name</Text>
+            <Text style={styles.label}>Display name</Text>
             <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
+              style={styles.input}
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={TEXT_MUTED}
               autoCapitalize="words"
             />
           </View>
 
           {/* Gender */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Gender</Text>
+            <Text style={styles.label}>Gender</Text>
             <View style={styles.chipRow}>
-              {GENDERS.map(g => (
-                <TouchableOpacity
-                  key={g.key}
-                  style={[styles.chip, { backgroundColor: colors.surfaceAlt }, gender === g.key && { backgroundColor: colors.text }]}
-                  onPress={() => setGender(g.key)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.chipText, { color: colors.textSecondary }, gender === g.key && { color: colors.background }]}>
-                    {g.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {GENDERS.map((g) => {
+                const selected = gender === g.key;
+                return (
+                  <TouchableOpacity
+                    key={g.key}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    onPress={() => setGender(g.key)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected && styles.chipTextSelected,
+                      ]}
+                    >
+                      {g.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Age / Height / Weight */}
           <View style={styles.row3}>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Age</Text>
+              <Text style={styles.label}>Age</Text>
               <TextInput
-                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={styles.input}
                 value={age}
                 onChangeText={setAge}
                 keyboardType="numeric"
                 placeholder="25"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={TEXT_MUTED}
               />
             </View>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Height (cm)</Text>
+              <Text style={styles.label}>Height (cm)</Text>
               <TextInput
-                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={styles.input}
                 value={heightCm}
                 onChangeText={setHeightCm}
                 keyboardType="numeric"
                 placeholder="170"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={TEXT_MUTED}
               />
             </View>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Weight (kg)</Text>
+              <Text style={styles.label}>Weight (kg)</Text>
               <TextInput
-                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={styles.input}
                 value={weightKg}
                 onChangeText={setWeightKg}
                 keyboardType="numeric"
                 placeholder="70"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={TEXT_MUTED}
               />
             </View>
           </View>
 
           {/* Goal */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Goal</Text>
+            <Text style={styles.label}>Goal</Text>
             <View style={styles.gridRow}>
-              {GOALS.map(g => (
-                <TouchableOpacity
-                  key={g.key}
-                  style={[styles.gridChip, { backgroundColor: colors.surfaceAlt }, goal === g.key && { backgroundColor: colors.text }]}
-                  onPress={() => setGoal(g.key)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name={g.icon as any} size={18} color={goal === g.key ? colors.background : colors.textSecondary} />
-                  <Text style={[styles.gridChipText, { color: colors.textSecondary }, goal === g.key && { color: colors.background }]}>
-                    {g.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {GOALS.map((g) => {
+                const selected = goal === g.key;
+                return (
+                  <TouchableOpacity
+                    key={g.key}
+                    style={[
+                      styles.gridChip,
+                      selected && styles.gridChipSelected,
+                    ]}
+                    onPress={() => setGoal(g.key)}
+                    activeOpacity={0.75}
+                  >
+                    <SvgIcon
+                      name={g.icon}
+                      color={selected ? TEXT_DARK : TEXT_MUTED}
+                    />
+                    <Text
+                      style={[
+                        styles.gridChipText,
+                        selected && styles.gridChipTextSelected,
+                      ]}
+                    >
+                      {g.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Activity */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Activity Level</Text>
+            <Text style={styles.label}>Activity</Text>
             <View style={styles.gridRow}>
-              {ACTIVITIES.map(a => (
-                <TouchableOpacity
-                  key={a.key}
-                  style={[styles.gridChip, { backgroundColor: colors.surfaceAlt }, activity === a.key && { backgroundColor: colors.text }]}
-                  onPress={() => setActivity(a.key)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name={a.icon as any} size={18} color={activity === a.key ? colors.background : colors.textSecondary} />
-                  <Text style={[styles.gridChipText, { color: colors.textSecondary }, activity === a.key && { color: colors.background }]}>
-                    {a.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {ACTIVITIES.map((a) => {
+                const selected = activity === a.key;
+                return (
+                  <TouchableOpacity
+                    key={a.key}
+                    style={[
+                      styles.gridChip,
+                      selected && styles.gridChipSelected,
+                    ]}
+                    onPress={() => setActivity(a.key)}
+                    activeOpacity={0.75}
+                  >
+                    <SvgIcon
+                      name={a.icon}
+                      color={selected ? TEXT_DARK : TEXT_MUTED}
+                    />
+                    <Text
+                      style={[
+                        styles.gridChipText,
+                        selected && styles.gridChipTextSelected,
+                      ]}
+                    >
+                      {a.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Recalculated targets preview */}
-          <View style={[styles.targetsCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.targetsTitle, { color: colors.textMuted }]}>DAILY TARGETS</Text>
-            <View style={styles.targetsRow}>
-              <TargetCell label="Calories" value={String(nutrition.calories)} color={colors.primary} textColor={colors.text} mutedColor={colors.textMuted} />
-              <TargetCell label="Protein"  value={`${nutrition.protein}g`}  color="#EF4444" textColor={colors.text} mutedColor={colors.textMuted} />
-              <TargetCell label="Carbs"    value={`${nutrition.carbs}g`}    color="#22C55E" textColor={colors.text} mutedColor={colors.textMuted} />
-              <TargetCell label="Fat"      value={`${nutrition.fat}g`}      color="#F59E0B" textColor={colors.text} mutedColor={colors.textMuted} />
+          <View style={styles.section}>
+            <Text style={styles.label}>Daily targets</Text>
+            <View style={styles.targetsCard}>
+              <TargetCell
+                icon={fireImg}
+                bg="#FCEBDD"
+                value={nutrition.calories}
+                unit="kcal"
+                label="Calories"
+              />
+              <TargetCell
+                icon={muscleImg}
+                bg="#F8E3E3"
+                value={nutrition.protein}
+                unit="g"
+                label="Protein"
+              />
+              <TargetCell
+                icon={leafImg}
+                bg="#E8EDE3"
+                value={nutrition.carbs}
+                unit="g"
+                label="Carbs"
+              />
+              <TargetCell
+                icon={dropImg}
+                bg="#FBEFD8"
+                value={nutrition.fat}
+                unit="g"
+                label="Fat"
+              />
             </View>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function TargetCell({ label, value, color, textColor, mutedColor }: any) {
+function TargetCell({ icon, bg, value, unit, label }: any) {
   return (
     <View style={styles.targetCell}>
-      <Text style={[styles.targetValue, { color }]}>{value}</Text>
-      <Text style={[styles.targetLabel, { color: mutedColor }]}>{label}</Text>
+      <View style={[styles.targetIconBg, { backgroundColor: bg }]}>
+        <Image source={icon} style={styles.targetIcon} resizeMode="contain" />
+      </View>
+      <Text style={styles.targetValue}>
+        {value}
+        <Text style={styles.targetUnit}> {unit}</Text>
+      </Text>
+      <Text style={styles.targetLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:        { flex: 1 },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  safe: { flex: 1 },
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
 
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: ms(20),
+    paddingVertical: ms(12),
   },
-  backBtn:     { width: 36, alignItems: 'flex-start' },
-  topTitle:    { fontSize: 17, fontWeight: FONTS.bold, letterSpacing: -0.3 },
-  saveBtn:     { width: 48, alignItems: 'flex-end' },
-  saveBtnText: { fontSize: 15, fontWeight: FONTS.semibold },
-
-  content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 60 },
-
-  errorBanner: { borderRadius: RADIUS.md, padding: 12, marginBottom: 20 },
-  errorText:   { fontSize: 14, fontWeight: FONTS.medium },
-
-  section: { marginBottom: 24 },
-  label:   { fontSize: 12, fontWeight: FONTS.semibold, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 10 },
-
-  chipRow: { flexDirection: 'row', gap: 8 },
-  chip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
+  backBtn: {
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(100),
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  chipText: { fontSize: 14, fontWeight: FONTS.medium },
+  topTitle: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+  },
+  saveBtn: { width: ms(36), alignItems: "flex-end" },
+  saveBtnText: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: ORANGE,
+  },
 
-  row3:  { flexDirection: 'row', gap: 10, marginBottom: 24 },
-  field: { flex: 1 },
+  content: {
+    paddingHorizontal: ms(20),
+    paddingTop: ms(12),
+    paddingBottom: ms(60),
+  },
+
+  errorBanner: {
+    borderRadius: RADIUS.md,
+    padding: ms(12),
+    marginBottom: ms(20),
+    backgroundColor: "#FBE3E3",
+  },
+  errorText: { fontSize: ms(14), fontWeight: FONTS.medium, color: "#E04D4D" },
+
+  section: { marginBottom: ms(20) },
+  label: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: BRAND_PURPLE,
+    marginBottom: ms(8),
+  },
+
   input: {
     borderWidth: 1,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
+    borderColor: BORDER,
+    backgroundColor: "#FFFFFF",
+    borderRadius: ms(12),
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(14),
+    fontSize: ms(15),
+    color: BRAND_PURPLE,
   },
 
-  gridRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  gridChip: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: RADIUS.md,
+  chipRow: { flexDirection: "row", gap: ms(8) },
+  chip: {
+    flex: 1,
+    paddingVertical: ms(14),
+    borderRadius: ms(16),
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  gridChipText:  { flex: 1, fontSize: 13, fontWeight: FONTS.medium },
+  chipSelected: { borderColor: "#7F6C64" },
+  chipText: { fontSize: ms(14), fontWeight: FONTS.medium, color: TEXT_DARK },
+  chipTextSelected: { color: TEXT_DARK, fontWeight: FONTS.bold },
+
+  row3: { flexDirection: "row", gap: ms(10), marginBottom: ms(20) },
+  field: { flex: 1 },
+
+  gridRow: { flexDirection: "row", flexWrap: "wrap", gap: ms(8) },
+  gridChip: {
+    width: "48%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: ms(8),
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(16),
+    borderRadius: ms(16),
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#4930261A",
+  },
+  gridChipSelected: { borderColor: "#7F6C64" },
+  gridChipText: {
+    flex: 1,
+    fontSize: ms(14),
+    fontWeight: FONTS.medium,
+    lineHeight: ms(22),
+    color: "#7F6C64",
+  },
+  gridChipTextSelected: { color: TEXT_DARK, fontWeight: FONTS.bold },
 
   targetsCard: {
-    borderRadius: RADIUS.lg,
-    padding: 16,
-    gap: 12,
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: ms(20),
+    paddingVertical: ms(18),
+    paddingHorizontal: ms(8),
   },
-  targetsTitle: { fontSize: 11, fontWeight: FONTS.semibold, letterSpacing: 0.8 },
-  targetsRow:   { flexDirection: 'row' },
-  targetCell:   { flex: 1, alignItems: 'center' },
-  targetValue:  { fontSize: 17, fontWeight: FONTS.bold },
-  targetLabel:  { fontSize: 11, fontWeight: FONTS.regular, marginTop: 2 },
+  targetCell: { flex: 1, alignItems: "center" },
+  targetIconBg: {
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: ms(10),
+  },
+  targetIcon: { width: ms(20), height: ms(20) },
+  targetValue: {
+    fontSize: ms(14),
+    lineHeight: ms(20),
+    fontWeight: FONTS.bold,
+    color: TEXT_DARK,
+  },
+  targetUnit: {
+    fontSize: ms(14),
+    fontWeight: FONTS.medium,
+    lineHeight: ms(22),
+    color: TEXT_DARK,
+  },
+  targetLabel: {
+    fontSize: ms(10),
+    lineHeight: ms(12),
+    fontWeight: FONTS.medium,
+    color: "#7F6C64",
+    marginTop: ms(3),
+  },
 });
