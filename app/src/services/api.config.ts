@@ -7,9 +7,9 @@ import Constants from "expo-constants";
  */
 export function getBaseUrl(): string {
   // Use environment variable if set
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
+  // if (process.env.EXPO_PUBLIC_API_URL) {
+  //   return process.env.EXPO_PUBLIC_API_URL;
+  // }
 
   // Detect IP if running in development (useful for physical devices)
   if (__DEV__) {

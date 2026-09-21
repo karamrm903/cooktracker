@@ -104,6 +104,9 @@ import EditProfileScreen from "./src/screens/EditProfileScreen";
 import ManageSubscriptionScreen from "./src/screens/ManageSubscriptionScreen";
 import LegalScreen from "./src/screens/LegalScreen";
 import ContactUsScreen from "./src/screens/ContactUsScreen";
+import AIRecipeWizardScreen from "./src/screens/AIRecipeWizardScreen";
+import AIRecipeResultsScreen from "./src/screens/AIRecipeResultsScreen";
+import GroceryListScreen from "./src/screens/GroceryListScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -474,6 +477,15 @@ function AppContent({ onRouteChange }) {
               component={ResetPasswordScreen}
             />
             <Stack.Screen name="UserSetup" component={UserSetupScreen} />
+            <Stack.Screen
+              name="AIRecipeWizard"
+              component={AIRecipeWizardScreen}
+            />
+            <Stack.Screen
+              name="AIRecipeResults"
+              component={AIRecipeResultsScreen}
+            />
+            <Stack.Screen name="GroceryList" component={GroceryListScreen} />
           </Stack.Navigator>
         ) : (
           <Stack.Navigator screenOptions={{ headerShown: false }}>

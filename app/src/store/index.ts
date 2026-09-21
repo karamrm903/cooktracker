@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import mealsReducer from './slices/mealsSlice';
 import subscriptionReducer from './slices/subscriptionSlice';
+import aiRecipeReducer from './slices/aiRecipeSlice';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     meals: mealsReducer,
     subscription: subscriptionReducer,
+    aiRecipe: aiRecipeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

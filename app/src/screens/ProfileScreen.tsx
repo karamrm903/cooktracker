@@ -221,6 +221,27 @@ export default function ProfileScreen({ navigation }: any) {
           )}
         </View>
 
+        {/* ── Discover ──────────────────────────────────────────────── */}
+        <Text style={styles.sectionHeading}>DISCOVER</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate("AIRecipeWizard")}
+          >
+            <View style={styles.aiEmojiWrap}>
+              <Text style={styles.aiEmoji}>✨</Text>
+            </View>
+            <View style={styles.rowTextWrap}>
+              <Text style={styles.rowLabel}>Weekly meal plan</Text>
+              <Text style={styles.rowSubtitle}>
+                7 AI recipes, Mon–Sun, tuned to your budget
+              </Text>
+            </View>
+            <SvgIcon name={SVG_ICONS.CHEVRON_RIGHT_ICON} color={TEXT_DARK} />
+          </TouchableOpacity>
+        </View>
+
         {/* ── Account ───────────────────────────────────────────────── */}
         <Text style={styles.sectionHeading}>ACCOUNT</Text>
         <View style={styles.card}>
@@ -420,6 +441,16 @@ const styles = StyleSheet.create({
     gap: ms(12),
   },
   rowIcon: { width: ms(20), alignItems: "center" },
+  aiEmojiWrap: {
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(10),
+    backgroundColor: "#FFF3E8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: ms(-6),
+  },
+  aiEmoji: { fontSize: ms(18) },
   rowTextWrap: { flex: 1 },
   rowLabel: {
     fontSize: ms(14),

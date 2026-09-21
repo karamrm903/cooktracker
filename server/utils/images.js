@@ -19,18 +19,24 @@ function randSuffix(len = 8) {
  */
 export async function fetchPexelsPhoto(query) {
   const key = process.env.PEXELS_API_KEY;
-  if (!key) return null;
+  if (!key) {
+    console.warn(`[images] PEXELS_API_KEY not set — cannot fetch photo for "${query}"`);
+    return null;
+  }
 
   const url = `${PEXELS_API}?query=${encodeURIComponent(query + ' food')}&per_page=5&orientation=landscape`;
   const res = await fetch(url, { headers: { Authorization: key } });
   if (!res.ok) {
-    console.warn(`[images] pexels ${res.status}: ${await res.text().catch(() => '')}`);
+    console.warn(`[images] pexels ${res.status} for "${query}": ${await res.text().catch(() => '')}`);
     return null;
   }
   const data = await res.json();
   const photo = data.photos?.[0];
   const baseUrl = photo?.src?.large ?? photo?.src?.medium ?? photo?.src?.original;
-  if (!baseUrl) return null;
+  if (!baseUrl) {
+    console.warn(`[images] pexels returned 0 results for "${query}"`);
+    return null;
+  }
 
   // Ask Pexels for a compressed, resized source to cut download weight.
   const sep = baseUrl.includes('?') ? '&' : '?';
@@ -139,15 +145,28 @@ export async function ensureRecipeImage(recipeId, query) {
   if (!existing) throw new Error(`recipe ${recipeId} not found`);
 
   if (existing.image_url) {
+    console.log(`[images] cache HIT for recipe ${recipeId} ("${existing.title}")`);
     return getPublicImageUrl(existing.image_url);
   }
 
-  const photo = await fetchPexelsPhoto(query || existing.title);
-  if (!photo) return null;
+  const q = query || existing.title;
+  console.log(`[images] cache MISS for recipe ${recipeId} — fetching Pexels for "${q}"`);
+  const photo = await fetchPexelsPhoto(q);
+  if (!photo) {
+    console.warn(`[images] ensureRecipeImage returned null for recipe ${recipeId} ("${q}")`);
+    return null;
+  }
 
-  const storagePath = await uploadRecipeImage(recipeId, photo.buffer, photo.contentType);
-  await adminClient.from('recipes').update({ image_url: storagePath }).eq('id', recipeId);
-  return getPublicImageUrl(storagePath);
+  try {
+    const storagePath = await uploadRecipeImage(recipeId, photo.buffer, photo.contentType);
+    await adminClient.from('recipes').update({ image_url: storagePath }).eq('id', recipeId);
+    const url = getPublicImageUrl(storagePath);
+    console.log(`[images] ✔ persisted image for recipe ${recipeId} → ${storagePath}`);
+    return url;
+  } catch (err) {
+    console.error(`[images] ✖ persist failed for recipe ${recipeId} ("${q}"): ${err.message}`);
+    throw err;
+  }
 }
 
 /**
