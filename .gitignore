@@ -2,6 +2,8 @@ node_modules/
 .env
 .expo/
 .dev/*
+dist/
+app/dist/
 
 # Android signing — never commit
 app/android/app/*.jks

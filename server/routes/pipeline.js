@@ -6,6 +6,7 @@ import path from 'path';
 
 import { extractFrameFiles, makeTmpDir, cleanTmpDir, getCacheFilePath, downloadVideoToCache, cleanupCache } from '../utils/frames.js';
 import { callClaude, LOCALE_TO_LANGUAGE } from '../utils/claude.js';
+import { getFfmpegPath } from '../utils/ffmpeg.js';
 
 const router = Router();
 const execFileAsync = promisify(execFile);
@@ -114,7 +115,7 @@ router.post('/transcript', async (req, res) => {
 
     const audioPath = path.join(tmpDir, 'audio.mp3');
     console.log(`[transcript] Extracting audio to ${audioPath}`);
-    await execFileAsync('ffmpeg', [
+    await execFileAsync(getFfmpegPath(), [
       '-y',
       '-i', cachePath,
       '-vn',
@@ -230,6 +231,28 @@ router.post('/vision', async (req, res) => {
     res.status(500).json({ error: err.message });
   } finally {
     cleanTmpDir(tmpDir);
+  }
+});
+
+// ── Recipe Extraction ─────────────────────────────────────────────────────────
+
+router.post('/recipe-extract', async (req, res) => {
+  const { prompt, model } = req.body ?? {};
+  if (!prompt) return res.status(400).json({ error: 'Body must contain { prompt }' });
+
+  try {
+    const parsed = await callClaude({
+      system: 'You are an expert culinary AI. Always respond with valid JSON only. Do not include markdown fences.',
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens: 2048,
+      ...(model ? { model } : {}),
+    });
+
+    console.log(`[recipe-extract] ✔ Recipe successfully extracted via Claude`);
+    res.json({ recipe: parsed });
+  } catch (err) {
+    console.error('[recipe-extract] ✖', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

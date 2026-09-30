@@ -223,7 +223,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
 
   const todaysMeals = allMeals
     .filter((meal) => meal.dateKey === todayKey)
-    .sort((a, b) => new Date(a.loggedAt) - new Date(b.loggedAt));
+    .sort((a, b) => new Date(a.loggedAt).getTime() - new Date(b.loggedAt).getTime());
 
   const totalCalories = todaysMeals.reduce(
     (sum, meal) => sum + (meal.calories || 0),
@@ -648,7 +648,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                           onPress={
                             meal.pending
                               ? () =>
-                                  navigation.navigate("SearchFood", {
+                                  (navigation as any).navigate("SearchFood", {
                                     defaultMealType: meal.mealType,
                                   })
                               : () => handleToggle(meal.id)

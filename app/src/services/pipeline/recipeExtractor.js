@@ -35,6 +35,8 @@
  */
 
 
+import { getBaseUrl } from '../../utils/api';
+
 // ── Structured context builder ────────────────────────────────────────────────
 
 /**
@@ -810,59 +812,46 @@ export async function extractRecipe(context) {
   console.log('  Ingredient match:', `${context.agreedIngredientCount}/${context.visualIngredients.length}`);
   console.log('  Raw confidence:', rawConfidence.toFixed(3));
 
-  const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error('EXPO_PUBLIC_ANTHROPIC_API_KEY is not set');
-  }
-
   const prompt = buildExtractionPrompt(context);
   console.log('[recipeExtractor] transcript text:', context.transcript.text);
   console.log('[recipeExtractor] ocr text:', context.ocrText);
   console.log('[recipeExtractor] visual ingredients:', context.visualIngredients);
   console.log('[recipeExtractor] creator caption:', context.creatorCaption);
   console.log('[recipeExtractor] parsed caption ingredients:', context.parsedCaptionIngredients);
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+
+  const response = await fetch(`${getBaseUrl()}/recipe-extract`, {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'claude-opus-4-6',
-      max_tokens: 2048,
-      system: 'You are an expert culinary AI. Always respond with valid JSON only. Do not include markdown fences.',
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    body: JSON.stringify({ prompt }),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Anthropic API error ${response.status}: ${text}`);
+    throw new Error(`Recipe extraction server error ${response.status}: ${text}`);
   }
 
   const data = await response.json();
-
-  let extracted;
+  let extracted = data.recipe || data;
 
   try {
-    const raw = data.content[0].text;
-
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-
-    if (jsonMatch) {
-      extracted = JSON.parse(jsonMatch[0]);
-      extracted.ingredients = extracted.ingredients?.map(cleanIngredientText);
-      extracted.steps = extracted.steps?.map(cleanStepText);
-
-      console.log('[recipeExtractor] raw ingredients before cleanup:', extracted.ingredients);
-      console.log('[recipeExtractor] raw steps before cleanup:', extracted.steps);
-      console.log('[recipeExtractor] ingredients after cleanup:', extracted.ingredients);
-      console.log('[recipeExtractor] steps after cleanup:', extracted.steps);
-
-    } else {
-      throw new Error("No JSON found in Claude response");
+    if (typeof extracted === 'string') {
+      const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        extracted = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON found in Claude response");
+      }
     }
+
+    extracted.ingredients = extracted.ingredients?.map(cleanIngredientText);
+    extracted.steps = extracted.steps?.map(cleanStepText);
+
+    console.log('[recipeExtractor] raw ingredients before cleanup:', extracted.ingredients);
+    console.log('[recipeExtractor] raw steps before cleanup:', extracted.steps);
+    console.log('[recipeExtractor] ingredients after cleanup:', extracted.ingredients);
+    console.log('[recipeExtractor] steps after cleanup:', extracted.steps);
 
     if (Array.isArray(extracted.inferredIngredients) && extracted.inferredIngredients.length > 0) {
       const cleanedInferred = extracted.inferredIngredients.map(cleanIngredientText);

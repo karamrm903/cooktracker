@@ -4,6 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
+import { getFfmpegPath } from './ffmpeg.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -82,7 +83,7 @@ export async function extractFrameFiles(url, tmpDir, {
 
   const framePattern = path.join(tmpDir, 'frame%03d.jpg');
 
-  await execFileAsync('ffmpeg', [
+  await execFileAsync(getFfmpegPath(), [
     '-y',
     '-i', videoPath,
     '-vf', `fps=1/${everySeconds},scale=${width}:-2`,

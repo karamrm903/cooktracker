@@ -1,6 +1,6 @@
 import React from "react";
 import { SvgProps } from "react-native-svg";
-import { SVG_ICON_COMPONENT_MAP } from "src/constants/svgIcons";
+import { SVG_ICON_COMPONENT_MAP } from "@/constants/svgIcons";
 
 interface Props extends SvgProps {
   name: string;

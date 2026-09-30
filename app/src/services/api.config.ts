@@ -6,12 +6,12 @@ import Constants from "expo-constants";
  * Dynamically detects the host machine's IP for physical device testing.
  */
 export function getBaseUrl(): string {
-  // Use environment variable if set
-  // if (process.env.EXPO_PUBLIC_API_URL) {
-  //   return process.env.EXPO_PUBLIC_API_URL;
-  // }
+  // Use environment variable if explicitly set
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
 
-  // Detect IP if running in development (useful for physical devices)
+  // Detect host IP if running in development (useful for physical devices)
   if (__DEV__) {
     try {
       const hostUri =
@@ -23,12 +23,12 @@ export function getBaseUrl(): string {
     } catch (e) {
       console.warn("Failed to detect host IP, falling back to defaults");
     }
-
-    // Default fallbacks for emulators/simulators
-    return Platform.OS === "android"
-      ? "http://10.0.2.2:3001"
-      : "http://localhost:3001";
   }
+
+  // Fallbacks for emulators, simulators, or local testing
+  return Platform.OS === "android"
+    ? "http://10.0.2.2:3001"
+    : "http://localhost:3001";
 }
 
 /**

@@ -134,13 +134,13 @@ export interface RecipeType {
   name: string;
   category: string;
   calories: number;
-  time: string;
-  difficulty: string;
-  rating: number;
-  reviews: number;
+  time?: string;
+  difficulty?: string;
+  rating?: number;
+  reviews?: number;
   emoji: string;
   color: string;
-  tags: string[];
+  tags?: string[];
   macros: { carbs: number; protein: number; fat: number };
   recipeId?: string;
   savedDate?: string;
