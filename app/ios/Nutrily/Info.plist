@@ -58,6 +58,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow Nutrily to access your camera to scan plates and recognize food.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow Nutrily to access your photos to select meal pictures.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Allow Nutrily to access your microphone for camera features.</string>
 	<key>RCTNewArchEnabled</key>
 	<false/>
 	<key>UILaunchStoryboardName</key>

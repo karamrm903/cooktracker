@@ -11,21 +11,28 @@ export function getBaseUrl(): string {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
-  // Detect host IP if running in development (useful for physical devices)
+  // Detect host IP if running in development (essential for physical devices)
   if (__DEV__) {
     try {
       const hostUri =
-        Constants.expoConfig?.hostUri || (Constants as any).manifest?.hostUri;
+        Constants.expoConfig?.hostUri ||
+        (Constants as any).manifest?.hostUri ||
+        (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
+        (Constants as any).manifest2?.extra?.expoClient?.hostUri ||
+        (Constants as any).manifest?.debuggerHost;
       if (hostUri) {
         const ip = hostUri.split(":")[0];
-        return `http://${ip}:3001`;
+        if (ip && ip !== "localhost" && ip !== "127.0.0.1") {
+          return `http://${ip}:3001`;
+        }
       }
     } catch (e) {
       console.warn("Failed to detect host IP, falling back to defaults");
     }
+
   }
 
-  // Fallbacks for emulators, simulators, or local testing
+  // Production / Emulator defaults
   return Platform.OS === "android"
     ? "http://10.0.2.2:3001"
     : "http://localhost:3001";

@@ -12,6 +12,7 @@ import imageRoutes    from './images.js';
 import recipeRoutes   from './recipes.js';
 import caloriesRoutes from './calories.js';
 import aiRecipeRoutes from './aiRecipes.js';
+import plateScannerRoutes from './plateScanner.js';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.use('/api', imageRoutes);
 router.use('/api', recipeRoutes);
 router.use('/api', caloriesRoutes);
 router.use('/api', aiRecipeRoutes);
+router.use('/api', plateScannerRoutes);
 
 // Webhook (signature-verified, not JWT-authenticated)
 router.use('/webhooks', webhookRoutes);

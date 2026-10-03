@@ -7,10 +7,12 @@ const app = express();
 
 app.use(cors());
 
-// Preserve raw body for RevenueCat webhook HMAC verification
+// Preserve raw body for RevenueCat webhook HMAC verification and allow base64 images
 app.use(express.json({
+  limit: '20mb',
   verify: (req, _res, buf) => { req.rawBody = buf; },
 }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Request logger — one line per request (method, path, status, duration).
 // Proves whether a request (e.g. a RevenueCat webhook POST) reached the server.

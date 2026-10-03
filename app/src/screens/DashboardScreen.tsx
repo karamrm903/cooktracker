@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { CalorieRing } from "../components/CalorieRing";
+import DailyPlateScoreCard from "../components/DailyPlateScoreCard";
 import CommonAlertModal from "../components/CommonModal";
 import {
   ExpandedNutrition,
@@ -94,6 +95,7 @@ type NavigationProp = NativeStackNavigationProp<
 
 interface DashboardProps {
   navigation: NavigationProp;
+  route?: any;
 }
 
 if (
@@ -104,9 +106,9 @@ if (
 }
 
 // ── Main screen ───────────────────────────────────────────────────────────────
-export default function DashboardScreen({ navigation }: DashboardProps) {
+export default function DashboardScreen({ navigation, route }: DashboardProps) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const mealLogsContext = useMealLogs() as any;
   const allMeals: Meal[] =
     mealLogsContext.allMeals || mealLogsContext.meals || [];
@@ -117,6 +119,7 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const isInitialLoad: boolean = mealLogsContext.isInitialLoad ?? true;
   const showMealSkeleton = isLoadingMeals && isInitialLoad;
 
+  const [todayViewMode, setTodayViewMode] = useState<"plate" | "calories">("plate");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState("");
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
@@ -137,6 +140,34 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
   const streak = useSelector((state: RootState) => state.meals.streak);
   const { isSubscribed } = useSubscription();
   const { ensure: ensureExplore } = useExplore();
+
+  useEffect(() => {
+    if (route?.params?.plateLoggedScore) {
+      setTodayViewMode("plate");
+    }
+  }, [route?.params?.plateLoggedScore]);
+
+  // Plate Score computations
+  const latestScannedMeal = allMeals.find(
+    (m) =>
+      m.source === "plate_scanner" ||
+      (m.fullRecipeNutrition as any)?.plateScore,
+  );
+  const latestPlateScore =
+    route?.params?.plateLoggedScore ??
+    (latestScannedMeal?.fullRecipeNutrition as any)?.plateScore ??
+    89;
+  const latestPlateImage =
+    (latestScannedMeal?.fullRecipeNutrition as any)?.imageUrl ?? null;
+
+  const nonSnackMeals = allMeals.filter(
+    (m) => m.mealType !== "snack" && !m.pending,
+  );
+  const snackMeals = allMeals.filter(
+    (m) => m.mealType === "snack" && !m.pending,
+  );
+  const mealsCompletedCount = nonSnackMeals.length;
+  const snacksCompletedCount = snackMeals.length;
 
   // Re-fetch meals + profile whenever Dashboard comes into focus
   useFocusEffect(
@@ -422,14 +453,99 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: "#493026" }]}>Today</Text>
+          <View style={styles.todayHeaderRow}>
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: isDark ? colors.text : "#493026", marginBottom: 0 },
+              ]}
+            >
+              Today
+            </Text>
+            <View
+              style={[
+                styles.todayToggleWrap,
+                {
+                  backgroundColor: isDark ? "#1C2028" : "#F2EBE5",
+                  borderColor: isDark ? "rgba(255,255,255,0.08)" : "#E7DDD5",
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.todayTogglePill,
+                  todayViewMode === "plate" && {
+                    backgroundColor: isDark ? "#282E3A" : "#FFFFFF",
+                  },
+                ]}
+                onPress={() => setTodayViewMode("plate")}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.todayToggleText,
+                    {
+                      color:
+                        todayViewMode === "plate"
+                          ? colors.primary
+                          : colors.textMuted,
+                    },
+                    todayViewMode === "plate" && { fontWeight: "700" },
+                  ]}
+                >
+                  Plate Score
+                </Text>
+              </TouchableOpacity>
 
-          <View
-            style={[
-              styles.heroCard,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-          >
+              <TouchableOpacity
+                style={[
+                  styles.todayTogglePill,
+                  todayViewMode === "calories" && {
+                    backgroundColor: isDark ? "#282E3A" : "#FFFFFF",
+                  },
+                ]}
+                onPress={() => setTodayViewMode("calories")}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.todayToggleText,
+                    {
+                      color:
+                        todayViewMode === "calories"
+                          ? colors.primary
+                          : colors.textMuted,
+                    },
+                    todayViewMode === "calories" && { fontWeight: "700" },
+                  ]}
+                >
+                  Calories
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {todayViewMode === "plate" ? (
+            <DailyPlateScoreCard
+              score={latestPlateScore}
+              target={88}
+              platesGoal={2}
+              currentBest={89}
+              weeklyAvg={53}
+              completedMeals={Math.min(2, Math.max(1, mealsCompletedCount))}
+              totalMeals={2}
+              completedSnacks={snacksCompletedCount}
+              totalSnacks={2}
+              onScanPlate={() => (navigation as any).navigate("PlateScanner")}
+              plateImageUrl={latestPlateImage}
+            />
+          ) : (
+            <View
+              style={[
+                styles.heroCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
             {isLoadingProfile || showMealSkeleton ? (
               <View style={styles.skeletonRingContainer}>
                 <Animated.View
@@ -585,7 +701,8 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
               </View>
             )}
           </View>
-        </View>
+        )}
+      </View>
 
         {/* ── TODAY'S MEALS ─────────────────────────────────────────────── */}
         <View style={styles.section}>
@@ -945,6 +1062,28 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flex: 1 },
   content: { paddingBottom: SPACING.xxl },
+
+  todayHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: ms(12),
+  },
+  todayToggleWrap: {
+    flexDirection: "row",
+    borderRadius: RADIUS.full,
+    padding: 3,
+    borderWidth: 1,
+  },
+  todayTogglePill: {
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(5),
+    borderRadius: RADIUS.full,
+  },
+  todayToggleText: {
+    fontSize: FONT_SIZES.caption,
+    fontWeight: "600",
+  },
 
   // Header
   header: {

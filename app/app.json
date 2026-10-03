@@ -14,7 +14,12 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.macrosai.nutrily"
+      "bundleIdentifier": "com.macrosai.nutrily",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Nutrily to access your camera to scan plates and recognize food.",
+        "NSPhotoLibraryUsageDescription": "Allow Nutrily to access your photos to select meal pictures.",
+        "NSMicrophoneUsageDescription": "Allow Nutrily to access your microphone for camera features."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -43,7 +48,19 @@
       "expo-font",
       "expo-video",
       "expo-web-browser",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Nutrily to access your camera to scan plates and recognize food."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Nutrily to access your photos to select meal pictures."
+        }
+      ]
     ]
   }
 }

@@ -40,7 +40,7 @@ export interface Meal {
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   dateKey: string; // ISO date string YYYY-MM-DD
   loggedAt: string;
-  source?: 'recipe' | 'manual';
+  source?: 'recipe' | 'manual' | 'plate_scanner' | 'food_search' | 'plan';
   gramsEaten?: number;
   estimatedRecipeGrams?: number;
   fullRecipeNutrition?: {

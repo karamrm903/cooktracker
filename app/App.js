@@ -107,6 +107,15 @@ import ContactUsScreen from "./src/screens/ContactUsScreen";
 import AIRecipeWizardScreen from "./src/screens/AIRecipeWizardScreen";
 import AIRecipeResultsScreen from "./src/screens/AIRecipeResultsScreen";
 import GroceryListScreen from "./src/screens/GroceryListScreen";
+import PlateScannerScreen from "./src/screens/PlateScannerScreen";
+import PlateResultsScreen from "./src/screens/PlateResultsScreen";
+import SpeedDialOverlay from "./src/components/SpeedDialOverlay";
+import PasteLinkModal from "./src/components/PasteLinkModal";
+import PaywallModal from "./src/components/PaywallModal";
+import {
+  subscriptionService,
+  isUsageLimitError,
+} from "./src/services/subscription.service";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -295,75 +304,145 @@ const ftt = StyleSheet.create({
 function CustomTabBar({ state, descriptors, navigation }) {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const session = useSelector((s) => s.auth.session);
+
+  const [speedDialVisible, setSpeedDialVisible] = useState(false);
+  const [pasteModalVisible, setPasteModalVisible] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [isCheckingImport, setIsCheckingImport] = useState(false);
+
+  const handlePasteSubmit = async (url) => {
+    setIsCheckingImport(true);
+    try {
+      await subscriptionService.checkRecipeImport(session);
+      setPasteModalVisible(false);
+      navigation.navigate("Analyzing", { url });
+    } catch (err) {
+      if (isUsageLimitError(err)) {
+        setPasteModalVisible(false);
+        setPaywallVisible(true);
+      } else {
+        setPasteModalVisible(false);
+        navigation.navigate("Analyzing", { url });
+      }
+    } finally {
+      setIsCheckingImport(false);
+    }
+  };
+
+  const renderTab = (route, index) => {
+    const { options } = descriptors[route.key];
+    const focused = state.index === index;
+    const label = options.tabBarLabel ?? route.name;
+    const color = focused ? TAB_ACTIVE : TAB_INACTIVE;
+    const pngIcon = TAB_ICONS[route.name];
+
+    const onPress = () => {
+      const event = navigation.emit({
+        type: "tabPress",
+        target: route.key,
+        canPreventDefault: true,
+      });
+      if (!focused && !event.defaultPrevented)
+        navigation.navigate(route.name);
+    };
+
+    return (
+      <TouchableOpacity
+        key={route.key}
+        style={tb.tab}
+        onPress={onPress}
+        activeOpacity={0.75}
+      >
+        {pngIcon ? (
+          <Image
+            source={pngIcon}
+            style={[tb.icon, { tintColor: color }]}
+            resizeMode="contain"
+          />
+        ) : (
+          <Ionicons
+            name={focused ? "diamond" : "diamond-outline"}
+            size={22}
+            color={color}
+          />
+        )}
+        <Text style={[tb.label, { color }]} numberOfLines={1}>
+          {label}
+        </Text>
+        <View
+          style={[tb.dot, focused && { backgroundColor: TAB_ACTIVE }]}
+        />
+      </TouchableOpacity>
+    );
+  };
+
+  // 4 tabs: Dashboard (0), Explore (1), Calories (2), Profile (3)
+  const leftRoutes = state.routes.slice(0, 2);
+  const rightRoutes = state.routes.slice(2, 4);
 
   return (
-    <View
-      style={[
-        tb.wrap,
-        {
-          backgroundColor: "#FCF7F3",
-          paddingTop: 16,
-          paddingBottom: Math.max(insets.bottom, 12) + 10,
-        },
-      ]}
-    >
+    <>
       <View
         style={[
-          tb.bar,
+          tb.wrap,
           {
-            backgroundColor: colors.surface,
-            borderColor: isDark ? colors.border : "#FEEBDD",
+            backgroundColor: isDark ? "#0A0C10" : "#FCF7F3",
+            paddingTop: 16,
+            paddingBottom: Math.max(insets.bottom, 12) + 10,
           },
         ]}
       >
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const focused = state.index === index;
-          const label = options.tabBarLabel ?? route.name;
-          const color = focused ? TAB_ACTIVE : TAB_INACTIVE;
-          const pngIcon = TAB_ICONS[route.name];
+        <View
+          style={[
+            tb.bar,
+            {
+              backgroundColor: colors.surface,
+              borderColor: isDark ? colors.border : "#FEEBDD",
+            },
+          ]}
+        >
+          {leftRoutes.map((route, i) => renderTab(route, i))}
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!focused && !event.defaultPrevented)
-              navigation.navigate(route.name);
-          };
+          {/* Center Elevated + Action Button */}
+          <TouchableOpacity
+            style={tb.centerFabWrap}
+            onPress={() => setSpeedDialVisible(true)}
+            activeOpacity={0.85}
+          >
+            <View style={[tb.centerFabInner, { backgroundColor: colors.primary }]}>
+              <Ionicons name="add" size={38} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
 
-          return (
-            <TouchableOpacity
-              key={route.key}
-              style={tb.tab}
-              onPress={onPress}
-              activeOpacity={0.75}
-            >
-              {pngIcon ? (
-                <Image
-                  source={pngIcon}
-                  style={[tb.icon, { tintColor: color }]}
-                  resizeMode="contain"
-                />
-              ) : (
-                <Ionicons
-                  name={focused ? "diamond" : "diamond-outline"}
-                  size={22}
-                  color={color}
-                />
-              )}
-              <Text style={[tb.label, { color }]} numberOfLines={1}>
-                {label}
-              </Text>
-              <View
-                style={[tb.dot, focused && { backgroundColor: TAB_ACTIVE }]}
-              />
-            </TouchableOpacity>
-          );
-        })}
+          {rightRoutes.map((route, i) => renderTab(route, i + 2))}
+        </View>
       </View>
-    </View>
+
+      {/* Speed Dial Menu with 3 Action Bubbles */}
+      <SpeedDialOverlay
+        visible={speedDialVisible}
+        onClose={() => setSpeedDialVisible(false)}
+        onPressCamera={() => navigation.navigate("PlateScanner")}
+        onPressPaste={() => setPasteModalVisible(true)}
+        onPressAddMeal={() => navigation.navigate("SearchFood")}
+      />
+
+      {/* Paste Recipe Link Modal */}
+      <PasteLinkModal
+        visible={pasteModalVisible}
+        onClose={() => setPasteModalVisible(false)}
+        onSubmit={handlePasteSubmit}
+        isLoading={isCheckingImport}
+      />
+
+      {/* Usage Limit Paywall Modal */}
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        feature="recipe_import"
+      />
+    </>
   );
 }
 
@@ -375,8 +454,8 @@ const tb = StyleSheet.create({
     minHeight: 60,
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
   icon: { width: 24, height: 24 },
@@ -387,16 +466,30 @@ const tb = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: "transparent",
   },
+  centerFabWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -32,
+    marginHorizontal: 6,
+  },
+  centerFabInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3.5,
+    borderColor: "#FFFFFF",
+    shadowColor: "#FF8A45",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 12,
+  },
 });
 
 // ── Tab navigator ──────────────────────────────────────────────────────────────
 function MainTabs() {
-  // Premium tab is only shown to users without an active subscription/trial.
-  // Gated on hasResolved so it never flashes before the first real status sync
-  // (avoids show-then-hide on relaunch). When a purchase lands, isSubscribed
-  // flips and the tab unmounts automatically.
-  const { isSubscribed, hasResolved } = useSubscription();
-
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} />}
@@ -405,14 +498,6 @@ function MainTabs() {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
       <Tab.Screen name="Calories" component={CaloriesScreen} />
-      {/* <Tab.Screen name="Friends" component={FriendsScreen} /> */}
-      {hasResolved && !isSubscribed && (
-        <Tab.Screen
-          name="Premium"
-          component={SubscriptionScreen}
-          options={{ tabBarLabel: "Premium" }}
-        />
-      )}
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -461,7 +546,11 @@ function AppContent({ onRouteChange }) {
               component={RecipeSummaryScreen}
             />
             <Stack.Screen name="LogMeal" component={LogMealScreen} />
-            <Stack.Screen name="SearchFood" component={SearchFoodScreen} />
+            <Stack.Screen
+              name="SearchFood"
+              component={SearchFoodScreen}
+              options={{ animation: "slide_from_bottom" }}
+            />
             <Stack.Screen name="FoodDetail" component={FoodDetailScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="CookingMode" component={CookingModeScreen} />
@@ -486,6 +575,16 @@ function AppContent({ onRouteChange }) {
               component={AIRecipeResultsScreen}
             />
             <Stack.Screen name="GroceryList" component={GroceryListScreen} />
+            <Stack.Screen
+              name="PlateScanner"
+              component={PlateScannerScreen}
+              options={{ animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen
+              name="PlateResults"
+              component={PlateResultsScreen}
+              options={{ animation: "slide_from_right" }}
+            />
           </Stack.Navigator>
         ) : (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
